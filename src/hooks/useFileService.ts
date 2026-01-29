@@ -32,6 +32,7 @@ export interface UseFileServiceReturn {
   
   // Actions
   openFile: (filters?: FileFilter[]) => Promise<string | null>;
+  openFilePath: (path: string) => Promise<string | null>;
   saveFileAs: (content: string, defaultName: string, filters?: FileFilter[]) => Promise<string | null>;
   
   // State
@@ -110,6 +111,27 @@ export function useFileService() {
   }, [isDesktop]);
 
   /**
+   * Open a file directly by path (desktop only)
+   */
+  const openFilePath = useCallback(async (path: string): Promise<string | null> => {
+    if (!isDesktop) return null;
+    
+    try {
+      const apis = await getTauriApis();
+      if (!apis) return null;
+      
+      const content = await apis.fs.readTextFile(path);
+      const name = path.split('/').pop() || 'untitled';
+      
+      setCurrentFile({ name, path, content });
+      return content;
+    } catch (err) {
+      console.error('Failed to open file by path:', err);
+      return null;
+    }
+  }, [isDesktop]);
+
+  /**
    * Save file via native dialog (Tauri) or download (browser)
    * Always prompts for location - non-destructive "Save As" behavior
    */
@@ -158,6 +180,7 @@ export function useFileService() {
   return {
     currentFile,
     openFile,
+    openFilePath,
     saveFileAs,
     isDesktop,
   };

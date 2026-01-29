@@ -3,6 +3,7 @@ import { SyntaxEditor, type SyntaxEditorHandle } from './SyntaxEditor';
 import { lintMarkdown } from '@/lib/markdown-linter';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS } from '@/lib/contexts';
+import type { RecentFile } from '@/hooks/useRecentFiles';
 
 interface MarkdownPanelProps {
   value: string;
@@ -11,7 +12,10 @@ interface MarkdownPanelProps {
   isActive: boolean;
   fileName: string | null;
   onOpen: () => void;
+  onOpenRecent?: (path: string) => void;
   onSaveAs: () => void;
+  recentFiles?: RecentFile[];
+  isDesktop?: boolean;
 }
 
 export function MarkdownPanel({ 
@@ -21,10 +25,14 @@ export function MarkdownPanel({
   isActive,
   fileName,
   onOpen,
+  onOpenRecent,
   onSaveAs,
+  recentFiles = [],
+  isDesktop = false,
 }: MarkdownPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState('');
   const [showDiscord, setShowDiscord] = useState(false);
+  const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [savedValue, setSavedValue] = useState(value);
   const editorRef = useRef<SyntaxEditorHandle>(null);
 
@@ -92,13 +100,44 @@ export function MarkdownPanel({
           )}
         </span>
         <div className="panel-actions">
-          <button 
-            className="btn btn-secondary" 
-            onClick={handleOpen}
-            title="Open file (Cmd+O)"
-          >
-            Open
-          </button>
+          <div className="btn-group">
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleOpen}
+              title="Open file (Cmd+O)"
+            >
+              Open
+            </button>
+            {isDesktop && recentFiles.length > 0 && (
+              <>
+                <button
+                  className="btn btn-secondary btn-dropdown"
+                  onClick={() => setShowRecentFiles(!showRecentFiles)}
+                  title="Recent files"
+                >
+                  ▾
+                </button>
+                {showRecentFiles && (
+                  <div className="dropdown-menu">
+                    <div className="dropdown-header">Recent Files</div>
+                    {recentFiles.map((file) => (
+                      <button
+                        key={file.path}
+                        className="dropdown-item"
+                        onClick={() => {
+                          onOpenRecent?.(file.path);
+                          setShowRecentFiles(false);
+                        }}
+                        title={file.path}
+                      >
+                        {file.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
           {isDirty && (
             <button 
               className="btn btn-secondary" 

@@ -5,6 +5,7 @@ import { markdownToBBCode } from '@/lib/converter';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS, BBCODE_FILTERS } from '@/hooks/useFileService';
+import { useRecentFiles } from '@/hooks/useRecentFiles';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 
@@ -26,7 +27,10 @@ For more info, visit [our Discord](https://discord.gg/example)
 
 export function App() {
   // File service
-  const { openFile, saveFileAs, isDesktop } = useFileService();
+  const { openFile, openFilePath, saveFileAs, isDesktop, currentFile } = useFileService();
+  
+  // Recent files (desktop only)
+  const { recentFiles, addRecentFile } = useRecentFiles();
   
   // File names
   const [mdFileName, setMdFileName] = useState<string | null>(null);
@@ -84,12 +88,26 @@ export function App() {
     const content = await openFile(MD_FILTERS);
     if (content !== null) {
       setMarkdown(content);
-      // Extract filename from the file service's current file
-      // For now, we'll just mark it as opened
-      setMdFileName('Opened file');
       setBBCodeModified(false);
     }
   }, [openFile, setMarkdown]);
+
+  // Track opened files in recent list
+  useEffect(() => {
+    if (currentFile?.path && currentFile?.name) {
+      addRecentFile(currentFile.path, currentFile.name);
+      setMdFileName(currentFile.name);
+    }
+  }, [currentFile, addRecentFile]);
+
+  // Open a recent file by path
+  const handleOpenRecentFile = useCallback(async (path: string) => {
+    const content = await openFilePath(path);
+    if (content !== null) {
+      setMarkdown(content);
+      setBBCodeModified(false);
+    }
+  }, [openFilePath, setMarkdown]);
 
   const handleOpenBBCode = useCallback(async () => {
     const content = await openFile(BBCODE_FILTERS);
@@ -252,7 +270,10 @@ export function App() {
             isActive={activeEditor === 'markdown'}
             fileName={mdFileName}
             onOpen={handleOpenMarkdown}
+            onOpenRecent={handleOpenRecentFile}
             onSaveAs={handleSaveMarkdownAs}
+            recentFiles={recentFiles}
+            isDesktop={isDesktop}
           />
 
           <BBCodePanel
