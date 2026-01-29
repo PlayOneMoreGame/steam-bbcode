@@ -9,6 +9,7 @@ interface BBCodePanelProps {
   context: SteamContext;
   onFocus: () => void;
   isActive: boolean;
+  onOpen: () => void;
   onSaveAs: () => void;
   onRevert: () => void;
   isModified: boolean;
@@ -20,6 +21,7 @@ export function BBCodePanel({
   context,
   onFocus,
   isActive,
+  onOpen,
   onSaveAs,
   onRevert,
   isModified,
@@ -85,6 +87,13 @@ export function BBCodePanel({
           )}
         </span>
         <div className="panel-actions">
+          <button
+            className="btn btn-secondary"
+            onClick={onOpen}
+            title="Open BBCode file"
+          >
+            Open
+          </button>
           {isModified && (
             <button
               className="btn btn-secondary"

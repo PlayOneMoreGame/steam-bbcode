@@ -3,6 +3,7 @@ import { MarkdownPanel, BBCodePanel, PreviewPanel } from '@/components';
 import type { PreviewMode } from '@/components/PreviewPanel';
 import { markdownToBBCode } from '@/lib/converter';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS, BBCODE_FILTERS } from '@/hooks/useFileService';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
@@ -34,6 +35,9 @@ export function App() {
   const [markdown, setMarkdown] = useLocalStorage('steam-bbcode-markdown', DEFAULT_MARKDOWN);
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
+
+  // Auto-save draft
+  const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
 
   // Active editor tracking
   const [activeEditor, setActiveEditor] = useState<PreviewMode>('markdown');
@@ -86,6 +90,14 @@ export function App() {
       setBBCodeModified(false);
     }
   }, [openFile, setMarkdown]);
+
+  const handleOpenBBCode = useCallback(async () => {
+    const content = await openFile(BBCODE_FILTERS);
+    if (content !== null) {
+      setBBCode(content);
+      setBBCodeModified(true);
+    }
+  }, [openFile]);
 
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';
@@ -249,6 +261,7 @@ export function App() {
             context={context}
             onFocus={() => setActiveEditor('bbcode')}
             isActive={activeEditor === 'bbcode'}
+            onOpen={handleOpenBBCode}
             onSaveAs={handleSaveBBCodeAs}
             onRevert={handleBBCodeRevert}
             isModified={bbcodeModified}
@@ -280,7 +293,14 @@ export function App() {
         <footer className="footer">
           <div className="footer-note">
             {isDesktop ? 'Cmd+O Open • Cmd+S Save As • ' : ''}
-            Markdown → Steam BBCode converter • <a href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose" target="_blank" rel="noopener" class="feedback-link">Feedback?</a>
+            Markdown → Steam BBCode converter • <a href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose" target="_blank" rel="noopener" className="feedback-link">Feedback?</a>
+          </div>
+          <div className="footer-save-status">
+            {saveStatus === 'saving' && <span className="save-indicator saving">Saving...</span>}
+            {saveStatus === 'saved' && lastSaved && (
+              <span className="save-indicator saved">Saved {formatLastSaved(lastSaved)}</span>
+            )}
+            {saveStatus === 'unsaved' && <span className="save-indicator unsaved">•</span>}
           </div>
         </footer>
       </div>

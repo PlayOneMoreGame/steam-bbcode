@@ -1,6 +1,6 @@
 # Steam BBCode Editor - Technical Analysis & Roadmap
 
-## Current Status (v1.0.0)
+## Current Status (v1.1.0)
 
 ### Completed Features ✅
 
