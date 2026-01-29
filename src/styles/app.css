@@ -1152,3 +1152,14 @@ body {
     display: none;
   }
 }
+
+/* Feedback link */
+.feedback-link {
+  color: var(--accent-blue);
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.feedback-link:hover {
+  text-decoration: underline;
+}

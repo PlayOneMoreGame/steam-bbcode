@@ -280,7 +280,7 @@ export function App() {
         <footer className="footer">
           <div className="footer-note">
             {isDesktop ? 'Cmd+O Open • Cmd+S Save As • ' : ''}
-            Markdown → Steam BBCode converter
+            Markdown → Steam BBCode converter • <a href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose" target="_blank" rel="noopener" class="feedback-link">Feedback?</a>
           </div>
         </footer>
       </div>
