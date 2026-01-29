@@ -20,8 +20,11 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
   result = result.replace(/^## (.+)$/gm, '[h2]$1[/h2]');
   result = result.replace(/^# (.+)$/gm, '[h1]$1[/h1]');
 
-  // Horizontal rules
+  // Horizontal rules (before lists to avoid conflict with ---)
   result = result.replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '[hr][/hr]');
+
+  // Lists - process EARLY before italic conversion to avoid * conflicts
+  result = processLists(result);
 
   // Code blocks (fenced) - these become block [code]
   result = result.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
@@ -42,13 +45,13 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
   // Links
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '[url=$2]$1[/url]');
 
-  // Bold (** or __)
-  result = result.replace(/\*\*([^*]+)\*\*/g, '[b]$1[/b]');
-  result = result.replace(/__([^_]+)__/g, '[b]$1[/b]');
+  // Bold (** or __) - use lazy matching to handle nested formatting
+  result = result.replace(/\*\*(.+?)\*\*/g, '[b]$1[/b]');
+  result = result.replace(/__(.+?)__/g, '[b]$1[/b]');
 
-  // Italic (* or _) - careful not to match inside words
-  result = result.replace(/(?<![*_])\*([^*]+)\*(?![*_])/g, '[i]$1[/i]');
-  result = result.replace(/(?<![*_])_([^_]+)_(?![*_])/g, '[i]$1[/i]');
+  // Italic (* or _) - must come after bold, careful not to match inside words
+  result = result.replace(/(?<![*\w])\*([^*\n]+)\*(?![*\w])/g, '[i]$1[/i]');
+  result = result.replace(/(?<![_\w])_([^_\n]+)_(?![_\w])/g, '[i]$1[/i]');
 
   // Strikethrough
   result = result.replace(/~~([^~]+)~~/g, '[strike]$1[/strike]');
@@ -58,9 +61,6 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
 
   // Merge consecutive quotes
   result = result.replace(/\[\/quote\]\n\[quote\]/g, '\n');
-
-  // Lists - process with tight formatting
-  result = processLists(result);
 
   return { bbcode: result, notes };
 }
