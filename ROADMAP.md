@@ -13,6 +13,7 @@
 - ✅ Keyboard shortcuts (Cmd+S, Cmd+O, Escape)
 - ✅ Linting with line number references
 - ✅ Error/warning badges in header
+- ✅ Tag reference panel (Tags button in header)
 
 **UX**
 - ✅ Three-panel responsive layout
@@ -62,9 +63,8 @@
 ## Phase 2 - Planned
 
 ### High Priority
-- [ ] **Web hosting** - Deploy to steambbeditor.onemoregame.com (see WEBAPP.md)
 - [ ] **Auto-update** - Check for new versions, notify users
-- [ ] **Tag reference panel** - Quick reference popup for BBCode tags
+- [ ] **Web hosting** - Deploy to steambbeditor.onemoregame.com (see WEBAPP.md)
 
 ### Medium Priority
 - [ ] Resizable panels with drag handles
