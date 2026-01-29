@@ -12,7 +12,12 @@
     "tauri:build": "tauri build",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "version:show": "node scripts/version.mjs show",
+    "version:patch": "node scripts/version.mjs patch",
+    "version:minor": "node scripts/version.mjs minor",
+    "version:major": "node scripts/version.mjs major",
+    "version:build": "node scripts/version.mjs build"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.5.3",

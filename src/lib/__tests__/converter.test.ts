@@ -51,7 +51,7 @@ describe('markdownToBBCode', () => {
       expect(result.bbcode).toBe('This is [strike]deleted[/strike] text');
     });
 
-    it.skip('handles nested bold and italic - known limitation', () => {
+    it('handles nested bold and italic', () => {
       const result = markdownToBBCode('**bold and *italic* inside**', 'announcements');
       expect(result.bbcode).toBe('[b]bold and [i]italic[/i] inside[/b]');
     });
@@ -135,7 +135,7 @@ describe('markdownToBBCode', () => {
       expect(result.bbcode).toBe('[list]\n[*]Item 1\n[*]Item 2\n[*]Item 3\n[/list]');
     });
 
-    it.skip('converts unordered lists with * - use - instead', () => {
+    it('converts unordered lists with *', () => {
       const md = '* Item 1\n* Item 2';
       const result = markdownToBBCode(md, 'announcements');
       expect(result.bbcode).toBe('[list]\n[*]Item 1\n[*]Item 2\n[/list]');
