@@ -15,6 +15,15 @@
       "clipboard": {
         "writeText": true
       },
+      "dialog": {
+        "open": true,
+        "save": true
+      },
+      "fs": {
+        "readFile": true,
+        "writeFile": true,
+        "scope": ["$DOCUMENT/*", "$DESKTOP/*", "$HOME/*", "$DOWNLOAD/*"]
+      },
       "window": {
         "all": false,
         "close": true,
@@ -71,7 +80,7 @@
         "minHeight": 600,
         "minWidth": 900,
         "resizable": true,
-        "title": "Steam BBCode",
+        "title": "SteamBBEditor",
         "center": true
       }
     ]

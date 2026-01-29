@@ -9,6 +9,9 @@ interface BBCodePanelProps {
   context: SteamContext;
   onFocus: () => void;
   isActive: boolean;
+  onSaveAs: () => void;
+  onRevert: () => void;
+  isModified: boolean;
 }
 
 export function BBCodePanel({ 
@@ -17,20 +20,20 @@ export function BBCodePanel({
   context,
   onFocus,
   isActive,
+  onSaveAs,
+  onRevert,
+  isModified,
 }: BBCodePanelProps) {
   const [copyFeedback, setCopyFeedback] = useState('');
-  const [savedValue, setSavedValue] = useState(value);
+  const [, setSavedValue] = useState(value);
   const editorRef = useRef<SyntaxEditorHandle>(null);
 
-  // Update saved value when value changes from outside (e.g., markdown conversion)
-  // But only if we haven't made local edits
-  const [hasLocalEdits, setHasLocalEdits] = useState(false);
-  
+  // Update saved value when value changes from conversion
   useEffect(() => {
-    if (!hasLocalEdits) {
+    if (!isModified) {
       setSavedValue(value);
     }
-  }, [value, hasLocalEdits]);
+  }, [value, isModified]);
 
   // Lint the BBCode
   const lintResult = useMemo(
@@ -42,23 +45,10 @@ export function BBCodePanel({
   const charCount = value.length;
   const charPercent = Math.min(100, Math.round((charCount / charLimit) * 100));
 
-  const isDirty = value !== savedValue;
-
-  const handleSave = useCallback(() => {
-    const blob = new Blob([value], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'steam-post.txt';
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleSaveAs = useCallback(() => {
+    onSaveAs();
     setSavedValue(value);
-    setHasLocalEdits(true);
-  }, [value]);
-
-  const handleRevert = useCallback(() => {
-    onChange(savedValue);
-  }, [onChange, savedValue]);
+  }, [onSaveAs, value]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -70,11 +60,6 @@ export function BBCodePanel({
       setTimeout(() => setCopyFeedback(''), 2000);
     }
   }, [value]);
-
-  const handleChange = useCallback((newValue: string) => {
-    setHasLocalEdits(true);
-    onChange(newValue);
-  }, [onChange]);
 
   const handleLintClick = useCallback((line?: number) => {
     if (line && editorRef.current) {
@@ -91,7 +76,7 @@ export function BBCodePanel({
       <div className="panel-header">
         <span className="panel-label">
           Steam BBCode
-          {isDirty && <span className="modified-indicator" title="Unsaved changes">●</span>}
+          {isModified && <span className="modified-indicator" title="Modified from source">●</span>}
           {hasErrors && (
             <span className="lint-badge error">{lintResult.errors.length}</span>
           )}
@@ -100,21 +85,21 @@ export function BBCodePanel({
           )}
         </span>
         <div className="panel-actions">
-          {isDirty && (
+          {isModified && (
             <button
               className="btn btn-secondary"
-              onClick={handleRevert}
-              title="Revert to last saved state"
+              onClick={onRevert}
+              title="Revert to auto-converted BBCode"
             >
               Revert
             </button>
           )}
           <button 
             className="btn btn-secondary" 
-            onClick={handleSave}
-            title="Save file (Ctrl+S)"
+            onClick={handleSaveAs}
+            title="Save As (Cmd+S)"
           >
-            Save
+            Save As
           </button>
           <button
             className="btn btn-primary"
@@ -161,11 +146,11 @@ export function BBCodePanel({
       <SyntaxEditor
         ref={editorRef}
         value={value}
-        onChange={handleChange}
+        onChange={onChange}
         language="bbcode"
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
-        onSave={handleSave}
+        onSave={handleSaveAs}
       />
 
       <div className="panel-footer">

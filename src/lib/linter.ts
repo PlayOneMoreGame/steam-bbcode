@@ -70,7 +70,8 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
   checkListItems(bbcode, errors, errorLines);
 
   // Check for list whitespace issues
-checkListWhitespace(bbcode, warnings, warningLines);
+  checkListWhitespace(bbcode, warnings, warningLines);
+
   // Check for malformed URLs
   checkUrls(bbcode, warnings, warningLines);
 
@@ -283,10 +284,6 @@ function checkTagNesting(
   errors: LintMessage[], 
   errorLines: Set<number>
 ): void {
-  // This is already partially caught by checkTagMatching
-  // Additional check for overlapping tags that might technically parse
-  // but produce unexpected results
-  
   const formattingTags = ['b', 'i', 'u', 'strike'];
   const pattern = formattingTags.map(t => `\\[${t}\\]|\\[/${t}\\]`).join('|');
   const regex = new RegExp(pattern, 'gi');

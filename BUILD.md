@@ -65,9 +65,9 @@ Build output location:
 ```
 src-tauri/target/release/bundle/
 ├── dmg/
-│   └── Steam BBCode_1.0.0_aarch64.dmg   # Distributable disk image
+│   └── SteamBBEditor_1.0.0_aarch64.dmg   # Distributable disk image
 └── macos/
-    └── Steam BBCode.app                  # The app bundle
+    └── SteamBBEditor.app                  # The app bundle
 ```
 
 ## Distributing to Your Team
@@ -77,7 +77,7 @@ Send the `.dmg` file from `src-tauri/target/release/bundle/dmg/`.
 
 Team members:
 1. Double-click the `.dmg`
-2. Drag "Steam BBCode" to Applications
+2. Drag "SteamBBEditor" to Applications
 3. Done!
 
 ### Option 2: Share the .app directly
@@ -123,7 +123,7 @@ Edit `src-tauri/tauri.conf.json`:
 ```json
 {
   "package": {
-    "productName": "Steam BBCode",
+    "productName": "SteamBBEditor",
     "version": "1.0.0"
   }
 }

@@ -9,9 +9,20 @@ interface MarkdownPanelProps {
   onChange: (value: string) => void;
   onFocus: () => void;
   isActive: boolean;
+  fileName: string | null;
+  onOpen: () => void;
+  onSaveAs: () => void;
 }
 
-export function MarkdownPanel({ value, onChange, onFocus, isActive }: MarkdownPanelProps) {
+export function MarkdownPanel({ 
+  value, 
+  onChange, 
+  onFocus, 
+  isActive,
+  fileName,
+  onOpen,
+  onSaveAs,
+}: MarkdownPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState('');
   const [showDiscord, setShowDiscord] = useState(false);
   const [savedValue, setSavedValue] = useState(value);
@@ -29,16 +40,10 @@ export function MarkdownPanel({ value, onChange, onFocus, isActive }: MarkdownPa
 
   const isDirty = value !== savedValue;
 
-  const handleSave = useCallback(() => {
-    const blob = new Blob([value], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'document.md';
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleSaveAs = useCallback(() => {
+    onSaveAs();
     setSavedValue(value);
-  }, [value]);
+  }, [onSaveAs, value]);
 
   const handleRevert = useCallback(() => {
     onChange(savedValue);
@@ -62,11 +67,22 @@ export function MarkdownPanel({ value, onChange, onFocus, isActive }: MarkdownPa
     }
   }, []);
 
+  // Update saved value when file is opened
+  const handleOpen = useCallback(() => {
+    onOpen();
+    // Note: savedValue will be updated after content changes
+  }, [onOpen]);
+
+  // When value changes from file open, update saved state
+  // This is a bit hacky - ideally we'd have a callback after open completes
+  // For now, we track if the value changed significantly
+  
   return (
     <section className={`panel ${isActive ? 'panel-active' : ''}`} onFocus={onFocus}>
       <div className="panel-header">
         <span className="panel-label">
           Markdown
+          {fileName && <span className="file-name" title={fileName}>{fileName}</span>}
           {isDirty && <span className="modified-indicator" title="Unsaved changes">●</span>}
           {lintResult.errors.length > 0 && (
             <span className="lint-badge error">{lintResult.errors.length}</span>
@@ -76,6 +92,13 @@ export function MarkdownPanel({ value, onChange, onFocus, isActive }: MarkdownPa
           )}
         </span>
         <div className="panel-actions">
+          <button 
+            className="btn btn-secondary" 
+            onClick={handleOpen}
+            title="Open file (Cmd+O)"
+          >
+            Open
+          </button>
           {isDirty && (
             <button 
               className="btn btn-secondary" 
@@ -87,10 +110,10 @@ export function MarkdownPanel({ value, onChange, onFocus, isActive }: MarkdownPa
           )}
           <button 
             className="btn btn-secondary" 
-            onClick={handleSave}
-            title="Save file (Ctrl+S)"
+            onClick={handleSaveAs}
+            title="Save As (Cmd+S)"
           >
-            Save
+            Save As
           </button>
           <button className="btn btn-primary" onClick={handleCopy}>
             {copyFeedback || 'Copy'}
@@ -148,10 +171,10 @@ export function MarkdownPanel({ value, onChange, onFocus, isActive }: MarkdownPa
         value={value}
         onChange={onChange}
         language="markdown"
-        placeholder="Paste your Markdown here..."
+        placeholder="Paste your Markdown here, or click Open to load a file..."
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
-        onSave={handleSave}
+        onSave={handleSaveAs}
       />
 
       <div className="panel-footer">

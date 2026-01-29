@@ -1,37 +1,35 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { MarkdownPanel, BBCodePanel, PreviewPanel } from '@/components';
 import type { PreviewMode } from '@/components/PreviewPanel';
 import { markdownToBBCode } from '@/lib/converter';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useFileService, MD_FILTERS, BBCODE_FILTERS } from '@/hooks/useFileService';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 
 import '@/styles/app.css';
 import '@/styles/steam-theme.css';
 
-const DEFAULT_MARKDOWN = `# SWAPMEAT Patch 0.4.2
+const DEFAULT_MARKDOWN = `# Patch Notes
 
-## Bug Fixes
-- Fixed crash when entering the **Meat Locker** on floor 3
-- Resolved issue where ~~permadeath~~ was *actually* permanent
-- Item tooltips no longer clip through the UI
+## What's New
+- Feature one with **bold** text
+- Feature two with *italic* text
+- Bug fix for the thing
 
-## Balance Changes
-1. Reduced difficulty spike in early game
-2. Adjusted spawn rates for rare items
-3. Buffed the \`TENDERLOIN\` weapon class
-
----
-
-### Known Issues
-> Some players report frame drops in areas with many entities
+## Known Issues
+> Some players may experience issues
 
 For more info, visit [our Discord](https://discord.gg/example)
-
-![screenshot](https://example.com/screenshot.png)
 `;
 
 export function App() {
+  // File service
+  const { openFile, saveFileAs, isDesktop } = useFileService();
+  
+  // File names
+  const [mdFileName, setMdFileName] = useState<string | null>(null);
+  
   // Persisted state
   const [markdown, setMarkdown] = useLocalStorage('steam-bbcode-markdown', DEFAULT_MARKDOWN);
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
@@ -49,32 +47,87 @@ export function App() {
   // BBCode state - starts with converted value, can be edited independently
   const [bbcode, setBBCode] = useState(convertedBBCode);
 
-  // Sync BBCode with conversion when markdown changes (unless user has manually edited)
-  const [userEditedBBCode, setUserEditedBBCode] = useState(false);
+  // Track if user has manually edited BBCode
+  const [bbcodeModified, setBBCodeModified] = useState(false);
   
+  // Sync BBCode with conversion when markdown changes (unless user has manually edited)
   useEffect(() => {
-    if (!userEditedBBCode) {
+    if (!bbcodeModified) {
       setBBCode(convertedBBCode);
     }
-  }, [convertedBBCode, userEditedBBCode]);
+  }, [convertedBBCode, bbcodeModified]);
 
   // When context changes, always re-convert
   useEffect(() => {
     setBBCode(convertedBBCode);
-    setUserEditedBBCode(false);
+    setBBCodeModified(false);
   }, [context]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle BBCode changes (track that user has edited)
-  const handleBBCodeChange = (newBBCode: string) => {
-    setUserEditedBBCode(true);
+  const handleBBCodeChange = useCallback((newBBCode: string) => {
+    setBBCodeModified(true);
     setBBCode(newBBCode);
-  };
+  }, []);
+
+  // Revert BBCode to auto-converted version
+  const handleBBCodeRevert = useCallback(() => {
+    setBBCode(convertedBBCode);
+    setBBCodeModified(false);
+  }, [convertedBBCode]);
+
+  // File operations
+  const handleOpenMarkdown = useCallback(async () => {
+    const content = await openFile(MD_FILTERS);
+    if (content !== null) {
+      setMarkdown(content);
+      // Extract filename from the file service's current file
+      // For now, we'll just mark it as opened
+      setMdFileName('Opened file');
+      setBBCodeModified(false);
+    }
+  }, [openFile, setMarkdown]);
+
+  const handleSaveMarkdownAs = useCallback(async () => {
+    const defaultName = mdFileName || 'document.md';
+    const savedPath = await saveFileAs(markdown, defaultName, MD_FILTERS);
+    if (savedPath) {
+      const name = savedPath.split('/').pop() || defaultName;
+      setMdFileName(name);
+    }
+  }, [saveFileAs, markdown, mdFileName]);
+
+  const handleSaveBBCodeAs = useCallback(async () => {
+    const baseName = mdFileName?.replace(/\.(md|markdown)$/i, '') || 'steam-post';
+    const defaultName = `${baseName}.txt`;
+    await saveFileAs(bbcode, defaultName, BBCODE_FILTERS);
+  }, [saveFileAs, bbcode, mdFileName]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+O or Ctrl+O - Open
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        handleOpenMarkdown();
+      }
+      // Cmd+S or Ctrl+S - Save As (context-aware)
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (activeEditor === 'markdown') {
+          handleSaveMarkdownAs();
+        } else {
+          handleSaveBBCodeAs();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleOpenMarkdown, handleSaveMarkdownAs, handleSaveBBCodeAs, activeEditor]);
 
   // Warn before leaving with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Check if there are unsaved changes
-      // (In a real app, we'd track this more precisely)
       e.preventDefault();
       e.returnValue = '';
     };
@@ -97,6 +150,7 @@ export function App() {
               <span className="title-md">MD</span>
               <span className="title-arrow">→</span>
               <span className="title-bb">BB</span>
+              {isDesktop && <span className="title-badge">Desktop</span>}
             </h1>
 
             <div className="controls">
@@ -184,6 +238,9 @@ export function App() {
             onChange={setMarkdown}
             onFocus={() => setActiveEditor('markdown')}
             isActive={activeEditor === 'markdown'}
+            fileName={mdFileName}
+            onOpen={handleOpenMarkdown}
+            onSaveAs={handleSaveMarkdownAs}
           />
 
           <BBCodePanel
@@ -192,6 +249,9 @@ export function App() {
             context={context}
             onFocus={() => setActiveEditor('bbcode')}
             isActive={activeEditor === 'bbcode'}
+            onSaveAs={handleSaveBBCodeAs}
+            onRevert={handleBBCodeRevert}
+            isModified={bbcodeModified}
           />
 
           <section className="panel preview-panel">
@@ -219,7 +279,8 @@ export function App() {
         {/* Footer */}
         <footer className="footer">
           <div className="footer-note">
-            Markdown → Steam BBCode converter with live preview
+            {isDesktop ? 'Cmd+O Open • Cmd+S Save As • ' : ''}
+            Markdown → Steam BBCode converter
           </div>
         </footer>
       </div>
