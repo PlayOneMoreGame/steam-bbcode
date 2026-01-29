@@ -13,6 +13,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "version:show": "node scripts/version.mjs show",
     "version:patch": "node scripts/version.mjs patch",
     "version:minor": "node scripts/version.mjs minor",
@@ -34,8 +36,4 @@
     "vite": "^5.0.0",
     "vitest": "^1.2.0"
   }
-"scripts": {
-  "test:e2e": "playwright test",
-  "test:e2e:ui": "playwright test --ui"
-}
 }
