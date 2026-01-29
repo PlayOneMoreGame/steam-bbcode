@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "SteamBBEditor",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -22,7 +22,12 @@
       "fs": {
         "readFile": true,
         "writeFile": true,
-        "scope": ["$DOCUMENT/*", "$DESKTOP/*", "$HOME/*", "$DOWNLOAD/*"]
+        "scope": [
+          "$DOCUMENT/*",
+          "$DESKTOP/*",
+          "$HOME/*",
+          "$DOWNLOAD/*"
+        ]
       },
       "window": {
         "all": false,
