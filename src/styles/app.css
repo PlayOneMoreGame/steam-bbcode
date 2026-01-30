@@ -223,15 +223,15 @@ body {
    ========================================================================== */
 
 .tag-reference {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
   padding: var(--spacing-md);
   background-color: var(--bg-tertiary);
   border-radius: var(--radius-md);
   margin-top: var(--spacing-sm);
+  max-height: 400px;
+  overflow-y: auto;
 }
 
+/* Legacy section styles - keeping for backwards compatibility */
 .tag-ref-section {
   flex: 1;
   min-width: 150px;
@@ -261,11 +261,7 @@ body {
 
 @media (max-width: 768px) {
   .tag-reference {
-    flex-direction: column;
-  }
-  
-  .tag-ref-section {
-    min-width: 100%;
+    max-height: 300px;
   }
 }
 
@@ -1249,4 +1245,54 @@ body {
 .dropdown-item:focus {
   outline: none;
   background: var(--bg-hover);
+}
+
+/* ==========================================================================
+   Tag Reference Table
+   ========================================================================== */
+
+.tag-ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.tag-ref-table th,
+.tag-ref-table td {
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tag-ref-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.tag-ref-table td:first-child {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tag-ref-table code {
+  background: var(--bg-input);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+}
+
+.tag-ref-note {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.tag-ref-note code {
+  background: var(--bg-input);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
 }
