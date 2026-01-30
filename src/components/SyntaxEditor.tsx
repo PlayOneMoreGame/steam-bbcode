@@ -37,6 +37,21 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   const highlightRef = useRef<HTMLPreElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
 
+  // Sync scroll positions - defined early so useImperativeHandle can use it
+  const syncScroll = useCallback(() => {
+    const textarea = textareaRef.current;
+    const highlight = highlightRef.current;
+    const lineNums = lineNumbersRef.current;
+    
+    if (textarea && highlight) {
+      highlight.scrollTop = textarea.scrollTop;
+      highlight.scrollLeft = textarea.scrollLeft;
+    }
+    if (textarea && lineNums) {
+      lineNums.scrollTop = textarea.scrollTop;
+    }
+  }, []);
+
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
     scrollToLine: (line: number, column?: number, length?: number) => {
@@ -115,21 +130,6 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
       : tokenizeBBCode(value);
     return applyHighlighting(value, tokens);
   }, [value, language]);
-
-  // Sync scroll positions
-  const syncScroll = useCallback(() => {
-    const textarea = textareaRef.current;
-    const highlight = highlightRef.current;
-    const lineNums = lineNumbersRef.current;
-    
-    if (textarea && highlight) {
-      highlight.scrollTop = textarea.scrollTop;
-      highlight.scrollLeft = textarea.scrollLeft;
-    }
-    if (textarea && lineNums) {
-      lineNums.scrollTop = textarea.scrollTop;
-    }
-  }, []);
 
   // Sync on value change
   useEffect(() => {
