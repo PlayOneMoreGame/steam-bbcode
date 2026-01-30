@@ -2,6 +2,7 @@
 // Pure functions, no React dependencies
 
 import type { SteamContext } from './contexts';
+import { youtubeImageRegex, imageRegex } from './utils';
 
 export interface ConversionResult {
   bbcode: string;
@@ -72,8 +73,7 @@ function processMedia(text: string, context: SteamContext, notes: string[]): str
   let result = text;
 
   // YouTube URLs in image syntax or raw
-  const youtubeRegex = /!\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)[^)]*)\)/g;
-  const youtubeMatches = result.match(youtubeRegex) || [];
+  const youtubeMatches = result.match(youtubeImageRegex()) || [];
   
   if (youtubeMatches.length > 0) {
     if (context === 'forums' || context === 'reviews') {
@@ -85,12 +85,12 @@ function processMedia(text: string, context: SteamContext, notes: string[]): str
 
   // Convert YouTube links to previewyoutube tags
   result = result.replace(
-    /!\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)[^)]*)\)/g,
+    youtubeImageRegex(),
     '[previewyoutube=$3][/previewyoutube]'
   );
 
   // Regular images
-  const imgMatches = result.match(/!\[([^\]]*)\]\((?!https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be))([^)]+)\)/g) || [];
+  const imgMatches = result.match(imageRegex()) || [];
   
   if (imgMatches.length > 0) {
     if (context === 'guides') {
@@ -102,7 +102,7 @@ function processMedia(text: string, context: SteamContext, notes: string[]): str
 
   // Convert regular images
   result = result.replace(
-    /!\[([^\]]*)\]\((?!https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be))([^)]+)\)/g,
+    imageRegex(),
     '[img]$2[/img]'
   );
 

@@ -2,6 +2,7 @@
 // Catches structural errors, common mistakes, and context-specific issues
 
 import { TAG_SUPPORT, CHAR_LIMITS, type SteamContext } from './contexts';
+import { getLineNumber, getColumnInLine } from './utils';
 
 export interface LintMessage {
   type: 'error' | 'warning' | 'info';
@@ -84,22 +85,6 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
   checkCharacterLimits(bbcode, context, errors, warnings);
 
   return { errors, warnings, errorLines, warningLines };
-}
-
-/**
- * Get line number for a character position
- */
-function getLineNumber(text: string, position: number): number {
-  const upToPosition = text.slice(0, position);
-  return (upToPosition.match(/\n/g) || []).length + 1;
-}
-
-/**
- * Get column (1-indexed) for a character position within its line
- */
-function getColumnInLine(text: string, position: number): number {
-  const lastNewline = text.lastIndexOf('\n', position - 1);
-  return position - lastNewline; // 1-indexed (position after newline = column 1)
 }
 
 /**

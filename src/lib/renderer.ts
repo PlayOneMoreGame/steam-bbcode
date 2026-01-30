@@ -1,6 +1,8 @@
 // BBCode to HTML renderer for Steam preview
 // Approximates Steam's visual rendering
 
+import { youtubeImageRegex, imageRegex } from './utils';
+
 /**
  * Convert Steam BBCode to HTML for preview
  */
@@ -85,15 +87,15 @@ export function extractMedia(markdown: string): MediaItem[] {
   const media: MediaItem[] = [];
 
   // YouTube URLs
-  const youtubeRegex = /!\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)[^)]*)\)/g;
+  const youtubeRe = youtubeImageRegex();
   let match;
-  while ((match = youtubeRegex.exec(markdown)) !== null) {
+  while ((match = youtubeRe.exec(markdown)) !== null) {
     media.push({ type: 'youtube', url: match[2], id: match[3] });
   }
 
   // Regular images (excluding YouTube)
-  const imgRegex = /!\[([^\]]*)\]\((?!https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be))([^)]+)\)/g;
-  while ((match = imgRegex.exec(markdown)) !== null) {
+  const imgRe = imageRegex();
+  while ((match = imgRe.exec(markdown)) !== null) {
     media.push({ type: 'image', url: match[2] });
   }
 

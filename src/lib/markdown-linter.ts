@@ -1,6 +1,8 @@
 // Markdown linter
 // Checks for common issues and Steam-incompatible patterns
 
+import { getLineNumber } from './utils';
+
 export interface LintMessage {
   type: 'error' | 'warning' | 'info';
   message: string;
@@ -17,14 +19,6 @@ export interface MarkdownLintResult {
   info: LintMessage[];
   errorLines: Set<number>;
   warningLines: Set<number>;
-}
-
-/**
- * Get line number for a character position
- */
-function getLineNumber(text: string, position: number): number {
-  const upToPosition = text.slice(0, position);
-  return (upToPosition.match(/\n/g) || []).length + 1;
 }
 
 /**
