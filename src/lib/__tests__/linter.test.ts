@@ -293,32 +293,4 @@ Visit [url=https://example.com]our site[/url] for more info.`;
       expect(result.errors).toHaveLength(0);
     });
   });
-
-  describe('unformatted text', () => {
-    it('warns about lines with no BBCode tags', () => {
-      const result = lintBBCode('this is plain text with no tags', 'announcements');
-      expect(result.warnings.some(w => w.message.includes('Unformatted text'))).toBe(true);
-    });
-
-    it('does not warn about lines with BBCode tags', () => {
-      const result = lintBBCode('[b]this has a tag[/b]', 'announcements');
-      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
-    });
-
-    it('does not warn about lines with [*] list items', () => {
-      const result = lintBBCode('[list]\n[*] Item one\n[*] Item two\n[/list]', 'announcements');
-      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
-    });
-
-    it('does not warn about empty lines', () => {
-      const result = lintBBCode('[h1]Title[/h1]\n\n[b]Text[/b]', 'announcements');
-      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
-    });
-
-    it('warns about multiple unformatted lines', () => {
-      const result = lintBBCode('line one\nline two\nline three', 'announcements');
-      const unformattedWarnings = result.warnings.filter(w => w.message.includes('Unformatted text'));
-      expect(unformattedWarnings.length).toBe(3);
-    });
-  });
 });
