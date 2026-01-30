@@ -13,7 +13,19 @@ NC='\033[0m' # No Color
 # Get current version from package.json
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 
+# Get latest git tag for comparison
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+
 echo -e "${YELLOW}Current version: ${GREEN}v${CURRENT_VERSION}${NC}"
+echo -e "${YELLOW}Latest git tag:  ${GREEN}${LATEST_TAG}${NC}"
+
+# Check if current version tag already exists
+if git rev-parse "v${CURRENT_VERSION}" >/dev/null 2>&1; then
+    echo ""
+    echo -e "${RED}Warning: Tag v${CURRENT_VERSION} already exists!${NC}"
+    echo ""
+fi
+
 echo ""
 
 # Parse version components
@@ -43,6 +55,14 @@ elif [[ "$CHOICE" == "3" ]]; then
 else
     echo -e "${YELLOW}Cancelled.${NC}"
     exit 0
+fi
+
+# Check if the NEW tag already exists
+if git rev-parse "v${NEW_VERSION}" >/dev/null 2>&1; then
+    echo ""
+    echo -e "${RED}Error: Tag v${NEW_VERSION} already exists!${NC}"
+    echo "Delete it first with: git tag -d v${NEW_VERSION} && git push origin :refs/tags/v${NEW_VERSION}"
+    exit 1
 fi
 
 echo ""
