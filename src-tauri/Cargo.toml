@@ -1,6 +1,6 @@
 [package]
 name = "steam-bbcode"
-version = "1.5.2"
+version = "1.5.3"
 description = "Markdown to Steam BBCode converter"
 authors = ["One More Game"]
 license = ""

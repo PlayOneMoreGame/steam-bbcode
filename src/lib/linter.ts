@@ -129,8 +129,8 @@ function checkUnknownTags(
       type: 'error',
       message: `Unknown tag [${tagName}]`,
       line,
-      start: match.index,
-      end: match.index + match[0].length,
+      column: getColumnInLine(bbcode, match.index),
+      length: match[0].length,
     });
     errorLines.add(line);
   }
@@ -193,8 +193,8 @@ function checkHtmlTags(
       type: 'error',
       message: `HTML tag <${tagName}> not supported${suggestion}`,
       line,
-      start: match.index,
-      end: match.index + match[0].length,
+      column: getColumnInLine(bbcode, match.index),
+      length: match[0].length,
     });
     errorLines.add(line);
   }
@@ -522,41 +522,6 @@ function checkUrls(
       line,
     });
     warningLines.add(line);
-  }
-}
-
-/**
- * Check for unformatted text lines (no BBCode tags)
- */
-function checkUnformattedText(
-  bbcode: string,
-  warnings: LintMessage[],
-  warningLines: Set<number>
-): void {
-  const lines = bbcode.split('\n');
-  
-  // Pattern to match any BBCode tag including [*] list items
-  const tagPattern = /\[\/?\w+(?:=[^\]]*)?\]|\[\*\]/;
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    
-    // Skip empty lines
-    if (!line) continue;
-    
-    // Skip lines that have any BBCode tag
-    if (tagPattern.test(line)) continue;
-    
-    // Skip lines that are just whitespace or very short (likely intentional spacing)
-    if (line.length < 3) continue;
-    
-    // This line has content but no BBCode - warn
-    warnings.push({
-      type: 'warning',
-      message: 'Unformatted text - no BBCode tags on this line',
-      line: i + 1,
-    });
-    warningLines.add(i + 1);
   }
 }
 
