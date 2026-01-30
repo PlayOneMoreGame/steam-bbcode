@@ -160,6 +160,8 @@ steam-bbcode/
 │   ├── tauri.conf.json     # App config
 │   ├── Cargo.toml          # Rust dependencies
 │   └── src/main.rs         # Rust entry point
+├── scripts/                # Build & release scripts
+├── CLAUDE.md               # AI assistant context
 ├── BUILD.md                # Detailed build instructions
 └── ROADMAP.md              # Future improvements
 ```

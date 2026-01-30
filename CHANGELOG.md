@@ -2,6 +2,26 @@
 
 All notable changes to SteamBBEditor will be documented in this file.
 
+## [1.5.3] - 2026-01-30
+
+### Fixed
+- TypeScript build errors (`start`/`end` → `column`/`length` in linter)
+- Removed unused `checkUnformattedText` functions
+
+## [1.5.2] - 2026-01-30
+
+### Added
+- Interactive release script (`npm run release`)
+- Detects existing git tags, warns before overwriting
+
+### Changed
+- Version bump workflow now fully automated
+
+## [1.5.1] - 2026-01-30
+
+### Fixed
+- Release script tag detection
+
 ## [1.5.0] - 2026-01-30
 
 ### Added

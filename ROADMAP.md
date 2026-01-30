@@ -1,6 +1,6 @@
 # Steam BBCode Editor - Technical Analysis & Roadmap
 
-## Current Status (v1.5.0)
+## Current Status (v1.5.3)
 
 ### Completed Features ✅
 
@@ -67,9 +67,12 @@
 
 **DevOps**
 - ✅ GitHub Actions CI/CD (multi-platform builds)
+- ✅ Buildkite CI (web builds via OMG infrastructure)
+- ✅ Terraform infrastructure as code
 - ✅ Semantic versioning system
+- ✅ Interactive release script (`npm run release`)
 - ✅ GitHub Issue templates (Bug Report, Feature Request)
-- ✅ Web deployment docs (AWS Amplify, S3+CloudFront)
+- ✅ Web deployment infrastructure (AWS S3 + CloudFront)
 
 ---
 
@@ -77,7 +80,7 @@
 
 ### High Priority
 - [ ] **Auto-update** - Check for new versions, notify users
-- [ ] **Web hosting** - Deploy to steambbeditor.onemoregame.com (see WEBAPP.md)
+- [x] **Web hosting** - Infrastructure ready (steambbeditor.onemoregame.com), deployment pending
 
 ### Medium Priority
 - [ ] Resizable panels with drag handles
