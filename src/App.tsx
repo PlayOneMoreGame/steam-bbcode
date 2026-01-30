@@ -8,22 +8,10 @@ import { useFileService, MD_FILTERS, BBCODE_FILTERS } from '@/hooks/useFileServi
 import { useRecentFiles } from '@/hooks/useRecentFiles';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
+import { WELCOME_MARKDOWN } from '@/lib/welcome';
 
 import '@/styles/app.css';
 import '@/styles/steam-theme.css';
-
-const DEFAULT_MARKDOWN = `# Patch Notes
-
-## What's New
-- Feature one with **bold** text
-- Feature two with *italic* text
-- Bug fix for the thing
-
-## Known Issues
-> Some players may experience issues
-
-For more info, visit [our Discord](https://discord.gg/example)
-`;
 
 export function App() {
   // File service
@@ -32,15 +20,18 @@ export function App() {
   // Recent files (desktop only)
   const { recentFiles, addRecentFile } = useRecentFiles();
   
-  // File names
+  // File names - null means we're showing the welcome doc
   const [mdFileName, setMdFileName] = useState<string | null>(null);
   
-  // Persisted state
-  const [markdown, setMarkdown] = useLocalStorage('steam-bbcode-markdown', DEFAULT_MARKDOWN);
+  // Markdown content - always starts with welcome doc on fresh load
+  // (useState, not useLocalStorage, so welcome doc shows every time)
+  const [markdown, setMarkdown] = useState(WELCOME_MARKDOWN);
+  
+  // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
 
-  // Auto-save draft
+  // Auto-save draft for crash recovery (but we don't auto-restore it)
   const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
 
   // Active editor tracking

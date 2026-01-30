@@ -22,7 +22,7 @@
 - ✅ Save As / Revert / Copy consistent actions
 - ✅ Open file dialog (Tauri native)
 - ✅ Active panel indication
-- ✅ localStorage persistence
+- ✅ Welcome document on startup (interactive tutorial)
 - ✅ beforeunload warning for unsaved changes
 - ✅ Keyboard shortcut tooltips
 - ✅ Focus ring styles for accessibility
@@ -91,6 +91,7 @@
 - [ ] Code folding for sections
 - [ ] Autocomplete dropdown for BBCode tags
 - [ ] Virtual scrolling for large documents
+- [ ] Option to disable welcome doc on startup
 
 ---
 

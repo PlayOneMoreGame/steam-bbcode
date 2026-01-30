@@ -14,6 +14,16 @@ Built for the OMG marketing team to streamline patch notes and announcements.
 **First launch:** If you see "can't be opened because Apple cannot check it for malicious software":
 - Right-click the app → **Open** → Click **Open** in the dialog
 
+## Getting Started
+
+The app opens with an **interactive welcome document** that shows:
+- How the three-panel workflow works
+- Formatting examples (bold, lists, links, code)
+- Steam BBCode quirks to watch out for
+- A sample error you can click to see the "jump to error" feature
+
+The welcome doc resets on each launch. Open a file or paste your content to get started!
+
 ## Workflow
 
 ```
