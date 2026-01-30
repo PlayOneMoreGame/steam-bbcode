@@ -68,10 +68,15 @@ export function MarkdownPanel({
     }
   }, [value]);
 
-  const handleLintClick = useCallback((line?: number) => {
-    if (line && editorRef.current) {
-      editorRef.current.scrollToLine(line);
-      editorRef.current.focus();
+  const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
+    if (!editorRef.current) return;
+    
+    // Prefer start/end if available (direct character offsets)
+    if (msg.start !== undefined && msg.end !== undefined) {
+      editorRef.current.selectRange(msg.start, msg.end);
+    } else if (msg.line) {
+      // Fall back to line/column/length
+      editorRef.current.scrollToLine(msg.line, msg.column, msg.length);
     }
   }, []);
 
@@ -167,7 +172,7 @@ export function MarkdownPanel({
             <div 
               key={`e${i}`} 
               className="lint-message error clickable"
-              onClick={() => handleLintClick(msg.line)}
+              onClick={() => handleLintClick(msg)}
               role="button"
               tabIndex={0}
             >
@@ -180,7 +185,7 @@ export function MarkdownPanel({
             <div 
               key={`w${i}`} 
               className="lint-message warning clickable"
-              onClick={() => handleLintClick(msg.line)}
+              onClick={() => handleLintClick(msg)}
               role="button"
               tabIndex={0}
             >
@@ -193,7 +198,7 @@ export function MarkdownPanel({
             <div 
               key={`i${i}`} 
               className="lint-message note clickable"
-              onClick={() => handleLintClick(msg.line)}
+              onClick={() => handleLintClick(msg)}
               role="button"
               tabIndex={0}
             >

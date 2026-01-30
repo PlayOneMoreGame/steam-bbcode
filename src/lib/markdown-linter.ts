@@ -5,6 +5,10 @@ export interface LintMessage {
   type: 'error' | 'warning' | 'info';
   message: string;
   line?: number;
+  column?: number;  // 1-indexed column within line
+  length?: number;  // Length of problematic text
+  start?: number;   // Character offset in text
+  end?: number;     // Character offset in text
 }
 
 export interface MarkdownLintResult {
@@ -242,16 +246,21 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
 function checkInvalidBracketPatterns(text: string, errors: LintMessage[], errorLines: Set<number>): void {
   const lines = text.split('\n');
   let inCodeBlock = false;
+  let charOffset = 0; // Track character offset from start of text
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     
     if (line.startsWith('```')) {
       inCodeBlock = !inCodeBlock;
+      charOffset += line.length + 1; // +1 for newline
       continue;
     }
     
-    if (inCodeBlock) continue;
+    if (inCodeBlock) {
+      charOffset += line.length + 1;
+      continue;
+    }
     
     // Check for invalid bracket patterns like [-], [+], [.], [] that look like failed tags
     const invalidPattern = /\[([.\-+•·]?)\]/g;
@@ -261,15 +270,22 @@ function checkInvalidBracketPatterns(text: string, errors: LintMessage[], errorL
       const content = match[1];
       // Skip valid markdown link text brackets [text]
       if (match[0] === '[]' || content === '-' || content === '+' || content === '.' || content === '•' || content === '·') {
+        const start = charOffset + match.index;
         errors.push({
           type: 'error',
           message: content ? `Invalid pattern [${content}] - not valid Markdown or BBCode` : `Empty brackets [] - not valid Markdown or BBCode`,
           line: i + 1,
+          column: match.index + 1,  // 1-indexed
+          length: match[0].length,
+          start,
+          end: start + match[0].length,
         });
         errorLines.add(i + 1);
         break; // Only one error per line
       }
     }
+    
+    charOffset += line.length + 1; // +1 for newline
   }
 }
 

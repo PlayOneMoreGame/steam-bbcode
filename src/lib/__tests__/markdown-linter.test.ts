@@ -191,6 +191,14 @@ describe('lintMarkdown', () => {
       expect(result.errors.some(e => e.message.includes('Empty brackets []'))).toBe(true);
     });
 
+    it('returns correct column and length for invalid brackets', () => {
+      const result = lintMarkdown('text [] more');
+      const error = result.errors.find(e => e.message.includes('Empty brackets'));
+      expect(error).toBeDefined();
+      expect(error?.column).toBe(6); // 1-indexed, [] starts at position 5 (0-indexed)
+      expect(error?.length).toBe(2); // [] is 2 characters
+    });
+
     it('does not flag brackets inside code blocks', () => {
       const result = lintMarkdown('```\n[-] in code\n```');
       expect(result.errors.filter(e => e.message.includes('Invalid pattern'))).toHaveLength(0);

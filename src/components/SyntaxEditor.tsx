@@ -7,7 +7,8 @@ import {
 } from '@/lib/highlighter';
 
 export interface SyntaxEditorHandle {
-  scrollToLine: (line: number) => void;
+  scrollToLine: (line: number, column?: number, length?: number) => void;
+  selectRange: (start: number, end: number) => void;
   focus: () => void;
 }
 
@@ -38,7 +39,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
-    scrollToLine: (line: number) => {
+    scrollToLine: (line: number, column?: number, length?: number) => {
       const textarea = textareaRef.current;
       const lineNums = lineNumbersRef.current;
       if (!textarea || !lineNums) return;
@@ -49,11 +50,49 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
       
       textarea.scrollTop = Math.max(0, scrollTop);
       syncScroll();
+      
+      // If column and length provided, select the text
+      if (column !== undefined) {
+        const lines = value.split('\n');
+        let charOffset = 0;
+        
+        // Calculate character offset to start of target line
+        for (let i = 0; i < line - 1 && i < lines.length; i++) {
+          charOffset += lines[i].length + 1; // +1 for newline
+        }
+        
+        // Add column offset (column is 1-indexed)
+        const selectionStart = charOffset + (column - 1);
+        const selectionEnd = selectionStart + (length || 1);
+        
+        // Set selection
+        textarea.focus();
+        textarea.setSelectionRange(selectionStart, selectionEnd);
+      }
+    },
+    selectRange: (start: number, end: number) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      
+      // Focus and select
+      textarea.focus();
+      textarea.setSelectionRange(start, end);
+      
+      // Calculate line number for scrolling
+      const textBefore = value.substring(0, start);
+      const lineNumber = (textBefore.match(/\n/g) || []).length + 1;
+      
+      // Scroll to make selection visible
+      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 22;
+      const scrollTop = (lineNumber - 1) * lineHeight - textarea.clientHeight / 2 + lineHeight;
+      textarea.scrollTop = Math.max(0, scrollTop);
+      
+      syncScroll();
     },
     focus: () => {
       textareaRef.current?.focus();
     },
-  }));
+  }), [value, syncScroll]);
 
   // Count lines
   const lineCount = useMemo(() => {

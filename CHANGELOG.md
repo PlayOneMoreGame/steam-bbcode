@@ -4,11 +4,16 @@ All notable changes to SteamBBEditor will be documented in this file.
 
 ## [1.4.7] - 2026-01-30
 
+### Added
+- **Click-to-select** - Clicking on a lint error now jumps to the line AND highlights the problem text
+- Linters now return column and length for precise text selection
+
 ### Fixed
-- Line numbers now scroll in sync with editor content (absolute positioning + explicit pixel line-height)
+- Line numbers now scroll in sync with editor content (absolute positioning + relative line-height)
 - Whitespace warnings no longer trigger false positives for normal `**bold**` text
 - BBCode linter now recognizes `[*]` as valid tag (was incorrectly flagging list items as unformatted)
 - Empty brackets `[]` now flagged as invalid pattern
+- Both editor panels now have consistent lint click behavior
 
 ## [1.4.2] - 2026-01-29
 

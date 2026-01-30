@@ -4,9 +4,11 @@
 import { TAG_SUPPORT, CHAR_LIMITS, type SteamContext } from './contexts';
 
 export interface LintMessage {
-  type: 'error' | 'warning';
+  type: 'error' | 'warning' | 'info';
   message: string;
   line?: number;
+  column?: number;  // 1-indexed column within line
+  length?: number;  // Length of problematic text
 }
 
 export interface LintResult {
@@ -93,6 +95,14 @@ function getLineNumber(text: string, position: number): number {
 }
 
 /**
+ * Get column (1-indexed) for a character position within its line
+ */
+function getColumnInLine(text: string, position: number): number {
+  const lastNewline = text.lastIndexOf('\n', position - 1);
+  return position - lastNewline; // 1-indexed (position after newline = column 1)
+}
+
+/**
  * Check for unknown or invalid BBCode tags
  */
 function checkUnknownTags(
@@ -119,6 +129,8 @@ function checkUnknownTags(
       type: 'error',
       message: `Unknown tag [${tagName}]`,
       line,
+      start: match.index,
+      end: match.index + match[0].length,
     });
     errorLines.add(line);
   }
@@ -181,6 +193,8 @@ function checkHtmlTags(
       type: 'error',
       message: `HTML tag <${tagName}> not supported${suggestion}`,
       line,
+      start: match.index,
+      end: match.index + match[0].length,
     });
     errorLines.add(line);
   }
@@ -428,19 +442,25 @@ function checkListItems(
         ? `Invalid tag [${content}] - will render as plain text`
         : `Empty brackets [] - will render as plain text`,
       line,
+      column: getColumnInLine(bbcode, match.index),
+      length: match[0].length,
     });
     errorLines.add(line);
   }
   
   // Check for [*] outside of [list] or [olist]
   const listContent = bbcode.replace(/\[(list|olist)\][\s\S]*?\[\/(list|olist)\]/gi, '');
-  const strayItem = listContent.match(/\[\*\]/);
-  if (strayItem) {
-    const line = getLineNumber(bbcode, bbcode.indexOf(strayItem[0]));
+  const strayItemMatch = /\[\*\]/.exec(listContent);
+  if (strayItemMatch) {
+    // Find position in original text
+    const originalIndex = bbcode.indexOf('[*]');
+    const line = getLineNumber(bbcode, originalIndex);
     errors.push({
       type: 'error',
       message: '[*] found outside of [list] or [olist]',
       line,
+      column: getColumnInLine(bbcode, originalIndex),
+      length: 3,
     });
     errorLines.add(line);
   }
