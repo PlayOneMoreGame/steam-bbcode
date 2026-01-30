@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/monoid@5.0.18/index.min.css');
+
 /* ==========================================================================
    CSS Variables - One Dark Pro Inspired Theme
    ========================================================================== */
@@ -107,10 +110,6 @@
   --panel-min-height: 400px;
   --header-height: auto;
 }
-
-/* Load fonts - Monoid from fontsource CDN, Inter from Google */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/@fontsource/monoid@5.0.18/index.min.css');
 
 /* ==========================================================================
    Reset & Base
