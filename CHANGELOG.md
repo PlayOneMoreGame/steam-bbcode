@@ -5,24 +5,19 @@ All notable changes to SteamBBEditor will be documented in this file.
 ## [1.5.0] - 2026-01-30
 
 ### Added
-- **Welcome document** - Interactive tutorial shown on every launch with formatting examples and Steam quirks
-- **Click-to-select errors** - Clicking on a lint error jumps to the line AND highlights the problem text
-- **Invalid bracket detection** - Patterns like `[-]`, `[+]`, `[.]`, `[]` flagged as errors in both editors
+- **Welcome document** - Interactive tutorial shown on launch demonstrating the Confluence → Steam workflow
+- **Click-to-select errors** - Clicking a lint error jumps to the line AND highlights the problem text
 
 ### Changed
 - **One Dark Pro theme** - Warmer dark theme with vibrant syntax highlighting
 - **Monoid font** - Loaded via CDN with JetBrains Mono fallback  
-- **Modular CSS variables** - All colors/fonts now use CSS custom properties
-- **Distinct preview styling** - Markdown preview is neutral (white), Steam preview shows exact Steam styling
-- Footer redesigned with keyboard shortcut badges (`⌘O`, `⌘S`)
-- Lint panel height increased (200px desktop, 120px mobile)
 - Content no longer auto-persists - welcome doc shows fresh on each launch
 
 ### Fixed
-- Line numbers now scroll in sync with editor content
-- Whitespace warnings no longer trigger false positives for normal `**bold**` text
-- BBCode linter recognizes `[*]` as valid tag
-- Both editor panels now have consistent behavior
+- Markdown linter no longer false-positives on multiple bold spans per line
+- Line numbers scroll in sync with editor content
+- BBCode linter recognizes `[*]` as valid list marker
+- Both editor panels have consistent click-to-error behavior
 
 ## [1.3.0] - 2026-01-29
 

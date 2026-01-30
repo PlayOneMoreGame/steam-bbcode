@@ -1,5 +1,6 @@
 // Default welcome document shown on startup
 // This teaches users the workflow and demonstrates Steam BBCode quirks
+// IMPORTANT: This doc must be lint-error-free in both Markdown and BBCode panels
 
 export const WELCOME_MARKDOWN = `# Welcome to SteamBBEditor
 
@@ -7,11 +8,11 @@ Convert **Markdown** to **Steam BBCode** with live preview and validation.
 
 ## Your Workflow
 
-1. **Write or paste** Markdown here (left panel)
-2. **Review** auto-converted BBCode (middle panel)
-3. **Preview** how Steam will render it (right panel)
-4. **Fix** any errors (click an error to jump to it!)
-5. **Copy** BBCode and paste into Steam
+1. Write or paste Markdown here (left panel)
+2. Review auto-converted BBCode (middle panel)
+3. Preview how Steam will render it (right panel)
+4. Fix any errors by clicking them to jump to the problem
+5. Copy BBCode and paste into Steam
 
 ---
 
@@ -19,15 +20,13 @@ Convert **Markdown** to **Steam BBCode** with live preview and validation.
 
 ### Text Styles
 
-**Bold text**, *italic text*, and ~~strikethrough~~.
-
-You can combine them: ***bold and italic***.
+Here is **bold text** and *italic text* and ~~strikethrough~~.
 
 ### Lists
 
 Bullet list:
 - First item
-- Second item with **bold**
+- Second item
 - Third item
 
 Numbered list:
@@ -35,12 +34,12 @@ Numbered list:
 2. Step two
 3. Step three
 
-### Links & Quotes
+### Links and Quotes
 
 Visit [Steam Community](https://steamcommunity.com) for more.
 
 > Blockquotes render nicely on Steam.
-> They're great for callouts.
+> They work great for callouts and notes.
 
 ### Code Blocks
 
@@ -53,27 +52,21 @@ function example() {
 
 ---
 
-## Steam BBCode Quirks ⚠️
+## Steam BBCode Tips
 
-Steam's BBCode has some differences from standard BBCode:
+**Horizontal rules** need explicit closing tags in Steam.
 
-| Quirk | Details |
-|-------|---------|
-| Horizontal rules | Must be \`[hr][/hr]\` (not self-closing) |
-| Inline code | Backticks don't work - use code blocks |
-| List items | Use \`[*]\` without closing tags |
-| Guide images | Require \`[previewimg]\` with uploads |
-| YouTube | Format: \`[previewyoutube=ID;full][/previewyoutube]\` |
+**Inline code** with backticks converts to bold since Steam has no inline code.
 
----
+**List items** use asterisk markers without closing tags.
 
-## Try It! Fix This Error ⬇️
+**Guide images** require special previewimg tags with uploaded images.
 
-This line has [] empty brackets - click the error above to select it!
+**YouTube embeds** require special previewyoutube tags with video ID.
 
 ---
 
-**Ready?** Press **⌘O** to open a file, or just start typing above.
+**Ready?** Press Cmd+O to open a file, or just start typing above.
 
 *This welcome doc resets each time you open the app.*
 `;

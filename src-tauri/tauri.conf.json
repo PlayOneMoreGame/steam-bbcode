@@ -22,12 +22,7 @@
       "fs": {
         "readFile": true,
         "writeFile": true,
-        "scope": [
-          "$DOCUMENT/*",
-          "$DESKTOP/*",
-          "$HOME/*",
-          "$DOWNLOAD/*"
-        ]
+        "scope": ["$DOCUMENT/*", "$DESKTOP/*", "$HOME/*", "$DOWNLOAD/*"]
       },
       "window": {
         "all": false,

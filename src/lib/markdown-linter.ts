@@ -171,58 +171,66 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
     
     if (inCodeBlock) continue;
     
-    // Check for malformed bold: **<space>text** or **text<space>**
-    // Match bold spans and check for internal whitespace issues
-    const boldPattern = /\*\*(\s+[^*]+|\s*[^*]+\s+)\*\*/g;
-    let match;
-    while ((match = boldPattern.exec(line)) !== null) {
-      const content = match[1];
-      if (content.startsWith(' ') || content.startsWith('\t')) {
+    // Check for ACTUAL malformed bold: ** text** (space right after opening **)
+    // Only check lines with exactly one bold span to avoid false positives
+    // when multiple bold spans exist (e.g., "**a** and **b**")
+    const asteriskPairs = (line.match(/\*\*/g) || []).length;
+    
+    if (asteriskPairs === 2) {
+      // Single bold span - safe to check for internal whitespace
+      const match = line.match(/\*\*( +)([^*]+)\*\*/);
+      if (match && match[1]) {
         warnings.push({
           type: 'warning',
           message: 'Space after ** may prevent bold formatting',
           line: i + 1,
         });
         warningLines.add(i + 1);
-        break;
+        continue;
       }
-      if (content.endsWith(' ') || content.endsWith('\t')) {
+      
+      // Check for space before closing: **text **
+      const matchEnd = line.match(/\*\*([^*]+)( +)\*\*/);
+      if (matchEnd && matchEnd[2]) {
         warnings.push({
           type: 'warning',
           message: 'Space before ** may prevent bold formatting',
           line: i + 1,
         });
         warningLines.add(i + 1);
-        break;
+        continue;
       }
     }
     
-    // Check for malformed strikethrough: ~~<space>text~~ or ~~text<space>~~
-    const strikePattern = /~~(\s+[^~]+|\s*[^~]+\s+)~~/g;
-    while ((match = strikePattern.exec(line)) !== null) {
-      const content = match[1];
-      if (content.startsWith(' ') || content.startsWith('\t')) {
+    // Same for strikethrough
+    const tildePairs = (line.match(/~~/g) || []).length;
+    
+    if (tildePairs === 2) {
+      const match = line.match(/~~( +)([^~]+)~~/);
+      if (match && match[1]) {
         warnings.push({
           type: 'warning',
           message: 'Space after ~~ may prevent strikethrough formatting',
           line: i + 1,
         });
         warningLines.add(i + 1);
-        break;
+        continue;
       }
-      if (content.endsWith(' ') || content.endsWith('\t')) {
+      
+      const matchEnd = line.match(/~~([^~]+)( +)~~/);
+      if (matchEnd && matchEnd[2]) {
         warnings.push({
           type: 'warning',
           message: 'Space before ~~ may prevent strikethrough formatting',
           line: i + 1,
         });
         warningLines.add(i + 1);
-        break;
+        continue;
       }
     }
     
-    // Check for header without space: #Header
-    if (/^#{1,6}[^ #\n]/.test(line)) {
+    // Check for header without space: #Header (but not # alone)
+    if (/^#{1,6}[^\s#]/.test(line)) {
       warnings.push({
         type: 'warning',
         message: 'Missing space after # in header',
@@ -231,11 +239,12 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
       warningLines.add(i + 1);
     }
     
-    // Check for list item without space: -Item or *Item (but not **bold**)
-    if (/^[-*+][^ *\n]/.test(line) && !line.startsWith('**')) {
+    // Check for bullet list without space: -Item (not --, not -1, not -**)
+    // Must be: dash/plus at start, immediately followed by a letter
+    if (/^[-+]\w/.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Missing space after list marker (- or *)',
+        message: 'Missing space after list marker',
         line: i + 1,
       });
       warningLines.add(i + 1);

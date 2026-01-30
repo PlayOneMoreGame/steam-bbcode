@@ -135,9 +135,15 @@ npm run dev          # Web-only (no Tauri)
 
 ### Releasing a New Version
 
-1. Update version in `src-tauri/tauri.conf.json` and `package.json`
-2. `npm run tauri:build`
-3. Upload `.dmg` to GitHub Releases (or share via Slack)
+```bash
+npm run release
+```
+
+This interactive script will:
+1. Show current version and prompt for bump type (patch/minor/major)
+2. Update `package.json`, `Cargo.toml`, and `tauri.conf.json`
+3. Commit, tag, and push to GitHub
+4. GitHub Actions builds and publishes releases automatically
 
 ---
 
