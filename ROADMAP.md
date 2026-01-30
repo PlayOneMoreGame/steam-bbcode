@@ -1,6 +1,6 @@
 # Steam BBCode Editor - Technical Analysis & Roadmap
 
-## Current Status (v1.1.0)
+## Current Status (v1.4.3)
 
 ### Completed Features ✅
 
@@ -14,6 +14,8 @@
 - ✅ Linting with line number references
 - ✅ Error/warning badges in header
 - ✅ Tag reference panel (Tags button in header)
+- ✅ One Dark Pro theme with Monoid font
+- ✅ Modular CSS variables system
 
 **UX**
 - ✅ Three-panel responsive layout
@@ -38,6 +40,17 @@
 - ✅ List item validation
 - ✅ URL validation
 - ✅ Character limit warnings
+- ✅ Invalid bracket pattern detection (`[-]`, `[+]`, etc.)
+- ✅ Unformatted text warnings
+
+**Markdown Linting**
+- ✅ Unclosed formatting detection
+- ✅ Whitespace in formatting warnings
+- ✅ Broken link detection
+- ✅ Confluence syntax warnings
+- ✅ Nested list warnings
+- ✅ Invalid bracket patterns
+- ✅ Unformatted text warnings
 
 **Desktop App**
 - ✅ Tauri macOS build (Apple Silicon)
@@ -69,7 +82,7 @@
 ### Medium Priority
 - [ ] Resizable panels with drag handles
 - [ ] Find/replace dialog
-- [ ] Themes (light/dark)
+- ✅ Themes - One Dark Pro implemented (dark only for now)
 - [ ] Better mobile experience
 
 ### Low Priority

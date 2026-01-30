@@ -2,6 +2,40 @@
 
 All notable changes to SteamBBEditor will be documented in this file.
 
+## [1.4.3] - 2026-01-29
+
+### Fixed
+- Line numbers now scroll in sync with editor content (both panels)
+- Whitespace warnings no longer trigger false positives for normal `**bold**` text
+
+## [1.4.2] - 2026-01-29
+
+### Added
+- Invalid bracket pattern detection (`[-]`, `[+]`, `[.]`) flagged as errors
+- Unformatted text warnings for lines with no Markdown/BBCode syntax
+- Increased lint panel height (200px) to show more warnings
+
+## [1.4.1] - 2026-01-29
+
+### Fixed
+- CSS `@import` order (fonts must be first)
+
+## [1.4.0] - 2026-01-29
+
+### Added
+- **One Dark Pro theme** - Warmer dark theme with vibrant syntax highlighting
+- **Monoid font** - Loaded via CDN with JetBrains Mono fallback
+- **Modular CSS variables** - All colors/fonts now use CSS custom properties
+- **Distinct preview styling** - Markdown preview is neutral (white), Steam preview shows exact Steam styling
+- **Whitespace linting** - Detects malformed bold/italic/lists in Markdown
+- **Extra whitespace after list marker** warnings
+- **Markdown linter test suite** - Comprehensive test coverage
+
+### Changed
+- Footer redesigned with keyboard shortcut badges (`⌘O`, `⌘S`)
+- Preview panel labels clarify "Source Preview" vs "Steam Preview"
+- Lint panel scrollable with increased height
+
 ## [1.3.0] - 2026-01-29
 
 ### Added
