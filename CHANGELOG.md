@@ -2,46 +2,26 @@
 
 All notable changes to SteamBBEditor will be documented in this file.
 
-## [1.4.7] - 2026-01-30
+## [1.5.0] - 2026-01-30
 
 ### Added
-- **Click-to-select** - Clicking on a lint error now jumps to the line AND highlights the problem text
-- Linters now return column and length for precise text selection
-
-### Fixed
-- Line numbers now scroll in sync with editor content (absolute positioning + relative line-height)
-- Whitespace warnings no longer trigger false positives for normal `**bold**` text
-- BBCode linter now recognizes `[*]` as valid tag (was incorrectly flagging list items as unformatted)
-- Empty brackets `[]` now flagged as invalid pattern
-- Both editor panels now have consistent lint click behavior
-
-## [1.4.2] - 2026-01-29
-
-### Added
-- Invalid bracket pattern detection (`[-]`, `[+]`, `[.]`) flagged as errors
-- Unformatted text warnings for lines with no Markdown/BBCode syntax
-- Increased lint panel height (200px) to show more warnings
-
-## [1.4.1] - 2026-01-29
-
-### Fixed
-- CSS `@import` order (fonts must be first)
-
-## [1.4.0] - 2026-01-29
-
-### Added
-- **One Dark Pro theme** - Warmer dark theme with vibrant syntax highlighting
-- **Monoid font** - Loaded via CDN with JetBrains Mono fallback
-- **Modular CSS variables** - All colors/fonts now use CSS custom properties
-- **Distinct preview styling** - Markdown preview is neutral (white), Steam preview shows exact Steam styling
-- **Whitespace linting** - Detects malformed bold/italic/lists in Markdown
-- **Extra whitespace after list marker** warnings
-- **Markdown linter test suite** - Comprehensive test coverage
+- **Click-to-select errors** - Clicking on a lint error jumps to the line AND highlights the problem text
+- **Invalid bracket detection** - Patterns like `[-]`, `[+]`, `[.]`, `[]` flagged as errors in both editors
+- **Empty bracket detection** - `[]` flagged as invalid in both Markdown and BBCode
 
 ### Changed
+- **One Dark Pro theme** - Warmer dark theme with vibrant syntax highlighting
+- **Monoid font** - Loaded via CDN with JetBrains Mono fallback  
+- **Modular CSS variables** - All colors/fonts now use CSS custom properties
+- **Distinct preview styling** - Markdown preview is neutral (white), Steam preview shows exact Steam styling
 - Footer redesigned with keyboard shortcut badges (`⌘O`, `⌘S`)
-- Preview panel labels clarify "Source Preview" vs "Steam Preview"
-- Lint panel scrollable with increased height
+- Lint panel height increased (200px desktop, 120px mobile)
+
+### Fixed
+- Line numbers now scroll in sync with editor content
+- Whitespace warnings no longer trigger false positives for normal `**bold**` text
+- BBCode linter recognizes `[*]` as valid tag
+- Both editor panels now have consistent behavior
 
 ## [1.3.0] - 2026-01-29
 

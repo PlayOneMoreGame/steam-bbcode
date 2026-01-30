@@ -1,6 +1,6 @@
 # Steam BBCode Editor - Technical Analysis & Roadmap
 
-## Current Status (v1.4.3)
+## Current Status (v1.5.0)
 
 ### Completed Features ✅
 
@@ -8,7 +8,7 @@
 - ✅ Syntax highlighting via regex tokenization
 - ✅ Line numbers with scroll sync
 - ✅ Error/warning line highlighting (red/orange gutter)
-- ✅ Clickable lint messages (scroll to line)
+- ✅ Clickable lint messages (scroll to line AND highlight error text)
 - ✅ Tab key handling (inserts 2 spaces)
 - ✅ Keyboard shortcuts (Cmd+S, Cmd+O, Escape)
 - ✅ Linting with line number references

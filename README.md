@@ -52,7 +52,7 @@ The app uses a **"Save As"** workflow to protect your source files:
 - **Save As** - Save to new `.md` file
 - **Copy** - Copy to clipboard
 - **Discord** - Auto-split into 2000-char chunks
-- **Linting** - Catches formatting errors
+- **Linting** - Catches formatting errors (click to jump & select)
 - **Syntax highlighting**
 
 ### BBCode Panel (Middle)
@@ -61,7 +61,7 @@ The app uses a **"Save As"** workflow to protect your source files:
 - **Save As** - Save to `.txt` file
 - **Copy** - Copy for pasting into Steam
 - **Revert** - Undo edits, re-sync with Markdown
-- **Context-aware linting** - Warns about unsupported tags
+- **Context-aware linting** - Warns about unsupported tags (click to jump & select)
 
 ### Preview Panel (Right)
 - **Live render** approximating Steam's styling
