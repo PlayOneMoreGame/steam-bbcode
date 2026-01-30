@@ -1,31 +1,98 @@
 /* ==========================================================================
-   CSS Variables
+   CSS Variables - One Dark Pro Inspired Theme
    ========================================================================== */
 
 :root {
-  --bg-primary: #0a0a0b;
-  --bg-secondary: #111113;
-  --bg-tertiary: #141416;
-  --bg-elevated: #1a1a1e;
+  /* Background colors - warmer, not too dark */
+  --bg-primary: #1e2127;
+  --bg-secondary: #252931;
+  --bg-tertiary: #2c323c;
+  --bg-elevated: #333842;
+  --bg-input: #3a3f4b;
+  --bg-hover: #3e4451;
+  --bg-panel: #282c34;
   
-  --border-primary: #1e1e22;
-  --border-secondary: #2a2a2e;
+  /* Border colors */
+  --border-color: #3e4451;
+  --border-primary: #3e4451;
+  --border-secondary: #4b5263;
   
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0a0;
-  --text-muted: #666;
-  --text-dim: #444;
+  /* Text colors */
+  --text-primary: #abb2bf;
+  --text-secondary: #9da5b4;
+  --text-muted: #7f848e;
+  --text-dim: #5c6370;
+  --text-inverse: #1e2127;
+  --text-on-accent: #ffffff;
   
-  --accent-blue: #4a9eff;
-  --accent-blue-dim: #3a7ecc;
-  --accent-green: #8bc34a;
-  --accent-orange: #ffc078;
-  --accent-red: #ff6b6b;
-  --accent-info: #74b9ff;
+  /* Accent colors - One Dark Pro palette */
+  --accent-blue: #61afef;
+  --accent-blue-dim: #528bcc;
+  --accent-green: #98c379;
+  --accent-orange: #e5c07b;
+  --accent-red: #e06c75;
+  --accent-purple: #c678dd;
+  --accent-cyan: #56b6c2;
+  --accent-info: #61afef;
   --accent-discord: #5865f2;
   
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Semi-transparent backgrounds for highlights */
+  --bg-blue-subtle: rgba(97, 175, 239, 0.1);
+  --bg-blue-faint: rgba(97, 175, 239, 0.05);
+  --bg-green-subtle: rgba(152, 195, 121, 0.1);
+  --bg-green-medium: rgba(152, 195, 121, 0.15);
+  --bg-red-subtle: rgba(224, 108, 117, 0.15);
+  --bg-orange-subtle: rgba(229, 192, 123, 0.1);
+  --bg-cyan-subtle: rgba(86, 182, 194, 0.1);
+  --bg-cyan-medium: rgba(86, 182, 194, 0.2);
+  --bg-cyan-border: rgba(86, 182, 194, 0.2);
+  --bg-cyan-border-hover: rgba(86, 182, 194, 0.4);
+  --bg-selection: rgba(97, 175, 239, 0.3);
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  
+  /* Platform-specific colors (Discord) */
+  --discord-bg: #36393f;
+  --discord-active: #4752c4;
+  
+  /* Steam preview colors - intentionally match Steam's theme */
+  --steam-bg: #1b2838;
+  --steam-text: #c6d4df;
+  --steam-font: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  
+  /* Markdown preview - neutral black & white for clarity */
+  --md-preview-bg: #ffffff;
+  --md-preview-text: #24292e;
+  --md-preview-text-muted: #586069;
+  --md-preview-border: #e1e4e8;
+  --md-preview-code-bg: #f6f8fa;
+  --md-preview-code-text: #24292e;
+  --md-preview-link: #0366d6;
+  --md-preview-quote-border: #dfe2e5;
+  --md-preview-quote-text: #6a737d;
+  
+  /* Background pattern colors */
+  --pattern-glow: rgba(97, 175, 239, 0.03);
+  --pattern-grid: rgba(44, 50, 60, 0.5);
+  
+  /* Syntax highlighting - vibrant but readable */
+  --syntax-keyword: #c678dd;
+  --syntax-string: #98c379;
+  --syntax-number: #d19a66;
+  --syntax-function: #61afef;
+  --syntax-variable: #e06c75;
+  --syntax-comment: #5c6370;
+  --syntax-tag: #e06c75;
+  --syntax-attribute: #d19a66;
+  --syntax-header: #61afef;
+  --syntax-link: #56b6c2;
+  --syntax-bold: #e5c07b;
+  --syntax-italic: #c678dd;
+  --syntax-purple: #c678dd;
+  
+  /* Typography - Monoid for readability */
+  --font-mono: 'Monoid', 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -40,6 +107,10 @@
   --panel-min-height: 400px;
   --header-height: auto;
 }
+
+/* Load fonts - Monoid from fontsource CDN, Inter from Google */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/monoid@5.0.18/index.min.css');
 
 /* ==========================================================================
    Reset & Base
@@ -74,9 +145,9 @@ body {
   min-height: 100vh;
   padding: var(--spacing-md);
   background-image:
-    radial-gradient(circle at 50% 0%, rgba(74, 158, 255, 0.03) 0%, transparent 50%),
-    linear-gradient(rgba(20, 20, 22, 0.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20, 20, 22, 0.5) 1px, transparent 1px);
+    radial-gradient(circle at 50% 0%, var(--pattern-glow) 0%, transparent 50%),
+    linear-gradient(var(--pattern-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pattern-grid) 1px, transparent 1px);
   background-size: 100% 100%, 24px 24px, 24px 24px;
 }
 
@@ -119,7 +190,7 @@ body {
 }
 
 .title-arrow {
-  color: #333;
+  color: var(--text-inverse);
   font-size: 0.75em;
 }
 
@@ -214,7 +285,7 @@ body {
   font-size: 11px;
   color: var(--accent-info);
   padding: var(--spacing-xs) var(--spacing-sm);
-  background-color: rgba(116, 185, 255, 0.1);
+  background-color: var(--bg-blue-subtle);
   border-radius: var(--radius-sm);
 }
 
@@ -324,6 +395,14 @@ body {
   gap: var(--spacing-sm);
 }
 
+.preview-subtitle {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text-dim);
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+}
+
 .panel-badge {
   font-size: 9px;
   padding: 3px 8px;
@@ -382,7 +461,7 @@ body {
 
 .preview-tab.active {
   background-color: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* ==========================================================================
@@ -463,12 +542,12 @@ body {
 
 .lint-badge.error {
   background-color: var(--accent-red);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .lint-badge.warning {
   background-color: var(--accent-orange);
-  color: #000;
+  color: var(--text-inverse);
 }
 
 /* ==========================================================================
@@ -495,7 +574,7 @@ body {
 
 .btn-primary {
   background-color: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -514,7 +593,7 @@ body {
 
 .btn-active {
   background-color: var(--accent-blue);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .btn-sm {
@@ -524,11 +603,11 @@ body {
 
 .btn-discord {
   background-color: var(--accent-discord);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 .btn-discord:hover:not(:disabled) {
-  background-color: #4752c4;
+  background-color: var(--discord-active);
 }
 
 /* ==========================================================================
@@ -619,7 +698,7 @@ body {
   gap: var(--spacing-sm);
   padding: 6px 10px;
   background-color: var(--accent-discord);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 10px;
 }
 
@@ -637,7 +716,7 @@ body {
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-secondary);
-  background-color: #36393f;
+  background-color: var(--discord-bg);
   max-height: 80px;
   overflow-y: auto;
   white-space: pre-wrap;
@@ -676,13 +755,13 @@ body {
 
 .line-number.line-error {
   color: var(--accent-red);
-  background-color: rgba(255, 107, 107, 0.15);
+  background-color: var(--bg-red-subtle);
   font-weight: 600;
 }
 
 .line-number.line-warning {
   color: var(--accent-orange);
-  background-color: rgba(255, 192, 120, 0.1);
+  background-color: var(--bg-orange-subtle);
 }
 
 .syntax-editor-content {
@@ -699,10 +778,10 @@ body {
   bottom: 0;
   padding: var(--spacing-md);
   margin: 0;
-  background-color: var(--bg-primary);
-  color: #c6d4df;
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -721,9 +800,9 @@ body {
   margin: 0;
   background: transparent;
   color: transparent;
-  caret-color: #fff;
+  caret-color: var(--accent-cyan);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -735,7 +814,7 @@ body {
 }
 
 .syntax-textarea::selection {
-  background: rgba(74, 158, 255, 0.3);
+  background: var(--bg-selection);
 }
 
 .syntax-textarea::placeholder {
@@ -743,50 +822,51 @@ body {
 }
 
 /* ==========================================================================
-   Markdown Syntax Highlighting
+   Markdown Syntax Highlighting - One Dark Pro Colors
    ========================================================================== */
 
 .syntax-highlight.markdown .md-header {
-  color: #67c1f5;
+  color: var(--syntax-header);
   font-weight: 600;
 }
 
 .syntax-highlight.markdown .md-bold {
-  color: #fff;
+  color: var(--syntax-bold);
   font-weight: 600;
 }
 
 .syntax-highlight.markdown .md-italic {
-  color: #c6d4df;
+  color: var(--syntax-italic);
   font-style: italic;
 }
 
 .syntax-highlight.markdown .md-strike {
-  color: #888;
+  color: var(--text-muted);
   text-decoration: line-through;
 }
 
 .syntax-highlight.markdown .md-code {
-  color: var(--accent-green);
-  background: rgba(139, 195, 74, 0.1);
-  border-radius: 2px;
+  color: var(--syntax-string);
+  background: var(--bg-green-medium);
+  border-radius: 3px;
+  padding: 1px 4px;
 }
 
 .syntax-highlight.markdown .md-codeblock {
-  color: var(--accent-green);
-  background: rgba(139, 195, 74, 0.05);
+  color: var(--syntax-string);
+  background: var(--bg-green-subtle);
 }
 
 .syntax-highlight.markdown .md-link {
-  color: var(--accent-info);
+  color: var(--syntax-link);
 }
 
 .syntax-highlight.markdown .md-image {
-  color: #a29bfe;
+  color: var(--syntax-purple);
 }
 
 .syntax-highlight.markdown .md-quote {
-  color: var(--accent-orange);
+  color: var(--syntax-comment);
   font-style: italic;
 }
 
@@ -795,11 +875,11 @@ body {
 }
 
 .syntax-highlight.markdown .md-list {
-  color: var(--accent-red);
+  color: var(--syntax-variable);
 }
 
 /* ==========================================================================
-   BBCode Syntax Highlighting
+   BBCode Syntax Highlighting - One Dark Pro Colors
    ========================================================================== */
 
 .syntax-highlight.bbcode .bb-tag,
@@ -812,80 +892,84 @@ body {
 }
 
 .syntax-highlight.bbcode .bb-header {
-  color: #67c1f5;
+  color: var(--syntax-header);
 }
 
 .syntax-highlight.bbcode .bb-format {
-  color: var(--accent-orange);
+  color: var(--syntax-bold);
 }
 
 .syntax-highlight.bbcode .bb-list {
-  color: var(--accent-red);
+  color: var(--syntax-variable);
 }
 
 .syntax-highlight.bbcode .bb-list-item {
-  color: var(--accent-red);
+  color: var(--syntax-variable);
+  font-weight: 600;
 }
 
 .syntax-highlight.bbcode .bb-link {
-  color: var(--accent-info);
+  color: var(--syntax-link);
 }
 
 .syntax-highlight.bbcode .bb-code {
-  color: var(--accent-green);
+  color: var(--syntax-string);
 }
 
 .syntax-highlight.bbcode .bb-tag {
-  color: #a29bfe;
+  color: var(--syntax-keyword);
 }
 
 .syntax-highlight.bbcode .bb-closing {
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 /* ==========================================================================
-   Markdown Preview Styles
+   Markdown Preview Styles - Neutral B&W (not Steam output)
    ========================================================================== */
 
 .preview.preview-markdown {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--md-preview-bg);
+  color: var(--md-preview-text);
+  font-family: var(--font-sans);
 }
 
 .preview-markdown .md-h1 {
   font-size: 1.75em;
   font-weight: 600;
-  color: #fff;
+  color: var(--md-preview-text);
   margin: 0 0 0.75em 0;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border-secondary);
+  border-bottom: 1px solid var(--md-preview-border);
 }
 
 .preview-markdown .md-h2 {
   font-size: 1.4em;
   font-weight: 600;
-  color: var(--accent-blue);
+  color: var(--md-preview-text);
   margin: 1.25em 0 0.5em 0;
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid var(--md-preview-border);
 }
 
 .preview-markdown .md-h3 {
   font-size: 1.15em;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--md-preview-text);
   margin: 1em 0 0.4em 0;
 }
 
 .preview-markdown .md-hr {
   border: none;
-  border-top: 1px solid var(--border-secondary);
+  border-top: 1px solid var(--md-preview-border);
   margin: 1.5em 0;
 }
 
 .preview-markdown .md-code {
   font-family: var(--font-mono);
-  font-size: 0.9em;
-  background: var(--bg-elevated);
-  color: var(--accent-green);
+  font-size: 0.85em;
+  background: var(--md-preview-code-bg);
+  color: var(--md-preview-code-text);
   padding: 0.2em 0.4em;
   border-radius: 3px;
 }
@@ -893,12 +977,13 @@ body {
 .preview-markdown .md-codeblock {
   font-family: var(--font-mono);
   font-size: 0.85em;
-  background: var(--bg-tertiary);
-  color: var(--accent-green);
+  background: var(--md-preview-code-bg);
+  color: var(--md-preview-code-text);
   padding: 1em;
   border-radius: var(--radius-sm);
   overflow-x: auto;
   margin: 1em 0;
+  border: 1px solid var(--md-preview-border);
 }
 
 .preview-markdown .md-codeblock code {
@@ -908,7 +993,7 @@ body {
 }
 
 .preview-markdown .md-link {
-  color: var(--accent-blue);
+  color: var(--md-preview-link);
   text-decoration: none;
 }
 
@@ -920,21 +1005,21 @@ body {
   max-width: 100%;
   border-radius: var(--radius-sm);
   margin: 0.5em 0;
+  border: 1px solid var(--md-preview-border);
 }
 
 .preview-markdown .md-quote {
-  border-left: 3px solid var(--accent-blue);
+  border-left: 4px solid var(--md-preview-quote-border);
   margin: 1em 0;
   padding: 0.5em 1em;
-  background: rgba(74, 158, 255, 0.05);
-  color: var(--text-secondary);
-  font-style: italic;
+  color: var(--md-preview-quote-text);
 }
 
 .preview-markdown .md-list,
 .preview-markdown .md-olist {
   margin: 0.75em 0;
   padding-left: 1.5em;
+  color: var(--md-preview-text);
 }
 
 .preview-markdown .md-list li,
@@ -943,8 +1028,8 @@ body {
 }
 
 .preview-markdown strong {
-  color: #fff;
-  font-weight: 600;
+  color: var(--md-preview-text);
+  font-weight: 700;
 }
 
 .preview-markdown em {
@@ -967,38 +1052,102 @@ body {
 .preview {
   flex: 1;
   padding: 20px;
-  background-color: #1b2838;
-  color: #c6d4df;
-  font-family: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  background-color: var(--steam-bg);
+  color: var(--steam-text);
+  font-family: var(--steam-font);
   font-size: 14px;
   line-height: 1.6;
   overflow-y: auto;
 }
 
 /* ==========================================================================
-   Footer
+   Footer - Improved Visibility
    ========================================================================== */
 
 .footer {
   flex-shrink: 0;
   margin-top: var(--spacing-md);
-  text-align: center;
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-md) var(--spacing-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
 }
 
-.footer-note {
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.keyboard-hints {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.keyboard-hints kbd {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  margin-right: 4px;
 }
 
-.footer-link {
-  color: var(--accent-blue);
+.footer-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.feedback-link {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 12px;
+  background: var(--bg-cyan-subtle);
+  border: 1px solid var(--bg-cyan-border);
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.feedback-link:hover {
+  background: var(--bg-cyan-medium);
+  border-color: var(--bg-cyan-border-hover);
   text-decoration: none;
 }
 
-.footer-link:hover {
-  text-decoration: underline;
+.footer-save-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.save-indicator {
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.save-indicator.saved {
+  color: var(--accent-green);
+  background: var(--bg-green-subtle);
+}
+
+.save-indicator.saving {
+  color: var(--accent-blue);
+  background: var(--bg-blue-subtle);
+}
+
+.save-indicator.unsaved {
+  color: var(--accent-orange);
+  font-size: 1.1rem;
 }
 
 /* ==========================================================================
@@ -1149,36 +1298,6 @@ body {
   }
 }
 
-/* Auto-save status */
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.footer-save-status {
-  font-size: 0.75rem;
-}
-
-.save-indicator {
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.save-indicator.saved {
-  color: var(--text-muted);
-}
-
-.save-indicator.saving {
-  color: var(--accent-blue);
-}
-
-.save-indicator.unsaved {
-  color: var(--accent-orange);
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
 /* ==========================================================================
    Button Group & Dropdown
    ========================================================================== */
@@ -1198,7 +1317,7 @@ body {
   border-bottom-left-radius: 0;
   padding: 0.25rem 0.4rem;
   min-width: unset;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid var(--border-subtle);
 }
 
 .dropdown-menu {
@@ -1211,7 +1330,7 @@ body {
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px var(--bg-overlay);
   margin-top: 4px;
 }
 

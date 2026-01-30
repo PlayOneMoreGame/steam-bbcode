@@ -1,39 +1,54 @@
 /* Steam BBCode preview styles
  * Approximates Steam's visual rendering
  * Uses .preview-bbcode to avoid conflicts with Markdown preview
+ * All colors are Steam's actual theme colors for accurate preview
  */
 
+:root {
+  /* Steam theme colors - for preview accuracy */
+  --steam-bg: #1b2838;
+  --steam-bg-dark: #1a1a1a;
+  --steam-text: #c6d4df;
+  --steam-text-muted: #8f98a0;
+  --steam-text-dim: #acb2b8;
+  --steam-accent: #67c1f5;
+  --steam-border: #3d4450;
+  --steam-code: #8bc34a;
+  --steam-font: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  --steam-font-mono: 'Courier New', Consolas, monospace;
+}
+
 .preview.preview-bbcode {
-  background-color: #1b2838;
-  color: #c6d4df;
-  font-family: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  background-color: var(--steam-bg);
+  color: var(--steam-text);
+  font-family: var(--steam-font);
 }
 
 .preview-bbcode .steam-h1 {
-  font-family: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  font-family: var(--steam-font);
   font-size: 24px;
   font-weight: 300;
-  color: #ffffff;
+  color: var(--text-on-accent);
   margin: 0 0 12px 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid #3d4450;
+  border-bottom: 1px solid var(--steam-border);
   letter-spacing: 0.5px;
 }
 
 .preview-bbcode .steam-h2 {
-  font-family: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  font-family: var(--steam-font);
   font-size: 18px;
   font-weight: normal;
-  color: #67c1f5;
+  color: var(--steam-accent);
   margin: 16px 0 8px 0;
   letter-spacing: 0.3px;
 }
 
 .preview-bbcode .steam-h3 {
-  font-family: 'Motiva Sans', Arial, Helvetica, sans-serif;
+  font-family: var(--steam-font);
   font-size: 14px;
   font-weight: normal;
-  color: #acb2b8;
+  color: var(--steam-text-dim);
   margin: 12px 0 6px 0;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -41,14 +56,14 @@
 
 .preview-bbcode .steam-hr {
   border: none;
-  border-top: 1px solid #3d4450;
+  border-top: 1px solid var(--steam-border);
   margin: 16px 0;
 }
 
 .preview-bbcode .steam-code {
-  font-family: 'Courier New', Consolas, monospace;
-  background: #1a1a1a;
-  color: #8bc34a;
+  font-family: var(--steam-font-mono);
+  background: var(--steam-bg-dark);
+  color: var(--steam-code);
   padding: 12px 16px;
   border-radius: 3px;
   font-size: 13px;
@@ -66,7 +81,7 @@
 }
 
 .preview-bbcode .steam-link {
-  color: #67c1f5;
+  color: var(--steam-accent);
   text-decoration: none;
 }
 
@@ -110,11 +125,11 @@
 }
 
 .preview-bbcode .steam-quote {
-  border-left: 3px solid #67c1f5;
+  border-left: 3px solid var(--steam-accent);
   margin: 12px 0;
   padding: 8px 16px;
   background: rgba(103, 193, 245, 0.08);
-  color: #8f98a0;
+  color: var(--steam-text-muted);
   font-style: italic;
 }
 
@@ -122,7 +137,7 @@
 .preview-bbcode .steam-olist {
   margin: 8px 0;
   padding-left: 24px;
-  color: #c6d4df;
+  color: var(--steam-text);
 }
 
 .preview-bbcode .steam-list li,
@@ -132,8 +147,8 @@
 }
 
 .preview-bbcode .steam-spoiler {
-  background: #1a1a1a;
-  border: 1px solid #3d4450;
+  background: var(--steam-bg-dark);
+  border: 1px solid var(--steam-border);
   border-radius: 3px;
   margin: 8px 0;
   overflow: hidden;
@@ -142,7 +157,7 @@
 .preview-bbcode .steam-spoiler summary {
   padding: 8px 12px;
   cursor: pointer;
-  color: #67c1f5;
+  color: var(--steam-accent);
   font-size: 13px;
   user-select: none;
 }
@@ -153,12 +168,12 @@
 
 .preview-bbcode .steam-spoiler > div {
   padding: 12px;
-  border-top: 1px solid #3d4450;
+  border-top: 1px solid var(--steam-border);
 }
 
 /* Strong and emphasis */
 .preview-bbcode strong {
-  color: #fff;
+  color: var(--text-on-accent);
   font-weight: 600;
 }
 

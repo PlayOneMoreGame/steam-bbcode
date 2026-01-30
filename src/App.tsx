@@ -168,7 +168,12 @@ export function App() {
 
   // Determine preview content based on active editor
   const previewContent = activeEditor === 'markdown' ? markdown : bbcode;
-  const previewLabel = activeEditor === 'markdown' ? 'Markdown Preview' : 'Steam Preview';
+  const previewLabel = activeEditor === 'markdown' 
+    ? 'Source Preview' 
+    : 'Steam Preview';
+  const previewSubtitle = activeEditor === 'markdown'
+    ? '(not final output)'
+    : '(as it will appear)';
 
   return (
     <div className="app">
@@ -344,7 +349,10 @@ export function App() {
 
           <section className="panel preview-panel">
             <div className="panel-header">
-              <span className="panel-label">{previewLabel}</span>
+              <span className="panel-label">
+                {previewLabel}
+                <span className="preview-subtitle">{previewSubtitle}</span>
+              </span>
               <div className="preview-tabs">
                 <button
                   className={`preview-tab ${activeEditor === 'markdown' ? 'active' : ''}`}
@@ -366,16 +374,29 @@ export function App() {
 
         {/* Footer */}
         <footer className="footer">
-          <div className="footer-note">
-            {isDesktop ? 'Cmd+O Open • Cmd+S Save As • ' : ''}
-            Markdown → Steam BBCode converter • <a href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose" target="_blank" rel="noopener" className="feedback-link">Feedback?</a>
+          <div className="footer-left">
+            {isDesktop && (
+              <span className="keyboard-hints">
+                <kbd>⌘O</kbd> Open
+                <kbd>⌘S</kbd> Save
+              </span>
+            )}
+            <span className="footer-label">Markdown → Steam BBCode</span>
+            <a 
+              href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose" 
+              target="_blank" 
+              rel="noopener" 
+              className="feedback-link"
+            >
+              Feedback
+            </a>
           </div>
           <div className="footer-save-status">
             {saveStatus === 'saving' && <span className="save-indicator saving">Saving...</span>}
             {saveStatus === 'saved' && lastSaved && (
               <span className="save-indicator saved">Saved {formatLastSaved(lastSaved)}</span>
             )}
-            {saveStatus === 'unsaved' && <span className="save-indicator unsaved">•</span>}
+            {saveStatus === 'unsaved' && <span className="save-indicator unsaved">●</span>}
           </div>
         </footer>
       </div>

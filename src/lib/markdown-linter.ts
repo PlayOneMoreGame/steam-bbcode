@@ -36,6 +36,9 @@ export function lintMarkdown(markdown: string): MarkdownLintResult {
   // Check for unclosed formatting
   checkUnclosedFormatting(markdown, errors, errorLines);
 
+  // Check for whitespace in formatting tags
+  checkWhitespaceInFormatting(markdown, warnings, warningLines);
+
   // Check for broken links
   checkBrokenLinks(markdown, warnings, warningLines);
 
@@ -140,6 +143,82 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
       line: lastOpener,
     });
     errorLines.add(lastOpener);
+  }
+}
+
+function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warningLines: Set<number>): void {
+  const lines = text.split('\n');
+  let inCodeBlock = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (line.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    
+    if (inCodeBlock) continue;
+    
+    // Check for space after opening bold: ** text**
+    if (/\*\*\s+[^*]/.test(line) && /\*\*[^*]+\*\*/.test(line)) {
+      warnings.push({
+        type: 'warning',
+        message: 'Space after ** may prevent bold formatting',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
+    
+    // Check for space before closing bold: **text **
+    if (/[^*]\s+\*\*/.test(line) && /\*\*[^*]+\*\*/.test(line)) {
+      warnings.push({
+        type: 'warning',
+        message: 'Space before ** may prevent bold formatting',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
+    
+    // Check for space after opening strikethrough: ~~ text~~
+    if (/~~\s+[^~]/.test(line) && /~~[^~]+~~/.test(line)) {
+      warnings.push({
+        type: 'warning',
+        message: 'Space after ~~ may prevent strikethrough formatting',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
+    
+    // Check for space before closing strikethrough: ~~text ~~
+    if (/[^~]\s+~~/.test(line) && /~~[^~]+~~/.test(line)) {
+      warnings.push({
+        type: 'warning',
+        message: 'Space before ~~ may prevent strikethrough formatting',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
+    
+    // Check for header without space: #Header
+    if (/^#{1,6}[^ #\n]/.test(line)) {
+      warnings.push({
+        type: 'warning',
+        message: 'Missing space after # in header',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
+    
+    // Check for list item without space: -Item or *Item (but not **bold**)
+    if (/^[-*+][^ *\n]/.test(line) && !line.startsWith('**')) {
+      warnings.push({
+        type: 'warning',
+        message: 'Missing space after list marker (- or *)',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
   }
 }
 
