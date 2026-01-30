@@ -1,0 +1,10 @@
+{
+  "live": {
+    "Name": "live",
+    "InfraEnvName": "prod",
+    "BaseDir": ".",
+    "Features": [
+      "terraform"
+    ]
+  }
+}
