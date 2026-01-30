@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+#########################################################################
+#
+#                 -- Generated with omgcmd --
+#      (do not edit unless you know what you're doing)
+#
+#########################################################################
+
+# Copyright (C) 2022 One More Game - All Rights Reserved
+# Unauthorized copying of this file, via any medium is strictly prohibited
+# Proprietary and confidential
+
+# shellcheck disable=SC1090
+# shellcheck disable=SC2059
+
+set -euo pipefail
+
+readonly ENV=$1
+readonly INFRA_ENV=$2
+
+readonly SECRETS_DIR="${HOME}/.config/omg/${INFRA_ENV}"
+
+# Validate args
+if [[ -z ${ENV+x} ]]; then
+  echo "Usage: login <project_environment_name> <infra_environment_name>"
+  exit 1
+fi
+
+echo "==== Configuring shell for environment: $ENV ===="
+echo "Using secrets directory: $SECRETS_DIR"
+mkdir -p "$SECRETS_DIR"
+
+# note @jared: avoid a dbus bug which locks up some consoles and spawns a million dbus-daemon instances
+# https://github.com/willprice/python-omxplayer-wrapper/issues/32
+# https://github.com/hashicorp/boundary/commit/c99907c6c5e2b5dbdc56786e55ea2aeb5721db76
+export DISABLE_KWALLET=1
+
+if [[ -z "${TF_VAR_use_assume_role:-}" ]]; then
+  # Log into AWS if needed
+  echo "Logging into AWS..."
+  login_result="$(aws sts get-caller-identity --profile "$INFRA_ENV" || true)"
+  if [[ -z "$login_result" ]]; then
+    aws sso login --profile "$INFRA_ENV"
+  fi
+  unset login_result
+fi
+
+if ! which az; then
+  echo "az command not found. Installing..."
+  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+fi
+
+# Log into Azure if needed
+if [[ "$(az account list -o json | jq -r '. | length')" == "0" ]]; then
+  echo "Logging into Azure..."
+  az login
+fi

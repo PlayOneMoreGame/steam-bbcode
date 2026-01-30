@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Copyright (C) 2025 One More Game - All Rights Reserved
+# Unauthorized copying of this file, via any medium is strictly prohibited
+# Proprietary and confidential
+
+# shellcheck disable=SC1090
+
+set -euo pipefail
+
+aws s3 sync dist/ s3://steambbeditor.onemoregame.com --delete

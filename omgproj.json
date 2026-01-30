@@ -1,0 +1,10 @@
+{
+  "Name": "steam-bbcode",
+  "Description": "Markdown to Steam BBCode editor with live preview",
+  "CodeLanguage": "Typescript",
+  "MasterBranch": "main",
+  "BaseDir": ".",
+  "Features": [
+    "nixshell"
+  ]
+}
