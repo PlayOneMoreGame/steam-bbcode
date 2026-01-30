@@ -744,6 +744,11 @@ body {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
   user-select: none;
+  /* Critical: use absolute positioning to constrain height */
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
 }
 
 .line-numbers::-webkit-scrollbar {
@@ -773,6 +778,8 @@ body {
   flex: 1;
   position: relative;
   overflow: hidden;
+  /* Make room for absolutely positioned line numbers */
+  margin-left: 48px;
 }
 
 .syntax-highlight {
