@@ -39,6 +39,9 @@ export function lintMarkdown(markdown: string): MarkdownLintResult {
   // Check for whitespace in formatting tags
   checkWhitespaceInFormatting(markdown, warnings, warningLines);
 
+  // Check for invalid bracket patterns like [-], [+], [.]
+  checkInvalidBracketPatterns(markdown, errors, errorLines);
+
   // Check for broken links
   checkBrokenLinks(markdown, warnings, warningLines);
 
@@ -56,6 +59,9 @@ export function lintMarkdown(markdown: string): MarkdownLintResult {
 
   // Check for images
   checkImages(markdown, info, warningLines);
+
+  // Check for unformatted text lines
+  checkUnformattedText(markdown, warnings, warningLines);
 
   return { errors, warnings, info, errorLines, warningLines };
 }
@@ -222,6 +228,36 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
   }
 }
 
+function checkInvalidBracketPatterns(text: string, errors: LintMessage[], errorLines: Set<number>): void {
+  const lines = text.split('\n');
+  let inCodeBlock = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (line.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    
+    if (inCodeBlock) continue;
+    
+    // Check for invalid bracket patterns like [-], [+], [.] that look like failed tags
+    const invalidPattern = /\[([.\-+•·])\]/g;
+    let match;
+    
+    while ((match = invalidPattern.exec(line)) !== null) {
+      errors.push({
+        type: 'error',
+        message: `Invalid pattern [${match[1]}] - not valid Markdown or BBCode`,
+        line: i + 1,
+      });
+      errorLines.add(i + 1);
+      break; // Only one error per line
+    }
+  }
+}
+
 function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: Set<number>): void {
   // Check for malformed links - space between ] and (
   const brokenLinkRegex = /\[([^\]]*)\]\s+\(/g;
@@ -338,6 +374,16 @@ function checkNestedLists(text: string, warnings: LintMessage[], warningLines: S
       warningLines.add(i + 1);
       break; // Only warn once
     }
+    
+    // Check for excessive whitespace after list marker (e.g., "-  item" or "-   item")
+    if (/^[-*+][ \t]{2,}\S/.test(line)) {
+      warnings.push({
+        type: 'warning',
+        message: 'Extra whitespace after list marker may cause formatting issues',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
   }
 }
 
@@ -378,5 +424,59 @@ function checkImages(text: string, info: LintMessage[], warningLines: Set<number
       line: firstLine,
     });
     warningLines.add(firstLine);
+  }
+}
+
+function checkUnformattedText(text: string, warnings: LintMessage[], warningLines: Set<number>): void {
+  const lines = text.split('\n');
+  let inCodeBlock = false;
+  
+  // Patterns that indicate valid Markdown formatting
+  const markdownPatterns = [
+    /^#{1,6}\s/,           // Headers
+    /^[-*+]\s/,            // Unordered list
+    /^\d+\.\s/,            // Ordered list
+    /^>/,                  // Blockquote
+    /^```/,                // Code block fence
+    /^\|/,                 // Table
+    /^[-*_]{3,}$/,         // Horizontal rule
+    /\*\*[^*]+\*\*/,       // Bold
+    /\*[^*]+\*/,           // Italic
+    /~~[^~]+~~/,           // Strikethrough
+    /`[^`]+`/,             // Inline code
+    /\[[^\]]+\]\([^)]+\)/, // Link
+    /!\[[^\]]*\]\([^)]+\)/ // Image
+  ];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Track code blocks
+    if (trimmedLine.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    
+    // Skip lines inside code blocks
+    if (inCodeBlock) continue;
+    
+    // Skip empty lines
+    if (!trimmedLine) continue;
+    
+    // Skip very short lines (likely intentional)
+    if (trimmedLine.length < 3) continue;
+    
+    // Check if line has any markdown formatting
+    const hasFormatting = markdownPatterns.some(pattern => pattern.test(line));
+    
+    if (!hasFormatting) {
+      warnings.push({
+        type: 'warning',
+        message: 'Unformatted text - no Markdown syntax on this line',
+        line: i + 1,
+      });
+      warningLines.add(i + 1);
+    }
   }
 }

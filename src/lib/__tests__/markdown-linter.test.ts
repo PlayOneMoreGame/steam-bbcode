@@ -126,6 +126,21 @@ describe('lintMarkdown', () => {
       const result = lintMarkdown('- Item\n  - Nested item');
       expect(result.warnings.some(w => w.message.includes('Nested list'))).toBe(true);
     });
+
+    it('warns about extra whitespace after list marker', () => {
+      const result = lintMarkdown('-  Item with extra space');
+      expect(result.warnings.some(w => w.message.includes('Extra whitespace after list marker'))).toBe(true);
+    });
+
+    it('warns about multiple extra spaces after list marker', () => {
+      const result = lintMarkdown('-   Item with more spaces');
+      expect(result.warnings.some(w => w.message.includes('Extra whitespace after list marker'))).toBe(true);
+    });
+
+    it('does not warn about normal list items', () => {
+      const result = lintMarkdown('- Normal item');
+      expect(result.warnings.filter(w => w.message.includes('Extra whitespace'))).toHaveLength(0);
+    });
   });
 
   describe('tables', () => {
@@ -139,6 +154,70 @@ describe('lintMarkdown', () => {
     it('notes images for Guides context', () => {
       const result = lintMarkdown('![alt](https://example.com/img.png)');
       expect(result.info.some(i => i.message.includes('image'))).toBe(true);
+    });
+  });
+
+  describe('invalid bracket patterns', () => {
+    it('reports [-] as invalid pattern', () => {
+      const result = lintMarkdown('text [-] more text');
+      expect(result.errors.some(e => e.message.includes('Invalid pattern [-]'))).toBe(true);
+    });
+
+    it('reports [+] as invalid pattern', () => {
+      const result = lintMarkdown('vote [+] here');
+      expect(result.errors.some(e => e.message.includes('Invalid pattern [+]'))).toBe(true);
+    });
+
+    it('reports [.] as invalid pattern', () => {
+      const result = lintMarkdown('text [.] text');
+      expect(result.errors.some(e => e.message.includes('Invalid pattern [.]'))).toBe(true);
+    });
+
+    it('does not flag brackets inside code blocks', () => {
+      const result = lintMarkdown('```\n[-] in code\n```');
+      expect(result.errors.filter(e => e.message.includes('Invalid pattern'))).toHaveLength(0);
+    });
+  });
+
+  describe('unformatted text', () => {
+    it('warns about plain text with no markdown', () => {
+      const result = lintMarkdown('this is just plain text');
+      expect(result.warnings.some(w => w.message.includes('Unformatted text'))).toBe(true);
+    });
+
+    it('does not warn about headers', () => {
+      const result = lintMarkdown('# This is a header');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
+    });
+
+    it('does not warn about list items', () => {
+      const result = lintMarkdown('- This is a list item');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
+    });
+
+    it('does not warn about bold text', () => {
+      const result = lintMarkdown('This has **bold** in it');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
+    });
+
+    it('does not warn about links', () => {
+      const result = lintMarkdown('Check out [this link](https://example.com)');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
+    });
+
+    it('does not warn about blockquotes', () => {
+      const result = lintMarkdown('> This is a quote');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
+    });
+
+    it('does not warn inside code blocks', () => {
+      const result = lintMarkdown('```\nplain text in code\n```');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
+    });
+
+    it('does not warn about empty lines', () => {
+      const result = lintMarkdown('# Header\n\n- List item');
+      expect(result.warnings.filter(w => w.message.includes('Unformatted text'))).toHaveLength(0);
     });
   });
 

@@ -75,6 +75,9 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
   // Check for malformed URLs
   checkUrls(bbcode, warnings, warningLines);
 
+  // Check for unformatted text (lines with no BBCode)
+  checkUnformattedText(bbcode, warnings, warningLines);
+
   // Check character limits
   checkCharacterLimits(bbcode, context, errors, warnings);
 
@@ -401,21 +404,26 @@ function checkTagSupport(
 }
 
 /**
- * Check for malformed list items
+ * Check for malformed list items and invalid bracket patterns
  */
 function checkListItems(
   bbcode: string, 
   errors: LintMessage[], 
   errorLines: Set<number>
 ): void {
+  // Flag [-], [+], [.] etc. anywhere - these look like tag attempts but aren't valid
   const malformedPattern = /\[([.\-+•·])\]/g;
+  const seen = new Set<number>(); // Track lines we've already reported
   
   let match;
   while ((match = malformedPattern.exec(bbcode)) !== null) {
     const line = getLineNumber(bbcode, match.index);
+    if (seen.has(line)) continue; // Only one error per line
+    seen.add(line);
+    
     errors.push({
       type: 'error',
-      message: `Invalid list marker [${match[1]}] - use [*] instead`,
+      message: `Invalid tag [${match[1]}] - will render as plain text`,
       line,
     });
     errorLines.add(line);
@@ -491,6 +499,41 @@ function checkUrls(
       line,
     });
     warningLines.add(line);
+  }
+}
+
+/**
+ * Check for unformatted text lines (no BBCode tags)
+ */
+function checkUnformattedText(
+  bbcode: string,
+  warnings: LintMessage[],
+  warningLines: Set<number>
+): void {
+  const lines = bbcode.split('\n');
+  
+  // Pattern to match any BBCode tag
+  const tagPattern = /\[\/?\w+(?:=[^\]]*)?\]/;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines
+    if (!line) continue;
+    
+    // Skip lines that have any BBCode tag
+    if (tagPattern.test(line)) continue;
+    
+    // Skip lines that are just whitespace or very short (likely intentional spacing)
+    if (line.length < 3) continue;
+    
+    // This line has content but no BBCode - warn
+    warnings.push({
+      type: 'warning',
+      message: 'Unformatted text - no BBCode tags on this line',
+      line: i + 1,
+    });
+    warningLines.add(i + 1);
   }
 }
 
