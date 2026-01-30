@@ -166,44 +166,54 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
     
     if (inCodeBlock) continue;
     
-    // Check for space after opening bold: ** text**
-    if (/\*\*\s+[^*]/.test(line) && /\*\*[^*]+\*\*/.test(line)) {
-      warnings.push({
-        type: 'warning',
-        message: 'Space after ** may prevent bold formatting',
-        line: i + 1,
-      });
-      warningLines.add(i + 1);
+    // Check for malformed bold: **<space>text** or **text<space>**
+    // Match bold spans and check for internal whitespace issues
+    const boldPattern = /\*\*(\s+[^*]+|\s*[^*]+\s+)\*\*/g;
+    let match;
+    while ((match = boldPattern.exec(line)) !== null) {
+      const content = match[1];
+      if (content.startsWith(' ') || content.startsWith('\t')) {
+        warnings.push({
+          type: 'warning',
+          message: 'Space after ** may prevent bold formatting',
+          line: i + 1,
+        });
+        warningLines.add(i + 1);
+        break;
+      }
+      if (content.endsWith(' ') || content.endsWith('\t')) {
+        warnings.push({
+          type: 'warning',
+          message: 'Space before ** may prevent bold formatting',
+          line: i + 1,
+        });
+        warningLines.add(i + 1);
+        break;
+      }
     }
     
-    // Check for space before closing bold: **text **
-    if (/[^*]\s+\*\*/.test(line) && /\*\*[^*]+\*\*/.test(line)) {
-      warnings.push({
-        type: 'warning',
-        message: 'Space before ** may prevent bold formatting',
-        line: i + 1,
-      });
-      warningLines.add(i + 1);
-    }
-    
-    // Check for space after opening strikethrough: ~~ text~~
-    if (/~~\s+[^~]/.test(line) && /~~[^~]+~~/.test(line)) {
-      warnings.push({
-        type: 'warning',
-        message: 'Space after ~~ may prevent strikethrough formatting',
-        line: i + 1,
-      });
-      warningLines.add(i + 1);
-    }
-    
-    // Check for space before closing strikethrough: ~~text ~~
-    if (/[^~]\s+~~/.test(line) && /~~[^~]+~~/.test(line)) {
-      warnings.push({
-        type: 'warning',
-        message: 'Space before ~~ may prevent strikethrough formatting',
-        line: i + 1,
-      });
-      warningLines.add(i + 1);
+    // Check for malformed strikethrough: ~~<space>text~~ or ~~text<space>~~
+    const strikePattern = /~~(\s+[^~]+|\s*[^~]+\s+)~~/g;
+    while ((match = strikePattern.exec(line)) !== null) {
+      const content = match[1];
+      if (content.startsWith(' ') || content.startsWith('\t')) {
+        warnings.push({
+          type: 'warning',
+          message: 'Space after ~~ may prevent strikethrough formatting',
+          line: i + 1,
+        });
+        warningLines.add(i + 1);
+        break;
+      }
+      if (content.endsWith(' ') || content.endsWith('\t')) {
+        warnings.push({
+          type: 'warning',
+          message: 'Space before ~~ may prevent strikethrough formatting',
+          line: i + 1,
+        });
+        warningLines.add(i + 1);
+        break;
+      }
     }
     
     // Check for header without space: #Header

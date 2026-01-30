@@ -44,6 +44,19 @@ describe('lintMarkdown', () => {
       expect(result.warnings.some(w => w.message.includes('Space before **'))).toBe(true);
     });
 
+    it('does not warn about properly formatted bold', () => {
+      const result = lintMarkdown('This is **bold** text');
+      const spaceWarnings = result.warnings.filter(w => 
+        w.message.includes('Space after **') || w.message.includes('Space before **')
+      );
+      expect(spaceWarnings).toHaveLength(0);
+    });
+
+    it('does not warn about space before opening bold', () => {
+      const result = lintMarkdown('Feature one with **bold** text');
+      expect(result.warnings.filter(w => w.message.includes('Space before **'))).toHaveLength(0);
+    });
+
     it('warns about space after opening strikethrough', () => {
       const result = lintMarkdown('This is ~~ strike~~ text');
       expect(result.warnings.some(w => w.message.includes('Space after ~~'))).toBe(true);

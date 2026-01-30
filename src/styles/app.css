@@ -740,8 +740,14 @@ body {
   padding: var(--spacing-md) 8px var(--spacing-md) 12px;
   background-color: var(--bg-tertiary);
   border-right: 1px solid var(--border-primary);
-  overflow: hidden;
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
   user-select: none;
+}
+
+.line-numbers::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 .line-number {
