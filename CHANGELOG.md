@@ -2,11 +2,13 @@
 
 All notable changes to SteamBBEditor will be documented in this file.
 
-## [1.4.3] - 2026-01-29
+## [1.4.7] - 2026-01-30
 
 ### Fixed
-- Line numbers now scroll in sync with editor content (both panels)
+- Line numbers now scroll in sync with editor content (absolute positioning + explicit pixel line-height)
 - Whitespace warnings no longer trigger false positives for normal `**bold**` text
+- BBCode linter now recognizes `[*]` as valid tag (was incorrectly flagging list items as unformatted)
+- Empty brackets `[]` now flagged as invalid pattern
 
 ## [1.4.2] - 2026-01-29
 

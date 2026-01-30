@@ -75,8 +75,8 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
   // Check for malformed URLs
   checkUrls(bbcode, warnings, warningLines);
 
-  // Check for unformatted text (lines with no BBCode)
-  checkUnformattedText(bbcode, warnings, warningLines);
+  // NOTE: Unformatted text check disabled - too noisy for real content
+  // checkUnformattedText(bbcode, warnings, warningLines);
 
   // Check character limits
   checkCharacterLimits(bbcode, context, errors, warnings);
@@ -411,19 +411,22 @@ function checkListItems(
   errors: LintMessage[], 
   errorLines: Set<number>
 ): void {
-  // Flag [-], [+], [.] etc. anywhere - these look like tag attempts but aren't valid
-  const malformedPattern = /\[([.\-+•·])\]/g;
+  // Flag [-], [+], [.], [] etc. anywhere - these look like tag attempts but aren't valid
+  const malformedPattern = /\[([.\-+•·]?)\]/g;
   const seen = new Set<number>(); // Track lines we've already reported
   
   let match;
   while ((match = malformedPattern.exec(bbcode)) !== null) {
+    const content = match[1];
     const line = getLineNumber(bbcode, match.index);
     if (seen.has(line)) continue; // Only one error per line
     seen.add(line);
     
     errors.push({
       type: 'error',
-      message: `Invalid tag [${match[1]}] - will render as plain text`,
+      message: content 
+        ? `Invalid tag [${content}] - will render as plain text`
+        : `Empty brackets [] - will render as plain text`,
       line,
     });
     errorLines.add(line);
@@ -512,8 +515,8 @@ function checkUnformattedText(
 ): void {
   const lines = bbcode.split('\n');
   
-  // Pattern to match any BBCode tag
-  const tagPattern = /\[\/?\w+(?:=[^\]]*)?\]/;
+  // Pattern to match any BBCode tag including [*] list items
+  const tagPattern = /\[\/?\w+(?:=[^\]]*)?\]|\[\*\]/;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();

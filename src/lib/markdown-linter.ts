@@ -60,8 +60,9 @@ export function lintMarkdown(markdown: string): MarkdownLintResult {
   // Check for images
   checkImages(markdown, info, warningLines);
 
-  // Check for unformatted text lines
-  checkUnformattedText(markdown, warnings, warningLines);
+  // NOTE: Unformatted text check disabled - too noisy for real patch notes
+  // which often have description paragraphs without formatting
+  // checkUnformattedText(markdown, warnings, warningLines);
 
   return { errors, warnings, info, errorLines, warningLines };
 }
@@ -252,18 +253,22 @@ function checkInvalidBracketPatterns(text: string, errors: LintMessage[], errorL
     
     if (inCodeBlock) continue;
     
-    // Check for invalid bracket patterns like [-], [+], [.] that look like failed tags
-    const invalidPattern = /\[([.\-+•·])\]/g;
+    // Check for invalid bracket patterns like [-], [+], [.], [] that look like failed tags
+    const invalidPattern = /\[([.\-+•·]?)\]/g;
     let match;
     
     while ((match = invalidPattern.exec(line)) !== null) {
-      errors.push({
-        type: 'error',
-        message: `Invalid pattern [${match[1]}] - not valid Markdown or BBCode`,
-        line: i + 1,
-      });
-      errorLines.add(i + 1);
-      break; // Only one error per line
+      const content = match[1];
+      // Skip valid markdown link text brackets [text]
+      if (match[0] === '[]' || content === '-' || content === '+' || content === '.' || content === '•' || content === '·') {
+        errors.push({
+          type: 'error',
+          message: content ? `Invalid pattern [${content}] - not valid Markdown or BBCode` : `Empty brackets [] - not valid Markdown or BBCode`,
+          line: i + 1,
+        });
+        errorLines.add(i + 1);
+        break; // Only one error per line
+      }
     }
   }
 }

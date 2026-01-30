@@ -43,7 +43,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
       const lineNums = lineNumbersRef.current;
       if (!textarea || !lineNums) return;
       
-      const lineHeight = 20.4; // 12px * 1.7 line-height
+      const lineHeight = 22.1; // 13px * 1.7 - must match CSS
       const scrollTop = (line - 1) * lineHeight - textarea.clientHeight / 2 + lineHeight;
       
       textarea.scrollTop = Math.max(0, scrollTop);
