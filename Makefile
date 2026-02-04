@@ -68,25 +68,3 @@ tf-ci-output:
 list:
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$'
 
-###############################################################################
-#                            Terraform (Live)                                 #
-###############################################################################
-tf-live: tf-live-init
-	@cd $(TF_DIR)/environments/live
-	terraform plan
-
-tf-live-init:
-	@cd $(TF_DIR)/environments/live
-	terraform init
-
-tf-live-apply: tf-live-init
-	@cd $(TF_DIR)/environments/live
-	terraform apply -auto-approve
-
-tf-live-upgrade:
-	@cd $(TF_DIR)/environments/live
-	terraform init -upgrade
-
-tf-live-output:
-	@cd $(TF_DIR)/environments/live
-	@terraform output -json
