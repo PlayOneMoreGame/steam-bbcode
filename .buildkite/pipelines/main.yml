@@ -35,26 +35,29 @@ steps:
     agents:
       os: linux
       hardware_env: prod
-  # - wait
-  # - label: ":terraform: Deploy (live)"
-  #   commands:
-  #     - cd ops/live
-  #     - make tf-live-upgrade
-  #     - make tf-live-apply
-  #   agents:
-  #     os: linux
-  #     hardware_env: prod
-  # - wait
-  # - label: ":rocket: Publish"
-  #   command:
-  #     - .buildkite/tasks/clean.sh && .buildkite/tasks/publish.sh
-  #   agents:
-  #     os: linux
-  #     hardware_env: prod
-  #   branches: main
-  #   concurrency: 1
-  #   concurrency_group: publish_steam-bbcode
-  #   retry:
-  #     automatic:
-  #       exit_status: "*"
-  #       limit: 3
+  - wait
+  - label: ":terraform: Deploy (live)"
+    command:
+      - make tf-live-apply
+    agents:
+      os: linux
+      hardware_env: prod
+      # TODO(jared): Need Node.js agent? Or does hardware_env: prod have Node?
+    branches: main
+    concurrency: 1
+    concurrency_group: deploy_steam-bbcode
+  - wait
+  - label: ":rocket: Publish"
+    command:
+      - .buildkite/tasks/clean.sh && .buildkite/tasks/publish.sh
+    agents:
+      os: linux
+      hardware_env: prod
+      # TODO(jared): Need AWS credentials for S3 sync + CloudFront invalidation
+    branches: main
+    concurrency: 1
+    concurrency_group: publish_steam-bbcode
+    retry:
+      automatic:
+        exit_status: "*"
+        limit: 3
