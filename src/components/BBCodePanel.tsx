@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { SyntaxEditor, type SyntaxEditorHandle } from './SyntaxEditor';
 import { lintBBCode } from '@/lib/linter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
+import { trackEvent } from '@/lib/analytics';
 
 interface BBCodePanelProps {
   value: string;
@@ -57,6 +58,7 @@ export function BBCodePanel({
       await navigator.clipboard.writeText(value);
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
+      trackEvent('copy_clicked', { panel: 'bbcode' });
     } catch {
       setCopyFeedback('Failed');
       setTimeout(() => setCopyFeedback(''), 2000);
@@ -65,7 +67,9 @@ export function BBCodePanel({
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
-    
+
+    trackEvent('lint_error_clicked', { panel: 'bbcode' });
+
     // Prefer start/end if available (direct character offsets)
     if (msg.start !== undefined && msg.end !== undefined) {
       editorRef.current.selectRange(msg.start, msg.end);

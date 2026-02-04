@@ -9,6 +9,7 @@ import { useRecentFiles } from '@/hooks/useRecentFiles';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 import { WELCOME_MARKDOWN } from '@/lib/welcome';
+import { trackEvent } from '@/lib/analytics';
 
 import '@/styles/app.css';
 import '@/styles/steam-theme.css';
@@ -80,6 +81,7 @@ export function App() {
     if (content !== null) {
       setMarkdown(content);
       setBBCodeModified(false);
+      trackEvent('file_opened', { source: 'dialog' });
     }
   }, [openFile, setMarkdown]);
 
@@ -97,6 +99,7 @@ export function App() {
     if (content !== null) {
       setMarkdown(content);
       setBBCodeModified(false);
+      trackEvent('file_opened', { source: 'recent' });
     }
   }, [openFilePath, setMarkdown]);
 
@@ -105,6 +108,7 @@ export function App() {
     if (content !== null) {
       setBBCode(content);
       setBBCodeModified(true);
+      trackEvent('file_opened', { source: 'dialog' });
     }
   }, [openFile]);
 
@@ -189,7 +193,11 @@ export function App() {
                 <select
                   className="control-select"
                   value={context}
-                  onChange={(e) => setContext(e.target.value as SteamContext)}
+                  onChange={(e) => {
+                    const newContext = e.target.value as SteamContext;
+                    setContext(newContext);
+                    trackEvent('context_changed', { context: newContext });
+                  }}
                 >
                   {Object.entries(CONTEXT_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>

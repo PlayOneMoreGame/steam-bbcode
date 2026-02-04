@@ -4,6 +4,7 @@ import { lintMarkdown } from '@/lib/markdown-linter';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS } from '@/lib/contexts';
 import type { RecentFile } from '@/hooks/useRecentFiles';
+import { trackEvent } from '@/lib/analytics';
 
 interface MarkdownPanelProps {
   value: string;
@@ -62,6 +63,7 @@ export function MarkdownPanel({
       await navigator.clipboard.writeText(value);
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
+      trackEvent('copy_clicked', { panel: 'markdown' });
     } catch {
       setCopyFeedback('Failed');
       setTimeout(() => setCopyFeedback(''), 2000);
@@ -70,7 +72,9 @@ export function MarkdownPanel({
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
-    
+
+    trackEvent('lint_error_clicked', { panel: 'markdown' });
+
     // Prefer start/end if available (direct character offsets)
     if (msg.start !== undefined && msg.end !== undefined) {
       editorRef.current.selectRange(msg.start, msg.end);
@@ -224,7 +228,12 @@ export function MarkdownPanel({
       <div className="panel-footer">
         <button 
           className={`btn btn-sm ${showDiscord ? 'btn-active' : 'btn-secondary'}`}
-          onClick={() => setShowDiscord(!showDiscord)}
+          onClick={() => {
+            if (!showDiscord) {
+              trackEvent('discord_split', { chunk_count: discordSections.length });
+            }
+            setShowDiscord(!showDiscord);
+          }}
           title="Split for Discord (2000 char limit)"
         >
           Discord ({discordSections.length})
@@ -273,6 +282,7 @@ function DiscordChunk({ index, total, content, charCount }: DiscordChunkProps) {
       await navigator.clipboard.writeText(content);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      trackEvent('copy_clicked', { panel: 'markdown', discord_chunk: true });
     } catch {
       // Silently fail
     }
