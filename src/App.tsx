@@ -142,9 +142,7 @@ export function App() {
         <header className="header">
           <div className="header-top">
             <h1 className="title">
-              <span className="title-md">MD</span>
-              <span className="title-arrow">&rarr;</span>
-              <span className="title-bb">BB</span>
+              SteamBBEditor
               {isDesktop && <span className="title-badge">Desktop</span>}
             </h1>
 

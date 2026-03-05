@@ -161,25 +161,10 @@ body {
   font-family: var(--font-sans);
   font-size: clamp(24px, 4vw, 32px);
   font-weight: 700;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-}
-
-.title-md {
-  color: var(--text-secondary);
-}
-
-.title-arrow {
-  color: var(--text-muted);
-  font-size: 0.75em;
-}
-
-.title-bb {
-  background: linear-gradient(135deg, #66c0f4 0%, var(--accent-blue) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .title-badge {
