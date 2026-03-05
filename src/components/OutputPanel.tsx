@@ -77,7 +77,7 @@ export function OutputPanel({ bbcode, context, isDesktop }: OutputPanelProps) {
       </div>
 
       {activeTab === 'preview' ? (
-        <PreviewPanel content={bbcode} mode="bbcode" />
+        <PreviewPanel content={bbcode} />
       ) : (
         <div className="output-bbcode-tab">
           {/* Lint messages */}

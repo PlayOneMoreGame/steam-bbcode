@@ -197,8 +197,6 @@ export function App() {
           <MarkdownPanel
             value={markdown}
             onChange={setMarkdown}
-            onFocus={() => {}}
-            isActive={true}
             fileName={mdFileName}
             onOpen={handleOpenMarkdown}
             onOpenRecent={handleOpenRecentFile}
@@ -217,13 +215,11 @@ export function App() {
         {/* Footer */}
         <footer className="footer">
           <div className="footer-left">
-            {isDesktop && (
-              <span className="keyboard-hints">
-                <kbd>⌘O</kbd> Open
-                <kbd>⌘S</kbd> Save
-                <kbd>⌘⇧C</kbd> Copy BBCode
-              </span>
-            )}
+            <span className="keyboard-hints">
+              <kbd>⌘O</kbd> Open
+              <kbd>⌘S</kbd> Save
+              <kbd>⌘⇧C</kbd> Copy BBCode
+            </span>
             <span className="footer-label">Markdown &rarr; Steam BBCode</span>
             <a
               href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose"

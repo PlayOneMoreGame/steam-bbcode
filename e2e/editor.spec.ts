@@ -7,6 +7,51 @@ test.beforeEach(async ({ page, context }) => {
 });
 
 // ---------------------------------------------------------------------------
+// End-to-end workflow: paste markdown → preview → copy BBCode
+// ---------------------------------------------------------------------------
+
+test('full workflow: paste markdown, preview, copy bbcode', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+
+  // Step 1: Paste markdown content
+  await mdEditor.fill('# Patch Notes v1.0\n\nFixed **critical bug** with save system.\n\n- Bug fix A\n- Bug fix B\n');
+
+  // Step 2: Preview is default tab — verify it shows rendered content
+  await expect(page.locator('.preview.preview-bbcode')).toContainText('Patch Notes v1.0');
+  await expect(page.locator('.preview.preview-bbcode')).toContainText('critical bug');
+
+  // Step 3: Copy BBCode button should be enabled (no lint errors)
+  const copyBtn = page.locator('.output-panel .btn-primary');
+  await expect(copyBtn).toBeEnabled();
+  await copyBtn.click();
+
+  // Step 4: Verify clipboard has correct BBCode
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toContain('[h1]Patch Notes v1.0[/h1]');
+  expect(clipboardText).toContain('[b]critical bug[/b]');
+  expect(clipboardText).toContain('[*]Bug fix A');
+});
+
+// ---------------------------------------------------------------------------
+// Welcome document
+// ---------------------------------------------------------------------------
+
+test('welcome doc loads with zero lint errors and copy enabled', async ({ page }) => {
+  // Copy BBCode button should be enabled on initial load (no lint errors in welcome doc)
+  const copyBtn = page.locator('.output-panel .btn-primary');
+  await expect(copyBtn).toBeEnabled();
+  await expect(copyBtn).toHaveText('Copy BBCode');
+
+  // BBCode tab should show no lint error messages
+  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
+  await expect(page.locator('.output-panel .lint-message')).toHaveCount(0);
+
+  // Preview should render the welcome content
+  await page.locator('.output-panel .preview-tab', { hasText: 'Steam Preview' }).click();
+  await expect(page.locator('.preview.preview-bbcode')).toContainText('Welcome to SteamBBEditor');
+});
+
+// ---------------------------------------------------------------------------
 // Core conversion
 // ---------------------------------------------------------------------------
 
@@ -26,11 +71,8 @@ test('converts markdown to bbcode in preview', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 test('output panel defaults to Steam Preview tab', async ({ page }) => {
-  // Preview tab should be active by default
   const previewTab = page.locator('.output-panel .preview-tab', { hasText: 'Steam Preview' });
   await expect(previewTab).toHaveClass(/active/);
-
-  // Preview content should be visible (rendered HTML, not raw BBCode)
   await expect(page.locator('.preview.preview-bbcode')).toBeVisible();
 });
 
@@ -51,7 +93,6 @@ test('output panel switches between Preview and BBCode tabs', async ({ page }) =
 
 test('bbcode tab shows character count', async ({ page }) => {
   await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
-  // Default welcome doc generates some BBCode, so char count should be > 0
   await expect(page.locator('.output-panel .char-count-inline')).toBeVisible();
 });
 
@@ -93,23 +134,14 @@ test('cmd+shift+c shortcut triggers copy', async ({ page }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Lint errors (via BBCode tab)
+// Markdown panel: Copy MD is secondary, not primary
 // ---------------------------------------------------------------------------
 
-test('shows lint errors on bbcode tab', async ({ page }) => {
-  // Type markdown that produces known lint warnings or check the welcome doc
-  // The BBCode tab badge shows error/warning counts
-  const mdEditor = page.locator('.panel').first().locator('textarea');
-
-  // Create content with a YouTube URL that the linter flags
-  await mdEditor.fill('[b]unclosed bold without closing tag');
-
-  // Switch to BBCode tab
-  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
-
-  // The converter wraps the whole thing in [b], so the BBCode output itself is valid.
-  // Instead, verify that the BBCode tab is showing the output (no errors for valid conversion).
-  await expect(page.locator('.bbcode-readonly')).toBeVisible();
+test('markdown copy button is labeled Copy MD', async ({ page }) => {
+  const copyMdBtn = page.locator('.panel').first().getByRole('button', { name: 'Copy MD' });
+  await expect(copyMdBtn).toBeVisible();
+  // Should be secondary style, not primary
+  await expect(copyMdBtn).toHaveClass(/btn-secondary/);
 });
 
 // ---------------------------------------------------------------------------
@@ -117,7 +149,6 @@ test('shows lint errors on bbcode tab', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 test('context selector changes character limit', async ({ page }) => {
-  // Switch to BBCode tab first to see char count
   await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
 
   // Default context is announcements (8,000 char limit)
@@ -145,6 +176,11 @@ test('tags button toggles reference panel', async ({ page }) => {
 // ---------------------------------------------------------------------------
 // Footer
 // ---------------------------------------------------------------------------
+
+test('keyboard hints are visible', async ({ page }) => {
+  await expect(page.locator('.keyboard-hints')).toBeVisible();
+  await expect(page.locator('.keyboard-hints')).toContainText('Copy BBCode');
+});
 
 test('feedback link exists', async ({ page }) => {
   const feedbackLink = page.locator('.feedback-link');

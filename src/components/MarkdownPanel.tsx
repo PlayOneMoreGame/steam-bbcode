@@ -9,8 +9,6 @@ import { trackEvent } from '@/lib/analytics';
 interface MarkdownPanelProps {
   value: string;
   onChange: (value: string) => void;
-  onFocus: () => void;
-  isActive: boolean;
   fileName: string | null;
   onOpen: () => void;
   onOpenRecent?: (path: string) => void;
@@ -19,11 +17,9 @@ interface MarkdownPanelProps {
   isDesktop?: boolean;
 }
 
-export function MarkdownPanel({ 
-  value, 
-  onChange, 
-  onFocus, 
-  isActive,
+export function MarkdownPanel({
+  value,
+  onChange,
   fileName,
   onOpen,
   onOpenRecent,
@@ -95,7 +91,7 @@ export function MarkdownPanel({
   // For now, we track if the value changed significantly
   
   return (
-    <section className={`panel ${isActive ? 'panel-active' : ''}`} onFocus={onFocus}>
+    <section className="panel">
       <div className="panel-header">
         <span className="panel-label">
           Markdown
@@ -163,8 +159,8 @@ export function MarkdownPanel({
           >
             Save As
           </button>
-          <button className="btn btn-primary" onClick={handleCopy}>
-            {copyFeedback || 'Copy'}
+          <button className="btn btn-secondary" onClick={handleCopy} title="Copy Markdown source">
+            {copyFeedback || 'Copy MD'}
           </button>
         </div>
       </div>
