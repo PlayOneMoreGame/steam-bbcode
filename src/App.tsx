@@ -218,7 +218,7 @@ export function App() {
               <kbd>⌘S</kbd> Save
               <kbd>⌘⇧C</kbd> Copy BBCode
             </span>
-            <span className="footer-label">Markdown &rarr; Steam BBCode</span>
+            <span className="footer-label">SteamBBEditor</span>
             <a
               href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose"
               target="_blank"
