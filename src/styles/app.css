@@ -339,9 +339,9 @@ body {
   min-height: 0; /* Allow flex children to shrink */
 }
 
-/* Three-column layout for large screens */
-.main-grid.three-panel {
-  grid-template-columns: 1fr 1fr 1fr;
+/* Two-column layout */
+.main-grid.two-panel {
+  grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr;
 }
 
@@ -454,6 +454,41 @@ body {
 .preview-tab.active {
   background-color: var(--accent-blue);
   color: var(--text-on-accent);
+}
+
+/* ==========================================================================
+   Output Panel (Preview + BBCode tabs)
+   ========================================================================== */
+
+.output-tabs {
+  display: flex;
+  gap: 2px;
+  background-color: var(--bg-elevated);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.output-bbcode-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bbcode-readonly {
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  user-select: all;
+  cursor: text;
 }
 
 /* ==========================================================================
@@ -1168,17 +1203,7 @@ body {
   :root {
     --panel-min-height: 350px;
   }
-  
-  .main-grid.three-panel {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-  }
-  
-  /* Preview takes full width on second row */
-  .main-grid.three-panel .preview-panel {
-    grid-column: 1 / -1;
-  }
-  
+
   .title {
     font-size: 24px;
   }
@@ -1198,13 +1223,9 @@ body {
     padding: var(--spacing-sm);
   }
   
-  .main-grid.three-panel {
+  .main-grid.two-panel {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-  }
-  
-  .main-grid.three-panel .preview-panel {
-    grid-column: auto;
+    grid-template-rows: auto auto;
   }
   
   .header-top {

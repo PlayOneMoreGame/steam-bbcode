@@ -9,10 +9,10 @@ Convert **Markdown** to **Steam BBCode** with live preview and validation.
 ## Your Workflow
 
 1. Write or paste Markdown here (left panel)
-2. Review auto-converted BBCode (middle panel)
-3. Preview how Steam will render it (right panel)
-4. Fix any errors by clicking them to jump to the problem
-5. Copy BBCode and paste into Steam
+2. Check the Steam Preview on the right to see how it will look
+3. Switch to the BBCode tab to inspect the generated output
+4. Fix any lint errors shown on the BBCode tab
+5. Click **Copy BBCode** and paste into Steam
 
 ---
 
@@ -70,4 +70,3 @@ function example() {
 
 *This welcome doc resets each time you open the app.*
 `;
-
