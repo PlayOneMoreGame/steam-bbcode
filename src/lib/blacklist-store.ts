@@ -1,6 +1,6 @@
 // Blocked words storage
 // Persists blocked word list to localStorage
-// Ships with ~717 default terms from FrontGate Media list
+// Ships with ~678 default terms from FrontGate Media list (39 common gaming/PG-13 terms removed)
 
 import { DEFAULT_BLOCKED_WORDS } from './blocked-words-default';
 

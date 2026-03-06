@@ -24,7 +24,7 @@ describe('blacklist-store', () => {
 
   describe('DEFAULT_BLOCKED_WORDS', () => {
     it('contains hundreds of terms', () => {
-      expect(DEFAULT_BLOCKED_WORDS.length).toBeGreaterThan(700);
+      expect(DEFAULT_BLOCKED_WORDS.length).toBeGreaterThan(650);
     });
 
     it('is sorted and lowercase', () => {
@@ -153,6 +153,62 @@ describe('blacklist-store', () => {
     it('preserves non-empty stored lists', () => {
       store['steambb-blacklist-terms'] = JSON.stringify(['custom-term']);
       expect(getBlacklist()).toEqual(['custom-term']);
+    });
+  });
+
+  describe('removing default terms', () => {
+    it('removes a default term from the active list', () => {
+      // Start fresh — no localStorage, defaults active
+      removeTerm('anal');
+      const result = getBlacklist();
+      expect(result).not.toContain('anal');
+      expect(result.length).toBe(DEFAULT_BLOCKED_WORDS.length - 1);
+    });
+
+    it('removed default term stays removed across reads', () => {
+      removeTerm('anal');
+      // Simulate re-reading (as if app re-rendered or page refreshed)
+      const firstRead = getBlacklist();
+      const secondRead = getBlacklist();
+      expect(firstRead).not.toContain('anal');
+      expect(secondRead).not.toContain('anal');
+      expect(firstRead).toEqual(secondRead);
+    });
+
+    it('can remove multiple default terms independently', () => {
+      removeTerm('anal');
+      removeTerm('anus');
+      removeTerm('ass');
+      const result = getBlacklist();
+      expect(result).not.toContain('anal');
+      expect(result).not.toContain('anus');
+      expect(result).not.toContain('ass');
+      expect(result.length).toBe(DEFAULT_BLOCKED_WORDS.length - 3);
+    });
+
+    it('reset restores previously removed defaults', () => {
+      removeTerm('anal');
+      removeTerm('anus');
+      expect(getBlacklist()).not.toContain('anal');
+      resetBlacklist();
+      const restored = getBlacklist();
+      expect(restored).toContain('anal');
+      expect(restored).toContain('anus');
+      expect(restored).toEqual(DEFAULT_BLOCKED_WORDS);
+    });
+
+    it('can add custom terms after removing defaults', () => {
+      removeTerm('anal');
+      addTerm('swapmeat-custom');
+      const result = getBlacklist();
+      expect(result).not.toContain('anal');
+      expect(result).toContain('swapmeat-custom');
+    });
+
+    it('isDefaultBlockedWord returns true even after removal', () => {
+      removeTerm('anal');
+      // "anal" is still a default — it's just been removed from the active list
+      expect(isDefaultBlockedWord('anal')).toBe(true);
     });
   });
 

@@ -88,7 +88,7 @@ export function SettingsPanel({
           </span>
         </h3>
         <p className="settings-section-desc">
-          Terms that trigger warnings in the editor and translation output. Search to find, add, or remove terms.
+          Terms that trigger warnings in the editor and translation output. Search to find or remove terms — all terms are removable, including defaults.
         </p>
 
         <div className="settings-add-row">
@@ -139,7 +139,7 @@ export function SettingsPanel({
                       aria-label={`Remove ${term}`}
                       title={`Remove "${term}"`}
                     >
-                      x
+                      ×
                     </button>
                   </span>
                 ))}
