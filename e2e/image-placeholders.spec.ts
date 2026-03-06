@@ -103,7 +103,7 @@ test('entering URL updates BBCode tab output', async ({ page }) => {
   const bbcode = page.locator('.bbcode-readonly');
   await expect(bbcode).toContainText('[img]https://cdn.steam.com/hero.png[/img]');
   // The other image should still be a placeholder
-  await expect(bbcode).toContainText('{placeholder:screenshot.gif}');
+  await expect(bbcode).toContainText('{image: screenshot.gif}');
 });
 
 // ---------------------------------------------------------------------------
@@ -189,5 +189,5 @@ test('copy BBCode includes resolved URLs, not placeholders', async ({ page }) =>
   // Verify clipboard
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardText).toContain('[img]https://cdn.steam.com/hero.png[/img]');
-  expect(clipboardText).toContain('{placeholder:screenshot.gif}');
+  expect(clipboardText).toContain('{image: screenshot.gif}');
 });
