@@ -33,6 +33,7 @@ export function App() {
 
   // Markdown content - always starts with welcome doc on fresh load
   const [markdown, setMarkdown] = useState(WELCOME_MARKDOWN);
+  const baseContentRef = useRef(WELCOME_MARKDOWN);
 
   // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
@@ -132,6 +133,7 @@ export function App() {
     const content = await openFile(MD_FILTERS);
     if (content !== null) {
       setMarkdown(content);
+      baseContentRef.current = content;
       trackEvent('file_opened', { source: 'dialog' });
     }
   }, [openFile, setMarkdown]);
@@ -161,6 +163,7 @@ export function App() {
     if (savedPath) {
       const name = savedPath.split('/').pop() || defaultName;
       setMdFileName(name);
+      baseContentRef.current = markdown;
     }
   }, [saveFileAs, markdown, mdFileName]);
 
@@ -199,7 +202,7 @@ export function App() {
   }, [handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode]);
 
   // Warn before leaving with unsaved changes
-  const hasChanges = markdown !== WELCOME_MARKDOWN;
+  const hasChanges = markdown !== baseContentRef.current;
 
   useEffect(() => {
     if (!hasChanges) return;

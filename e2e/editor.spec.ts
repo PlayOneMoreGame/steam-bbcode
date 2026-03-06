@@ -358,3 +358,18 @@ test('bbcode tab lint messages show Why? link with expandable help', async ({ pa
   await whyButtons.first().click();
   await expect(lintPanel.locator('.lint-help-text').first()).toBeVisible();
 });
+
+// ---------------------------------------------------------------------------
+// hasChanges tracks base content, not WELCOME_MARKDOWN (SMD-4360)
+// ---------------------------------------------------------------------------
+
+test('welcome doc on load is not dirty', async ({ page }) => {
+  // On initial load with welcome doc, there should be no unsaved indicator
+  await expect(page.locator('.save-indicator.unsaved')).not.toBeVisible();
+});
+
+test('editing content shows dirty indicator', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('Some new content');
+  await expect(page.locator('.save-indicator.unsaved')).toBeVisible();
+});
