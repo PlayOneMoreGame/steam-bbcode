@@ -16,7 +16,7 @@ export const CONFLUENCE_RENDERED_CLIPBOARD_HTML = `<meta charset='utf-8'><h2 id=
 export const EXPECTED_RENDERED_BBCODE = `[h2]Shrines[/h2]
 Shrines are large monuments found around planets that players can interact with to gain a global Boon (buff), and sometimes are paired with a Curse (debuff), that lasts for a period of time, for the duration of the planet, or for the duration of a run.
 
-[img]{image: Shrine_InGame_FirstPass_PatchEmbed.gif}[/img]
+[b]>>> Drop image: Shrine_InGame_FirstPass_PatchEmbed.gif <<<[/b]
 
 Players will be able to see a Shrine icon on the compass when they are within range. When a player finds the Shrine, it will be in a deactivated state. A player holds F to interact with the Shrine to begin the powering up process.
 
@@ -43,30 +43,30 @@ Modifications can be added to enemies and players based on these outcomes. If yo
 [*]We're mulling over whether splitting twice is too much or dumb fun. Would love feedback on that.
 [/list]
 
-[img]{image: MeatPugs_01.gif}[/img]
-[img]{image: MeatPugs_02.gif}[/img]
+[b]>>> Drop image: MeatPugs_01.gif <<<[/b]
+[b]>>> Drop image: MeatPugs_02.gif <<<[/b]
 
 [h2]Animation[/h2]
 New stagger animations for Squat Daddy, Dirtbag, Buster, Looger, Buzzle and Pestie. Here are a couple examples
 
-[img]{image: squatsstaggers.gif}[/img]
-[img]{image: MusclemManstagGif.gif}[/img]
+[b]>>> Drop image: squatsstaggers.gif <<<[/b]
+[b]>>> Drop image: MusclemManstagGif.gif <<<[/b]
 
 New animations for Little Alien across the board so he can show off his personality.
 
-[img]{image: LittleAlienAttackGif.gif}[/img]
+[b]>>> Drop image: LittleAlienAttackGif.gif <<<[/b]
 
 [h2]UI / UX[/h2]
 [list]
 [*]New Flair Terminal UI
 Same functionality, new graphics! Players can still unlock and upgrade flair at the terminal. Stay tuned for more updates to come!
-[img]{image: image-20260303-004331.png}[/img]
+[b]>>> Drop image: image-20260303-004331.png <<<[/b]
 [*]Exposed more detailed graphics options in the options menu. Vsync, target framerate, Anistropic Filtering, Anti-aliasing, texture and particle detail levels and more. You can still adjust the overall quality level of the graphics, but now you can also tweak individual settings to taste.
 [*]The Employee Handbook's FAQ tab now has an entry detailing Elements.
-[img]{image: Screenshot 2026-03-04 at 1.09.26 PM.png}[/img]
+[b]>>> Drop image: Screenshot 2026-03-04 at 1.09.26 PM.png <<<[/b]
 [*]Font updates are rolling out so you may notice some issues as we change things around.
 [*]Damage numbers have been tweaked to make it easier to read, they no longer add up and damage numbers are shown individually.
-[img]{image: DamageNumbers.gif}[/img]
+[b]>>> Drop image: DamageNumbers.gif <<<[/b]
 [/list]
 
 [h2]Art[/h2]
@@ -75,16 +75,16 @@ Same functionality, new graphics! Players can still unlock and upgrade flair at 
 [*]Added sub regions/biomes to Barbecuria to help with navigation and give the map more character
 [/list]
 
-[img]{image: BarbecuriaRework01.png}[/img]
+[b]>>> Drop image: BarbecuriaRework01.png <<<[/b]
 Fungal Forest
 
-[img]{image: Barbecuria02.png}[/img]
+[b]>>> Drop image: Barbecuria02.png <<<[/b]
 Sand Worm Desert
 
-[img]{image: Barbecuria03.png}[/img]
+[b]>>> Drop image: Barbecuria03.png <<<[/b]
 Payload Exit in the Fungal Forest
 
-[img]{image: Barbecuria04.png}[/img]
+[b]>>> Drop image: Barbecuria04.png <<<[/b]
 The Crag Pools
 
 [list]

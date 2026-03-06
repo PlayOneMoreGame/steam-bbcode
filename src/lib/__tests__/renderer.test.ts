@@ -66,24 +66,13 @@ describe('bbcodeToHTML', () => {
       expect(html).toContain('loading="lazy"');
     });
 
-    it('renders placeholder card for Confluence image attachments', () => {
-      const html = bbcodeToHTML('[img]{placeholder:screenshot.png}[/img]');
-      expect(html).toContain('steam-img-placeholder');
+    it('renders drop markers as bold text (natural [b] tag processing)', () => {
+      const html = bbcodeToHTML('[b]>>> Drop image: screenshot.png <<<[/b]');
+      expect(html).toContain('<strong>');
       expect(html).toContain('screenshot.png');
-      expect(html).toContain('Enter Steam URL in Images panel');
-      expect(html).not.toContain('<img');
     });
 
-    it('escapes HTML in placeholder filenames', () => {
-      // The renderer escapes < and > globally before processing [img] tags,
-      // so angle brackets in filenames are already escaped when the placeholder
-      // handler runs. Verify no raw <script> tags appear.
-      const html = bbcodeToHTML('[img]{placeholder:<script>alert(1)</script>.png}[/img]');
-      expect(html).not.toContain('<script>');
-      expect(html).toContain('steam-img-placeholder');
-    });
-
-    it('renders normal img for non-placeholder URLs', () => {
+    it('renders normal img for URLs', () => {
       const html = bbcodeToHTML('[img]https://cdn.steam.com/real.png[/img]');
       expect(html).toContain('<img src="https://cdn.steam.com/real.png"');
       expect(html).not.toContain('steam-img-placeholder');
@@ -111,11 +100,11 @@ describe('bbcodeToHTML', () => {
       expect(html).toContain('missing.png');
     });
 
-    it('handles blob and placeholder images in the same document', () => {
+    it('handles blob images alongside drop markers', () => {
       const imageMap = new Map([['dropped.png', 'data:image/png;base64,xyz']]);
-      const bbcode = '[img]{placeholder:conf.png}[/img]\n[img]blob:dropped.png[/img]';
+      const bbcode = '[b]>>> Drop image: conf.png <<<[/b]\n[img]blob:dropped.png[/img]';
       const html = bbcodeToHTML(bbcode, imageMap);
-      // Confluence placeholder shows placeholder card
+      // Drop marker renders as bold text
       expect(html).toContain('conf.png');
       // Blob image renders actual img
       expect(html).toContain('data:image/png;base64,xyz');

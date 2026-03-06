@@ -531,14 +531,14 @@ function checkUrls(
 }
 
 /**
- * Check for unresolved image placeholders from Confluence conversion
+ * Check for image drop markers from Confluence conversion
  */
 function checkImagePlaceholders(
   bbcode: string,
   warnings: LintMessage[],
   warningLines: Set<number>
 ): void {
-  const pattern = /\[img\]\{(?:image:\s*|placeholder:)([^}]+)\}\[\/img\]/gi;
+  const pattern = /\[b\]>>> Drop image: (.+?) <<<\[\/b\]/gi;
   let match;
 
   while ((match = pattern.exec(bbcode)) !== null) {
@@ -546,11 +546,11 @@ function checkImagePlaceholders(
     const line = getLineNumber(bbcode, match.index);
     warnings.push({
       type: 'warning',
-      message: `Image '${filename}' — upload to Steam and enter URL before publishing`,
+      message: `Image '${filename}' — upload to Steam and drag into position`,
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
-      help: `Upload this image to Steam's partner dashboard, then paste the URL in the Images panel.`,
+      help: `Upload this image to Steam's partner dashboard, then drag the thumbnail from Steam's image panel to replace this marker.`,
     });
     warningLines.add(line);
   }

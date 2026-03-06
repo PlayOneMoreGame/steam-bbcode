@@ -6,7 +6,7 @@ import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklis
 import { markdownToBBCode } from '@/lib/converter';
 import { confluenceToBBCode } from '@/lib/confluence-converter';
 import { detectFormat, type InputFormat } from '@/lib/format-detector';
-import { extractPlaceholderImages, resolvePlaceholders, type ImageUrlMap } from '@/lib/image-placeholders';
+import { extractPlaceholderImages } from '@/lib/image-placeholders';
 import { translateBBCode, hashString } from '@/lib/translation-service';
 import { getApiKey } from '@/lib/api-key-store';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -90,53 +90,16 @@ export function App() {
   // In-memory image store for drag-and-drop / pasted images
   const imageStore = useImageStore();
 
-  // Image placeholder state — maps filename to Steam URL
-  const [imageUrls, setImageUrls] = useState<ImageUrlMap>({});
-
-  // Extract placeholder filenames from BBCode
+  // Extract image filenames from drop markers in BBCode
   const placeholderImages = useMemo(
     () => extractPlaceholderImages(bbcode),
     [bbcode]
   );
 
-  // Resolve placeholders in BBCode using user-provided URLs
-  const resolvedBBCode = useMemo(
-    () => resolvePlaceholders(bbcode, imageUrls),
-    [bbcode, imageUrls]
-  );
-
-  // Handle image URL changes from the Images panel
-  const handleImageUrlChange = useCallback((filename: string, url: string) => {
-    setImageUrls(prev => ({ ...prev, [filename]: url }));
-  }, []);
-
   // Handle drag-and-drop / pasted images — store in memory
   const handleImageDrop = useCallback((filename: string, dataUrl: string) => {
     imageStore.addImage(filename, dataUrl);
   }, [imageStore]);
-
-  // Clear image URLs when content changes significantly (new file opened)
-  const prevPlaceholdersRef = useRef<string[]>([]);
-  useEffect(() => {
-    const prev = prevPlaceholdersRef.current;
-    const curr = placeholderImages;
-    // If the set of filenames changed completely, reset the URL map
-    // but preserve URLs for filenames that still exist
-    if (prev.length > 0 && curr.length > 0) {
-      const currSet = new Set(curr);
-      const removed = prev.filter(f => !currSet.has(f));
-      if (removed.length > 0) {
-        setImageUrls(prevUrls => {
-          const next = { ...prevUrls };
-          for (const f of removed) {
-            delete next[f];
-          }
-          return next;
-        });
-      }
-    }
-    prevPlaceholdersRef.current = curr;
-  }, [placeholderImages]);
 
   // File operations
   const handleOpenMarkdown = useCallback(async () => {
@@ -188,12 +151,12 @@ export function App() {
   // Copy BBCode to clipboard (for keyboard shortcut)
   const handleCopyBBCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(resolvedBBCode);
+      await navigator.clipboard.writeText(bbcode);
       trackEvent('copy_clicked', { panel: 'bbcode', source: 'shortcut' });
     } catch {
       // Silently fail — OutputPanel has its own copy button with feedback
     }
-  }, [resolvedBBCode]);
+  }, [bbcode]);
 
   // Global keyboard shortcuts
   // Native menu captures Cmd+N, Cmd+O, Cmd+S in desktop mode; this handler covers web mode.
@@ -286,7 +249,7 @@ export function App() {
 
   // Track source BBCode hash for stale detection
   useEffect(() => {
-    const newHash = hashString(resolvedBBCode);
+    const newHash = hashString(bbcode);
     if (sourceHashRef.current !== 0 && sourceHashRef.current !== newHash) {
       // Source changed — mark all completed translations as stale
       setTranslations(prev => {
@@ -300,7 +263,7 @@ export function App() {
       });
     }
     sourceHashRef.current = newHash;
-  }, [resolvedBBCode]);
+  }, [bbcode]);
 
   const handleTranslate = useCallback(async (lang: string) => {
     // Check for API key first
@@ -317,7 +280,7 @@ export function App() {
 
     trackEvent('translate_started', { lang });
 
-    const result = await translateBBCode(resolvedBBCode, lang);
+    const result = await translateBBCode(bbcode, lang);
 
     if (result.ok) {
       setTranslations(prev => ({
@@ -340,7 +303,7 @@ export function App() {
         trackEvent('translate_error', { lang, error: result.error });
       }
     }
-  }, [resolvedBBCode]);
+  }, [bbcode]);
 
   const handleApiKeySaved = useCallback(() => {
     setApiKeyDialogOpen(false);
@@ -439,12 +402,10 @@ export function App() {
           />
 
           <OutputPanel
-            bbcode={resolvedBBCode}
+            bbcode={bbcode}
             context={context}
             isDesktop={isDesktop}
             placeholderImages={placeholderImages}
-            imageUrls={imageUrls}
-            onImageUrlChange={handleImageUrlChange}
             imageDataUrls={imageStore.images}
             translations={translations}
             onTranslate={handleTranslate}

@@ -13,7 +13,7 @@ describe('confluenceToBBCode', () => {
 
     it('produces conversion notes for image attachments', () => {
       const result = confluenceToBBCode(SWAPMEAT_019_PATCH_NOTES, 'announcements');
-      expect(result.notes.some(n => n.includes('image attachment') || n.includes('Confluence files'))).toBe(true);
+      expect(result.notes.some(n => n.includes('Drop image') || n.includes('upload'))).toBe(true);
     });
   });
 
@@ -155,7 +155,7 @@ describe('confluenceToBBCode', () => {
         '<ac:image><ri:attachment ri:filename="test.png" /></ac:image>',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]{image: test.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: test.png <<<[/b]');
     });
 
     it('preserves filenames with spaces in placeholder', () => {
@@ -163,7 +163,7 @@ describe('confluenceToBBCode', () => {
         '<ac:image><ri:attachment ri:filename="Screenshot 2026-03-04 at 1.09.26 PM.png" /></ac:image>',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]{image: Screenshot 2026-03-04 at 1.09.26 PM.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: Screenshot 2026-03-04 at 1.09.26 PM.png <<<[/b]');
     });
 
     it('extracts caption text after image', () => {
@@ -171,7 +171,7 @@ describe('confluenceToBBCode', () => {
         '<ac:image><ri:attachment ri:filename="map.png" /><ac:caption><p>The World Map</p></ac:caption></ac:image>',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]{image: map.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: map.png <<<[/b]');
       expect(result.bbcode).toContain('The World Map');
     });
 
@@ -188,7 +188,7 @@ describe('confluenceToBBCode', () => {
         '<img src="https://onemoregame.atlassian.net/wiki/download/attachments/123/screenshot.png" alt="screenshot.png" />',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]{image: screenshot.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: screenshot.png <<<[/b]');
       expect(result.bbcode).not.toContain('atlassian.net');
     });
 
@@ -197,7 +197,7 @@ describe('confluenceToBBCode', () => {
         '<img src="https://onemoregame.atlassian.net/wiki/pages/viewpageattachments.action?pageId=123&preview=/123/456/hero.png" />',
         'announcements'
       );
-      expect(result.bbcode).toContain('{image: ');
+      expect(result.bbcode).toContain('>>> Drop image:');
       expect(result.bbcode).not.toContain('viewpageattachments');
     });
 
@@ -215,7 +215,7 @@ describe('confluenceToBBCode', () => {
         '<img src="https://onemoregame.atlassian.net/wiki/download/attachments/123/" alt="my-image.gif" />',
         'announcements'
       );
-      expect(result.bbcode).toContain('{image: my-image.gif}');
+      expect(result.bbcode).toContain('>>> Drop image: my-image.gif <<<');
     });
   });
 
@@ -323,7 +323,7 @@ describe('confluenceToBBCode', () => {
 
     it('produces image attachment notes for rendered clipboard', () => {
       const result = confluenceToBBCode(CONFLUENCE_RENDERED_CLIPBOARD_HTML, 'announcements');
-      expect(result.notes.some(n => n.includes('image attachment') || n.includes('Confluence files'))).toBe(true);
+      expect(result.notes.some(n => n.includes('Drop image') || n.includes('upload'))).toBe(true);
     });
   });
 
@@ -331,20 +331,20 @@ describe('confluenceToBBCode', () => {
     it('extracts image from mediaSingle div with data-file-name', () => {
       const html = '<div data-node-type="mediaSingle"><div data-type="file" data-node-type="media" data-file-name="test.gif"><img src="blob:https://example.com/fake" alt="test.gif"></div></div>';
       const result = confluenceToBBCode(html, 'announcements');
-      expect(result.bbcode).toContain('[img]{image: test.gif}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: test.gif <<<[/b]');
     });
 
     it('extracts caption from data-media-caption div', () => {
       const html = '<div data-node-type="mediaSingle"><div data-type="file" data-node-type="media" data-file-name="map.png"><img src="blob:https://example.com/fake" alt="map.png"></div><div data-media-caption="true">The World Map</div></div>';
       const result = confluenceToBBCode(html, 'announcements');
-      expect(result.bbcode).toContain('[img]{image: map.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: map.png <<<[/b]');
       expect(result.bbcode).toContain('The World Map');
     });
 
     it('converts blob: img src to image placeholder using alt text', () => {
       const html = '<img src="blob:https://onemoregame.atlassian.net/fake-id" alt="screenshot.png">';
       const result = confluenceToBBCode(html, 'announcements');
-      expect(result.bbcode).toContain('[img]{image: screenshot.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: screenshot.png <<<[/b]');
       expect(result.bbcode).not.toContain('blob:');
     });
 
@@ -376,7 +376,7 @@ describe('confluenceToBBCode', () => {
       const html = '<ul><li><p>Item text</p><div data-node-type="mediaSingle"><div data-type="file" data-node-type="media" data-file-name="inline.png"><img src="blob:fake" alt="inline.png"></div></div></li></ul>';
       const result = confluenceToBBCode(html, 'announcements');
       expect(result.bbcode).toContain('[*]Item text');
-      expect(result.bbcode).toContain('[img]{image: inline.png}[/img]');
+      expect(result.bbcode).toContain('[b]>>> Drop image: inline.png <<<[/b]');
     });
 
     it('skips meta charset element', () => {

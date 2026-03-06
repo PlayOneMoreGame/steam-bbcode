@@ -69,18 +69,10 @@ export function bbcodeToHTML(bbcode: string, imageDataUrls?: ImageDataUrlMap): s
     return `<a href="${safeUrl}" class="steam-link" target="_blank" rel="noopener">${safeUrl}</a>`;
   });
 
-  // Images — placeholder cards for Confluence attachments, blob images, normal img for URLs
+  // Images — blob images for drag-and-drop, normal img for URLs
+  // Note: Confluence image drop markers ([b]>>> Drop image: X <<<[/b]) render
+  // naturally through the [b] tag processing above — no special handling needed.
   html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (_match, src: string) => {
-    // Placeholder images (Confluence attachments)
-    const placeholderMatch = src.match(/^\{(?:image:\s*|placeholder:)(.+)\}$/);
-    if (placeholderMatch) {
-      const filename = placeholderMatch[1]
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${filename}</div><div class="steam-img-placeholder-hint">Enter Steam URL in Images panel</div></div>`;
-    }
-
     // In-memory blob images (drag-and-drop / paste)
     const blobMatch = src.match(/^blob:(.+)$/);
     if (blobMatch) {
@@ -99,7 +91,7 @@ export function bbcodeToHTML(bbcode: string, imageDataUrls?: ImageDataUrlMap): s
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-      return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${safeFilename}</div><div class="steam-img-placeholder-hint">Enter Steam URL in Images panel</div></div>`;
+      return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${safeFilename}</div><div class="steam-img-placeholder-hint">Drag-and-drop image</div></div>`;
     }
 
     const safeSrc = escapeHtmlAttr(sanitizeUrl(src));

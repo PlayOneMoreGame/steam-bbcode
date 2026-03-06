@@ -5,7 +5,6 @@ import { ApiKeyDialog } from './ApiKeyDialog';
 import { lintBBCode } from '@/lib/linter';
 import { SUPPORTED_LANGUAGES } from '@/lib/translation-service';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
-import type { ImageUrlMap } from '@/lib/image-placeholders';
 import type { ImageDataUrlMap } from '@/lib/renderer';
 import { trackEvent } from '@/lib/analytics';
 
@@ -23,8 +22,6 @@ interface OutputPanelProps {
   context: SteamContext;
   isDesktop: boolean;
   placeholderImages?: string[];
-  imageUrls?: ImageUrlMap;
-  onImageUrlChange?: (filename: string, url: string) => void;
   imageDataUrls?: ImageDataUrlMap;
   translations: Record<string, TranslationState>;
   onTranslate: (lang: string) => void;
@@ -38,8 +35,6 @@ export function OutputPanel({
   context,
   isDesktop,
   placeholderImages = [],
-  imageUrls = {},
-  onImageUrlChange,
   imageDataUrls,
   translations,
   onTranslate,
@@ -335,13 +330,10 @@ export function OutputPanel({
         />
       )}
 
-      {/* Images panel -- visible when document has Confluence image placeholders */}
-      {placeholderImages.length > 0 && onImageUrlChange && (
+      {/* Images panel -- upload checklist for Confluence image placeholders */}
+      {placeholderImages.length > 0 && (
         <ImagesPanel
           filenames={placeholderImages}
-          imageUrls={imageUrls}
-          onUrlChange={onImageUrlChange}
-          context={context}
           imageDataUrls={imageDataUrls}
         />
       )}

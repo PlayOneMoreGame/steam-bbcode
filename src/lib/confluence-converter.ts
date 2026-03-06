@@ -27,8 +27,8 @@ export function confluenceToBBCode(xhtml: string, context: SteamContext): Conver
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   // Remove blank line between heading and following content (heading → single newline → content)
   cleaned = cleaned.replace(/(\[\/h[123]\])\n\n/g, '$1\n');
-  // Consecutive images should have single newline between them
-  cleaned = cleaned.replace(/(\[\/img\])\n\n(\[img\])/g, '$1\n$2');
+  // Consecutive image drop markers should have single newline between them
+  cleaned = cleaned.replace(/(<<<\[\/b\])\n\n(\[b\]>>>)/g, '$1\n$2');
   // Ensure blank line before [list] when preceded by plain text (captions, paragraphs)
   // but NOT after headings or other list closings
   cleaned = cleaned.replace(/([^\n\]])\n(\[(?:list|olist)\])/g, '$1\n\n$2');
@@ -179,13 +179,13 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
       if (src.startsWith('blob:')) {
         const filename = alt || 'image.png';
         addImageNote(notes);
-        return `\n[img]{image: ${filename}}[/img]\n`;
+        return `\n${imageDropMarker(filename)}\n`;
       }
 
       if (isConfluenceUrl(src)) {
         const filename = extractFilenameFromUrl(src) || alt || 'image.png';
         addImageNote(notes);
-        return `\n[img]{image: ${filename}}[/img]\n`;
+        return `\n${imageDropMarker(filename)}\n`;
       }
       // Non-Confluence URL — pass through
       if (src) return `\n[img]${src}[/img]\n`;
@@ -266,9 +266,14 @@ function findByTagName(el: Element, ...names: string[]): Element | null {
   return null;
 }
 
+/** Format an image drop marker — visible, searchable, harmless if left in Steam */
+function imageDropMarker(filename: string): string {
+  return `[b]>>> Drop image: ${filename} <<<[/b]`;
+}
+
 function addImageNote(notes: string[]): void {
-  if (!notes.some(n => n.includes('image attachment'))) {
-    notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
+  if (!notes.some(n => n.includes('image'))) {
+    notes.push('Images marked with >>> Drop image <<< — upload to Steam and drag into position');
   }
 }
 
@@ -286,7 +291,7 @@ function processRenderedMedia(el: Element, notes: string[]): string {
   const filename = mediaDiv.getAttribute('data-file-name') || mediaDiv.getAttribute('data-alt') || 'image.png';
   addImageNote(notes);
 
-  let result = `\n[img]{image: ${filename}}[/img]`;
+  let result = `\n${imageDropMarker(filename)}`;
 
   // Check for caption
   const captionDiv = el.querySelector('[data-media-caption]');
@@ -312,7 +317,7 @@ function processConfluenceImage(el: Element, notes: string[]): string {
 
       addImageNote(notes);
 
-      let result = `\n[img]{image: ${filename}}[/img]`;
+      let result = `\n${imageDropMarker(filename)}`;
       if (captionText) {
         result += `\n${captionText}`;
       }
@@ -329,7 +334,7 @@ function processConfluenceImage(el: Element, notes: string[]): string {
       if (isConfluenceUrl(url)) {
         const filename = extractFilenameFromUrl(url) || 'image.png';
         addImageNote(notes);
-        return `\n[img]{image: ${filename}}[/img]\n`;
+        return `\n${imageDropMarker(filename)}\n`;
       }
       return `\n[img]${url}[/img]\n`;
     }
