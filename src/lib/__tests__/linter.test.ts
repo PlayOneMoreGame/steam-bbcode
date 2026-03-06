@@ -433,4 +433,97 @@ Visit [url=https://example.com]our site[/url] for more info.`;
       expect(match?.help).toContain('Settings');
     });
   });
+
+  describe('blank line in list detection', () => {
+    it('flags a blank line inside a single list block', () => {
+      const bbcode = '[list]\n[*] item 1\n\n[*] item 2\n[/list]';
+      const result = lintBBCode(bbcode, 'announcements');
+      const blankWarnings = result.warnings.filter(w => w.message.includes('Blank line inside a list'));
+      expect(blankWarnings).toHaveLength(1);
+      expect(blankWarnings[0].line).toBe(3);
+    });
+
+    it('does NOT flag blank lines between separate list blocks', () => {
+      // This is the false-positive scenario: multiple lists separated by blank lines
+      const bbcode = [
+        '[h1]Section 1[/h1]',
+        '[list]',
+        '[*] item a',
+        '[*] item b',
+        '[/list]',
+        '',
+        '[h2]Section 2[/h2]',
+        '[list]',
+        '[*] item c',
+        '[*] item d',
+        '[/list]',
+        '',
+        '[h2]Section 3[/h2]',
+        '[list]',
+        '[*] item e',
+        '[*] item f',
+        '[/list]',
+      ].join('\n');
+      const result = lintBBCode(bbcode, 'announcements');
+      const blankWarnings = result.warnings.filter(w => w.message.includes('Blank line inside a list'));
+      expect(blankWarnings).toHaveLength(0);
+    });
+
+    it('does NOT flag SWAPMEAT-style patch notes with multiple lists', () => {
+      // Simulates real converter output: headings + list blocks + blank lines between sections
+      const bbcode = [
+        '[h1]SWAPMEAT Update v0.19.0[/h1]',
+        '',
+        '[h2]New Features[/h2]',
+        '[list]',
+        '[*] Added new weapon: Plasma Rifle',
+        '[*] Added new map: Abandoned Warehouse',
+        '[*] Added leaderboard integration',
+        '[/list]',
+        '',
+        '[h2]Balance Changes[/h2]',
+        '[list]',
+        '[*] Reduced shotgun spread by 15%',
+        '[*] Increased pistol damage from 20 to 25',
+        '[*] Nerfed rocket launcher splash radius',
+        '[/list]',
+        '',
+        '[h2]Bug Fixes[/h2]',
+        '[list]',
+        '[*] Fixed crash when joining full lobby',
+        '[*] Fixed items disappearing from inventory',
+        '[*] Fixed audio not playing on hit',
+        '[/list]',
+        '',
+        '[h2]Known Issues[/h2]',
+        '[list]',
+        '[*] Occasional frame drops on large maps',
+        '[*] Chat may disconnect during server migration',
+        '[/list]',
+      ].join('\n');
+      const result = lintBBCode(bbcode, 'announcements');
+      const blankWarnings = result.warnings.filter(w => w.message.includes('Blank line inside a list'));
+      expect(blankWarnings).toHaveLength(0);
+    });
+
+    it('correctly flags blank line inside one list while ignoring gaps between others', () => {
+      const bbcode = [
+        '[list]',
+        '[*] clean item 1',
+        '[*] clean item 2',
+        '[/list]',
+        '',
+        '[list]',
+        '[*] item a',
+        '',
+        '[*] item b',
+        '[/list]',
+      ].join('\n');
+      const result = lintBBCode(bbcode, 'announcements');
+      const blankWarnings = result.warnings.filter(w => w.message.includes('Blank line inside a list'));
+      expect(blankWarnings).toHaveLength(1);
+      // The blank line is on line 8 (between "[*] item a" on line 7 and "[*] item b" on line 9)
+      expect(blankWarnings[0].line).toBe(8);
+    });
+  });
 });

@@ -491,24 +491,31 @@ function checkListItems(
  * Check for whitespace issues in lists
  */
 function checkListWhitespace(
-  bbcode: string, 
+  bbcode: string,
   warnings: LintMessage[],
   warningLines: Set<number>
 ): void {
-  // Blank lines in lists
-  const pattern = /\[list\][\s\S]*?\n\n[\s\S]*?\[\/list\]/gi;
-  let match;
-  
-  while ((match = pattern.exec(bbcode)) !== null) {
-    const blankLinePos = match[0].indexOf('\n\n');
-    const line = getLineNumber(bbcode, match.index + blankLinePos);
-    warnings.push({
-      type: 'warning',
-      message: 'Blank line inside a list may break the formatting on Steam',
-      line,
-      help: 'Steam can interpret blank lines inside a [list] as the end of the list, which breaks the rest of your items. Remove blank lines between [*] items to keep the list together.',
-    });
-    warningLines.add(line);
+  // Find each [list]...[/list] block individually, then check for \n\n inside it.
+  // Using a non-greedy match that excludes nested [list] tags to avoid crossing boundaries.
+  const blockPattern = /\[list\]([\s\S]*?)\[\/list\]/gi;
+  let blockMatch;
+
+  while ((blockMatch = blockPattern.exec(bbcode)) !== null) {
+    const blockContent = blockMatch[1];
+    // Search for blank lines (\n\n) within this specific block
+    let searchStart = 0;
+    let blankIdx;
+    while ((blankIdx = blockContent.indexOf('\n\n', searchStart)) !== -1) {
+      const line = getLineNumber(bbcode, blockMatch.index + '[list]'.length + blankIdx + 1);
+      warnings.push({
+        type: 'warning',
+        message: 'Blank line inside a list may break the formatting on Steam',
+        line,
+        help: 'Steam can interpret blank lines inside a [list] as the end of the list, which breaks the rest of your items. Remove blank lines between [*] items to keep the list together.',
+      });
+      warningLines.add(line);
+      searchStart = blankIdx + 2;
+    }
   }
 }
 

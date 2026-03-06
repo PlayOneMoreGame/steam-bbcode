@@ -71,48 +71,50 @@ describe('blacklist-store', () => {
   });
 
   describe('addTerm', () => {
-    it('adds a term to the list', () => {
-      setBlacklist([]);
-      addTerm('bad');
-      expect(getBlacklist()).toEqual(['bad']);
-    });
-
     it('adds a term to existing list', () => {
       setBlacklist(['existing']);
       addTerm('new');
       expect(getBlacklist()).toEqual(['existing', 'new']);
     });
 
+    it('adds a term to default list', () => {
+      // No localStorage → defaults loaded, term appended
+      addTerm('xyzzy-custom');
+      const result = getBlacklist();
+      expect(result).toContain('xyzzy-custom');
+      expect(result.length).toBe(DEFAULT_BLOCKED_WORDS.length + 1);
+    });
+
     it('prevents duplicates (case-insensitive)', () => {
-      setBlacklist([]);
+      setBlacklist(['only']);
       addTerm('bad');
       addTerm('BAD');
-      expect(getBlacklist()).toEqual(['bad']);
+      expect(getBlacklist()).toEqual(['only', 'bad']);
     });
 
     it('prevents duplicates (exact match)', () => {
-      setBlacklist([]);
+      setBlacklist(['only']);
       addTerm('bad');
       addTerm('bad');
-      expect(getBlacklist()).toEqual(['bad']);
+      expect(getBlacklist()).toEqual(['only', 'bad']);
     });
 
     it('trims whitespace', () => {
-      setBlacklist([]);
+      setBlacklist(['only']);
       addTerm('  bad  ');
-      expect(getBlacklist()).toEqual(['bad']);
+      expect(getBlacklist()).toContain('bad');
     });
 
     it('does not add empty string', () => {
-      setBlacklist([]);
+      setBlacklist(['only']);
       addTerm('');
-      expect(getBlacklist()).toEqual([]);
+      expect(getBlacklist()).toEqual(['only']);
     });
 
     it('does not add whitespace-only string', () => {
-      setBlacklist([]);
+      setBlacklist(['only']);
       addTerm('   ');
-      expect(getBlacklist()).toEqual([]);
+      expect(getBlacklist()).toEqual(['only']);
     });
   });
 
@@ -124,15 +126,33 @@ describe('blacklist-store', () => {
     });
 
     it('removes case-insensitively', () => {
-      setBlacklist(['Bad']);
+      setBlacklist(['Bad', 'other']);
       removeTerm('bad');
-      expect(getBlacklist()).toEqual([]);
+      expect(getBlacklist()).toEqual(['other']);
     });
 
     it('no-op when term not present', () => {
       setBlacklist(['bad']);
       removeTerm('nothere');
       expect(getBlacklist()).toEqual(['bad']);
+    });
+  });
+
+  describe('migration from old empty default', () => {
+    it('returns defaults when stored value is empty array', () => {
+      store['steambb-blacklist-terms'] = '[]';
+      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+    });
+
+    it('clears the old empty value from localStorage', () => {
+      store['steambb-blacklist-terms'] = '[]';
+      getBlacklist();
+      expect(store['steambb-blacklist-terms']).toBeUndefined();
+    });
+
+    it('preserves non-empty stored lists', () => {
+      store['steambb-blacklist-terms'] = JSON.stringify(['custom-term']);
+      expect(getBlacklist()).toEqual(['custom-term']);
     });
   });
 

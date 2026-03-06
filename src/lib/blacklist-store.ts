@@ -18,6 +18,11 @@ export function getBlacklist(): string[] {
     if (!stored) return [...DEFAULT_BLOCKED_WORDS];
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return [...DEFAULT_BLOCKED_WORDS];
+    // Migrate from old empty default — previous versions shipped with []
+    if (parsed.length === 0) {
+      localStorage.removeItem(STORAGE_KEY);
+      return [...DEFAULT_BLOCKED_WORDS];
+    }
     return parsed;
   } catch {
     return [...DEFAULT_BLOCKED_WORDS];
