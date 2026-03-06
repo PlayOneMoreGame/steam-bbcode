@@ -4,6 +4,7 @@ import { OutputPanel, type TranslationState } from '@/components/OutputPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm } from '@/lib/blacklist-store';
 import { markdownToBBCode } from '@/lib/converter';
+import { lintBBCode } from '@/lib/linter';
 import { detectFormat, type InputFormat } from '@/lib/format-detector';
 import { extractPlaceholderImages } from '@/lib/image-placeholders';
 import { translateBBCode, hashString } from '@/lib/translation-service';
@@ -16,7 +17,7 @@ import { useImageStore } from '@/hooks/useImageStore';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 import { WELCOME_MARKDOWN } from '@/lib/welcome';
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, trackPageView, buildWorkflowProperties, type InputMethod } from '@/lib/analytics';
 
 import '@/styles/app.css';
 import '@/styles/steam-theme.css';
@@ -24,6 +25,19 @@ import '@/styles/steam-theme.css';
 export function App() {
   // File service
   const { openFile, saveFileAs, isDesktop, currentFile } = useFileService();
+
+  // Analytics: session start + page view on mount
+  const inputMethodRef = useRef<InputMethod>('unknown');
+  const pasteTimestampRef = useRef<number | null>(null);
+  const contentAtPasteRef = useRef<string>('');
+
+  useEffect(() => {
+    trackPageView();
+    trackEvent('session_start', {
+      is_desktop: isDesktop,
+      user_agent: navigator.userAgent,
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Recent files (desktop only)
   const { addRecentFile } = useRecentFiles();
@@ -47,11 +61,13 @@ export function App() {
   const handleAddBlacklistTerm = useCallback((term: string) => {
     addBlacklistTerm(term);
     setBlacklist(getBlacklist());
+    trackEvent('blacklist_term_added', { term });
   }, []);
 
   const handleRemoveBlacklistTerm = useCallback((term: string) => {
     removeBlacklistTerm(term);
     setBlacklist(getBlacklist());
+    trackEvent('blacklist_term_removed', { term });
   }, []);
 
   // Format detection (debounced)
@@ -101,6 +117,9 @@ export function App() {
     if (content !== null) {
       setMarkdown(content);
       baseContentRef.current = content;
+      inputMethodRef.current = 'file_open';
+      pasteTimestampRef.current = Date.now();
+      contentAtPasteRef.current = content;
       trackEvent('file_opened', { source: 'dialog' });
     }
   }, [openFile, setMarkdown]);
@@ -147,10 +166,21 @@ export function App() {
     try {
       await navigator.clipboard.writeText(bbcode);
       trackEvent('copy_clicked', { panel: 'bbcode', source: 'shortcut' });
+      const lint = lintBBCode(bbcode, context);
+      trackEvent('workflow_completed', buildWorkflowProperties({
+        inputMethod: inputMethodRef.current,
+        bbcodeLength: bbcode.length,
+        imageCount: placeholderImages.length,
+        lintErrorCount: lint.errors.length,
+        lintWarningCount: lint.warnings.length,
+        pasteTimestamp: pasteTimestampRef.current,
+        context,
+        editedAfterPaste: contentAtPasteRef.current !== '' && markdown !== contentAtPasteRef.current,
+      }));
     } catch {
       // Silently fail — OutputPanel has its own copy button with feedback
     }
-  }, [bbcode]);
+  }, [bbcode, context, markdown, placeholderImages.length]);
 
   // Global keyboard shortcuts
   // Native menu captures Cmd+N, Cmd+O, Cmd+S in desktop mode; this handler covers web mode.
@@ -393,6 +423,11 @@ export function App() {
             context={context}
             blacklist={blacklist}
             onImageDrop={handleImageDrop}
+            onInputMethodChange={(method: InputMethod, content: string) => {
+              inputMethodRef.current = method;
+              pasteTimestampRef.current = Date.now();
+              contentAtPasteRef.current = content;
+            }}
           />
 
           <OutputPanel
@@ -406,6 +441,19 @@ export function App() {
             apiKeyDialogOpen={apiKeyDialogOpen}
             onApiKeyDialogClose={() => setApiKeyDialogOpen(false)}
             onApiKeySaved={handleApiKeySaved}
+            onWorkflowComplete={() => {
+              const lint = lintBBCode(bbcode, context);
+              trackEvent('workflow_completed', buildWorkflowProperties({
+                inputMethod: inputMethodRef.current,
+                bbcodeLength: bbcode.length,
+                imageCount: placeholderImages.length,
+                lintErrorCount: lint.errors.length,
+                lintWarningCount: lint.warnings.length,
+                pasteTimestamp: pasteTimestampRef.current,
+                context,
+                editedAfterPaste: contentAtPasteRef.current !== '' && markdown !== contentAtPasteRef.current,
+              }));
+            }}
           />
         </main>
 

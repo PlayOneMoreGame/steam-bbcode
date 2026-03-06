@@ -28,6 +28,7 @@ interface OutputPanelProps {
   apiKeyDialogOpen: boolean;
   onApiKeyDialogClose: () => void;
   onApiKeySaved: () => void;
+  onWorkflowComplete?: () => void;
 }
 
 export function OutputPanel({
@@ -41,6 +42,7 @@ export function OutputPanel({
   apiKeyDialogOpen,
   onApiKeyDialogClose,
   onApiKeySaved,
+  onWorkflowComplete,
 }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<OutputTab>('preview');
   const [copyFeedback, setCopyFeedback] = useState('');
@@ -123,11 +125,14 @@ export function OutputPanel({
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
       trackEvent('copy_clicked', { panel: activeTab === 'preview' || activeTab === 'bbcode' ? 'bbcode' : 'translation', lang: activeTab });
+      if (activeTab === 'preview' || activeTab === 'bbcode') {
+        onWorkflowComplete?.();
+      }
     } catch {
       setCopyFeedback('Failed');
       setTimeout(() => setCopyFeedback(''), 2000);
     }
-  }, [activeCopyContent, activeTab]);
+  }, [activeCopyContent, activeTab, onWorkflowComplete]);
 
   const handleLintClick = useCallback(() => {
     setActiveTab('bbcode');

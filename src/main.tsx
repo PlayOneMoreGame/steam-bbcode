@@ -11,6 +11,9 @@ if (posthogKey) {
     api_host: posthogHost || 'https://us.i.posthog.com',
     autocapture: false,
     capture_pageview: false,
+    session_recording: {
+      maskAllInputs: false,
+    },
   });
 }
 

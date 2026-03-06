@@ -6,7 +6,7 @@ import { plaintextToMarkdown } from '@/lib/plaintext-normalizer';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { InputFormat } from '@/lib/format-detector';
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, type InputMethod } from '@/lib/analytics';
 
 /** Labels shown in the format badge — user-facing, no technical jargon */
 const FORMAT_LABELS: Record<InputFormat, string> = {
@@ -34,6 +34,7 @@ interface MarkdownPanelProps {
   context?: SteamContext;
   blacklist?: string[];
   onImageDrop?: (filename: string, dataUrl: string) => void;
+  onInputMethodChange?: (method: InputMethod, content: string) => void;
 }
 
 export function MarkdownPanel({
@@ -46,6 +47,7 @@ export function MarkdownPanel({
   context = 'announcements',
   blacklist = [],
   onImageDrop,
+  onInputMethodChange,
 }: MarkdownPanelProps) {
   const [showDiscord, setShowDiscord] = useState(false);
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
@@ -86,6 +88,7 @@ export function MarkdownPanel({
       e.preventDefault();
       const { markdown } = confluenceToMarkdown(html, context);
       onChange(markdown);
+      onInputMethodChange?.('confluence_paste', markdown);
       trackEvent('paste_confluence', { source: 'clipboard_html' });
       return;
     }
@@ -97,12 +100,19 @@ export function MarkdownPanel({
       if (normalized !== plain) {
         e.preventDefault();
         onChange(normalized);
+        onInputMethodChange?.('plaintext_paste', normalized);
         trackEvent('paste_plaintext', { source: 'clipboard_plain', normalized: true });
         return;
       }
+      // Unstructured plain text — browser handles paste, track the method
+      onInputMethodChange?.('markdown_paste', plain);
+      return;
     }
-    // Unstructured text — let default paste behavior handle it
-  }, [onChange, context]);
+    // Default paste (e.g. markdown from clipboard)
+    if (plain) {
+      onInputMethodChange?.('markdown_paste', plain);
+    }
+  }, [onChange, context, onInputMethodChange]);
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
