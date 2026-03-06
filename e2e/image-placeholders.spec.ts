@@ -93,23 +93,19 @@ test('BBCode output contains drop markers for Confluence images', async ({ page 
 });
 
 // ---------------------------------------------------------------------------
-// Lint warnings for drop markers
+// Lint does NOT show drop markers (they're process reminders, not editing issues)
 // ---------------------------------------------------------------------------
 
-test('lint warns about drop marker images', async ({ page }) => {
+test('lint does not warn about drop marker images', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
   await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
   await page.waitForTimeout(500);
 
-  // Switch to BBCode tab to see lint warnings
+  // Switch to BBCode tab
   await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
-  const lintPanel = page.locator('.output-panel .panel-lint');
 
-  // Should have warnings for both images
-  const warnings = lintPanel.locator('.lint-message.warning');
-  const warningTexts = await warnings.allTextContents();
-  const dropWarnings = warningTexts.filter(t => t.includes('upload to Steam'));
-  expect(dropWarnings.length).toBe(2);
+  // Lint status should show Ready (no errors or warnings from drop markers)
+  await expect(page.locator('.lint-status-ready')).toBeVisible();
 });
 
 // ---------------------------------------------------------------------------

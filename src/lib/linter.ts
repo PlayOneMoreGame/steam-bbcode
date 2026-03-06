@@ -82,9 +82,6 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
   // NOTE: Unformatted text check disabled - too noisy for real content
   // checkUnformattedText(bbcode, warnings, warningLines);
 
-  // Check for unresolved image placeholders
-  checkImagePlaceholders(bbcode, warnings, warningLines);
-
   // Check character limits
   checkCharacterLimits(bbcode, context, errors, warnings);
 
@@ -525,32 +522,6 @@ function checkUrls(
       message: 'This link may need https:// at the start to work on Steam',
       line,
       help: 'Steam requires full web addresses with https:// at the beginning. Try: [url=https://example.com]link text[/url].',
-    });
-    warningLines.add(line);
-  }
-}
-
-/**
- * Check for image drop markers from Confluence conversion
- */
-function checkImagePlaceholders(
-  bbcode: string,
-  warnings: LintMessage[],
-  warningLines: Set<number>
-): void {
-  const pattern = /\[b\]>>> Drop image: (.+?) <<<\[\/b\]/gi;
-  let match;
-
-  while ((match = pattern.exec(bbcode)) !== null) {
-    const filename = match[1];
-    const line = getLineNumber(bbcode, match.index);
-    warnings.push({
-      type: 'warning',
-      message: `Image '${filename}' — upload to Steam and drag into position`,
-      line,
-      column: getColumnInLine(bbcode, match.index),
-      length: match[0].length,
-      help: `Upload this image to Steam's partner dashboard, then drag the thumbnail from Steam's image panel to replace this marker.`,
     });
     warningLines.add(line);
   }

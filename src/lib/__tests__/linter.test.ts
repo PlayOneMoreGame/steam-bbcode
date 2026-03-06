@@ -223,47 +223,18 @@ describe('lintBBCode', () => {
   });
 
   describe('image drop markers', () => {
-    it('warns about drop marker images', () => {
+    it('does not lint drop markers — they are process reminders, not editing issues', () => {
       const bbcode = '[b]>>> Drop image: screenshot.png <<<[/b]';
       const result = lintBBCode(bbcode, 'announcements');
-      expect(result.warnings.some(w =>
-        w.message.includes("Image 'screenshot.png'") && w.message.includes('upload to Steam')
-      )).toBe(true);
+      expect(result.warnings.filter(w => w.message.includes('screenshot.png'))).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
     });
 
-    it('warns about each drop marker', () => {
+    it('does not affect Ready status for drop markers', () => {
       const bbcode = '[b]>>> Drop image: a.png <<<[/b]\n[b]>>> Drop image: b.png <<<[/b]';
       const result = lintBBCode(bbcode, 'announcements');
-      const dropWarnings = result.warnings.filter(w => w.message.includes('upload to Steam'));
-      expect(dropWarnings).toHaveLength(2);
-      expect(dropWarnings[0].message).toContain("'a.png'");
-      expect(dropWarnings[1].message).toContain("'b.png'");
-    });
-
-    it('includes correct line number for drop marker warning', () => {
-      const bbcode = 'Some text\n[b]>>> Drop image: test.png <<<[/b]';
-      const result = lintBBCode(bbcode, 'announcements');
-      const warning = result.warnings.find(w => w.message.includes("'test.png'"));
-      expect(warning?.line).toBe(2);
-    });
-
-    it('includes help text for drop marker warning', () => {
-      const bbcode = '[b]>>> Drop image: test.png <<<[/b]';
-      const result = lintBBCode(bbcode, 'announcements');
-      const warning = result.warnings.find(w => w.message.includes("'test.png'"));
-      expect(warning?.help).toContain('Steam');
-    });
-
-    it('does not warn about normal images', () => {
-      const bbcode = '[img]https://cdn.steam.com/img.png[/img]';
-      const result = lintBBCode(bbcode, 'announcements');
-      expect(result.warnings.filter(w => w.message.includes('upload to Steam'))).toHaveLength(0);
-    });
-
-    it('marks drop marker warning lines', () => {
-      const bbcode = '[b]>>> Drop image: test.png <<<[/b]';
-      const result = lintBBCode(bbcode, 'announcements');
-      expect(result.warningLines.has(1)).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings.filter(w => w.message.includes('upload'))).toHaveLength(0);
     });
   });
 
