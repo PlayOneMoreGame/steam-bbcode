@@ -8,17 +8,18 @@ export type ImageUrlMap = Record<string, string>;
 
 /**
  * Extract all placeholder image filenames from BBCode.
- * Detects both `{placeholder:filename}` (Confluence) and `blob:filename` (drag/drop/paste).
+ * Detects `{image: filename}` (rendered clipboard), `{placeholder:filename}` (storage format),
+ * and `blob:filename` (drag/drop/paste).
  * Returns an array of unique filenames in order of first appearance.
  */
 export function extractPlaceholderImages(bbcode: string): string[] {
-  const pattern = /\[img\](?:\{placeholder:([^}]+)\}|blob:([^\[]+))\[\/img\]/gi;
+  const pattern = /\[img\](?:\{image:\s*([^}]+)\}|\{placeholder:([^}]+)\}|blob:([^\[]+))\[\/img\]/gi;
   const seen = new Set<string>();
   const filenames: string[] = [];
   let match;
 
   while ((match = pattern.exec(bbcode)) !== null) {
-    const filename = match[1] || match[2];
+    const filename = match[1] || match[2] || match[3];
     if (filename && !seen.has(filename)) {
       seen.add(filename);
       filenames.push(filename);
@@ -30,12 +31,24 @@ export function extractPlaceholderImages(bbcode: string): string[] {
 
 /**
  * Replace placeholder URLs in BBCode with resolved Steam URLs.
- * Handles both `{placeholder:filename}` and `blob:filename` patterns.
+ * Handles `{image: filename}`, `{placeholder:filename}`, and `blob:filename` patterns.
  * Only replaces entries that have a non-empty URL in the map.
  */
 export function resolvePlaceholders(bbcode: string, imageUrls: ImageUrlMap): string {
-  // Resolve {placeholder:...} patterns
+  // Resolve {image: ...} patterns (rendered clipboard)
   let result = bbcode.replace(
+    /\[img\]\{image:\s*([^}]+)\}\[\/img\]/gi,
+    (original, filename: string) => {
+      const url = imageUrls[filename];
+      if (url && url.trim()) {
+        return `[img]${url.trim()}[/img]`;
+      }
+      return original;
+    }
+  );
+
+  // Resolve {placeholder:...} patterns (storage format)
+  result = result.replace(
     /\[img\]\{placeholder:([^}]+)\}\[\/img\]/gi,
     (original, filename: string) => {
       const url = imageUrls[filename];

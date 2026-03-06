@@ -1,0 +1,95 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - heading "SteamBBEditor" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]: "Steam Context:"
+          - combobox [ref=e11] [cursor=pointer]:
+            - option "Announcements" [selected]
+            - option "Guides"
+            - option "Forums"
+            - option "Reviews"
+        - button "Tags" [ref=e13] [cursor=pointer]
+        - button "Settings" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - generic [ref=e16]: ℹ Image attachments reference Confluence files — upload to Steam and update URLs
+      - generic [ref=e17]: ℹ Image attachments reference Confluence files — upload to Steam and update URLs
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - text: Editor
+          - generic [ref=e22]: Rich Text
+        - generic [ref=e23]:
+          - generic [ref=e24]: "1"
+          - button "Open" [ref=e25] [cursor=pointer]
+      - button "⚠ Line 1 2 images from Confluence — you'll need to upload them to Steam and update the URLs." [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: ⚠
+        - generic [ref=e30]: Line 1
+        - generic [ref=e31]: 2 images from Confluence — you'll need to upload them to Steam and update the URLs.
+      - generic [ref=e32]:
+        - generic [ref=e34]: "1"
+        - generic [ref=e35]:
+          - generic: <h1>Patch Notes</h1><p>Here are changes:</p><ac:image><ri:attachment ri:filename="hero.png" /></ac:image><p>More text</p><ac:image><ri:attachment ri:filename="screenshot.gif" /></ac:image>
+          - textbox "Paste your Markdown here, or click Open to load a file..." [ref=e36]: <h1>Patch Notes</h1><p>Here are changes:</p><ac:image><ri:attachment ri:filename="hero.png" /></ac:image><p>More text</p><ac:image><ri:attachment ri:filename="screenshot.gif" /></ac:image>
+      - generic [ref=e37]:
+        - button "Discord (1)" [ref=e38] [cursor=pointer]
+        - generic [ref=e39]: 188 chars
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - button "Steam Preview" [ref=e43] [cursor=pointer]
+          - button "BBCode 1" [active] [ref=e44] [cursor=pointer]:
+            - text: BBCode
+            - generic [ref=e45]: "1"
+          - button "Translate ▾" [ref=e47] [cursor=pointer]
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]: "!"
+            - text: 1 warning
+          - button "Copy BBCode" [ref=e51] [cursor=pointer]
+      - generic [ref=e52]:
+        - generic [ref=e55]:
+          - generic [ref=e56]: ⚠
+          - generic [ref=e57]: L8
+          - generic [ref=e58]: Image 'screenshot.gif' — upload to Steam and enter URL before publishing
+          - button "Why?" [ref=e59] [cursor=pointer]
+        - generic [ref=e60]: "[h1]Patch Notes[/h1] Here are changes: [img]https://cdn.steam.com/hero.png[/img] More text [img]{image: screenshot.gif}[/img]"
+      - generic [ref=e61]:
+        - button "1 images need URLs Images (2 total, 1 needs Steam URL) ▼" [expanded] [ref=e62] [cursor=pointer]:
+          - generic [ref=e63]:
+            - generic "1 images need URLs" [ref=e64]: ○
+            - text: Images (2 total, 1 needs Steam URL)
+          - generic [ref=e65]: ▼
+        - generic [ref=e66]:
+          - generic [ref=e67]: Announcements use [img]URL[/img] with the Steam CDN URL
+          - generic [ref=e68]:
+            - generic [ref=e69]: 🖼
+            - generic "hero.png" [ref=e70]
+            - textbox "Paste Steam URL..." [ref=e71]: https://cdn.steam.com/hero.png
+            - generic [ref=e72]: ✓
+          - generic [ref=e73]:
+            - generic [ref=e74]: 🖼
+            - generic "screenshot.gif" [ref=e75]
+            - textbox "Paste Steam URL..." [ref=e76]
+            - generic [ref=e77]: ○
+      - generic [ref=e81]: 128 / 8,000
+  - contentinfo [ref=e82]:
+    - generic [ref=e83]:
+      - generic [ref=e84]: ⌘N
+      - text: New
+      - generic [ref=e85]: ⌘O
+      - text: Open
+      - generic [ref=e86]: ⌘S
+      - text: Save As
+      - generic [ref=e87]: ⌘⇧C
+      - text: Copy BBCode
+    - generic [ref=e88]:
+      - generic [ref=e89]: ●
+      - link "Feedback" [ref=e90] [cursor=pointer]:
+        - /url: https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose
+```

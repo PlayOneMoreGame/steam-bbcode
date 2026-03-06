@@ -16,11 +16,11 @@ const FORMAT_LABELS: Record<InputFormat, string> = {
 
 /**
  * Check if HTML clipboard content contains Confluence markers.
- * Confluence pages copied from the browser include XHTML in the clipboard HTML
- * with ac:, ri:, or atlassian-specific attributes.
+ * Covers both storage format (ac:/ri: namespace) and rendered clipboard
+ * (data-renderer-start-pos, data-node-type="media", blob: atlassian URLs).
  */
 function isConfluenceHtml(html: string): boolean {
-  return /(<ac:[a-z-]+|<ri:[a-z-]+|atlassian|confluence)/i.test(html);
+  return /(<ac:[a-z-]+|<ri:[a-z-]+|atlassian|confluence|data-renderer-start-pos|data-node-type="media)/i.test(html);
 }
 
 interface MarkdownPanelProps {

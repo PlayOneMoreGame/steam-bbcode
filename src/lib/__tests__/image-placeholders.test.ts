@@ -55,6 +55,21 @@ describe('extractPlaceholderImages', () => {
     const bbcode = '[img]blob:pasted-image-1.png[/img]';
     expect(extractPlaceholderImages(bbcode)).toEqual(['pasted-image-1.png']);
   });
+
+  it('extracts filenames from {image: } format', () => {
+    const bbcode = '[img]{image: test.png}[/img]\n[img]{image: hero.gif}[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['test.png', 'hero.gif']);
+  });
+
+  it('extracts filenames with spaces from {image: } format', () => {
+    const bbcode = '[img]{image: Screenshot 2026-03-04 at 1.09.26 PM.png}[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['Screenshot 2026-03-04 at 1.09.26 PM.png']);
+  });
+
+  it('extracts mixed {image:}, {placeholder:}, and blob formats', () => {
+    const bbcode = '[img]{image: new.png}[/img]\n[img]{placeholder:old.png}[/img]\n[img]blob:dropped.png[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['new.png', 'old.png', 'dropped.png']);
+  });
 });
 
 describe('resolvePlaceholders', () => {
@@ -130,6 +145,18 @@ describe('resolvePlaceholders', () => {
     const result = resolvePlaceholders(bbcode, urls);
     expect(result).toContain('[img]https://cdn.steam.com/conf.png[/img]');
     expect(result).toContain('[img]https://cdn.steam.com/local.png[/img]');
+  });
+
+  it('resolves {image: } format with Steam URL', () => {
+    const bbcode = '[img]{image: test.png}[/img]';
+    const urls: ImageUrlMap = { 'test.png': 'https://cdn.steam.com/test.png' };
+    expect(resolvePlaceholders(bbcode, urls)).toBe('[img]https://cdn.steam.com/test.png[/img]');
+  });
+
+  it('leaves unresolved {image: } references unchanged', () => {
+    const bbcode = '[img]{image: test.png}[/img]';
+    const urls: ImageUrlMap = {};
+    expect(resolvePlaceholders(bbcode, urls)).toBe(bbcode);
   });
 });
 

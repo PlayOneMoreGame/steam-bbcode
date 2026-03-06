@@ -101,4 +101,23 @@ describe('detectFormat', () => {
       expect(detectFormat('I rated it 5 * out of 5')).toBe('plaintext');
     });
   });
+
+  describe('rendered clipboard detection', () => {
+    it('detects data-renderer-start-pos attribute', () => {
+      expect(detectFormat('<p data-renderer-start-pos="10">Text</p>')).toBe('confluence');
+    });
+
+    it('detects data-node-type="mediaSingle"', () => {
+      expect(detectFormat('<div data-node-type="mediaSingle"><div data-node-type="media" data-file-name="img.png"></div></div>')).toBe('confluence');
+    });
+
+    it('detects data-local-id attribute (rendered clipboard variant)', () => {
+      expect(detectFormat('<h2 data-local-id="8c8c629dc341">Title</h2>')).toBe('confluence');
+    });
+
+    it('detects real rendered clipboard sample', () => {
+      const sample = `<meta charset='utf-8'><h2 id="Shrines" data-local-id="8c8c629dc341" data-renderer-start-pos="1" style="margin: 0px;"><strong><u>Shrines</u></strong></h2>`;
+      expect(detectFormat(sample)).toBe('confluence');
+    });
+  });
 });

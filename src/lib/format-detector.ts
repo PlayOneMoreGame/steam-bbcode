@@ -30,8 +30,14 @@ function hasConfluenceMarkers(text: string): boolean {
   // ri: namespace tags (ri:attachment, ri:page, ri:url, etc.)
   if (/<ri:[a-z-]+/i.test(text)) return true;
 
-  // Confluence local-id attributes (present on nearly every element)
+  // Confluence local-id attributes (present on nearly every element in both storage and rendered)
   if (/\blocal-id="[a-f0-9-]+"/.test(text)) return true;
+
+  // Rendered clipboard: data-renderer-start-pos attribute
+  if (/data-renderer-start-pos=/.test(text)) return true;
+
+  // Rendered clipboard: mediaSingle/media data attributes with blob: Confluence URLs
+  if (/data-node-type="media/.test(text)) return true;
 
   return false;
 }

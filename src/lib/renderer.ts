@@ -71,8 +71,8 @@ export function bbcodeToHTML(bbcode: string, imageDataUrls?: ImageDataUrlMap): s
 
   // Images — placeholder cards for Confluence attachments, blob images, normal img for URLs
   html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (_match, src: string) => {
-    // Confluence placeholder images
-    const placeholderMatch = src.match(/^\{placeholder:(.+)\}$/);
+    // Placeholder images (Confluence attachments)
+    const placeholderMatch = src.match(/^\{(?:image:\s*|placeholder:)(.+)\}$/);
     if (placeholderMatch) {
       const filename = placeholderMatch[1]
         .replace(/&/g, '&amp;')

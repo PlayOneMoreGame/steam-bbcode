@@ -29,6 +29,9 @@ export function confluenceToBBCode(xhtml: string, context: SteamContext): Conver
   cleaned = cleaned.replace(/(\[\/h[123]\])\n\n/g, '$1\n');
   // Consecutive images should have single newline between them
   cleaned = cleaned.replace(/(\[\/img\])\n\n(\[img\])/g, '$1\n$2');
+  // Ensure blank line before [list] when preceded by plain text (captions, paragraphs)
+  // but NOT after headings or other list closings
+  cleaned = cleaned.replace(/([^\n\]])\n(\[(?:list|olist)\])/g, '$1\n\n$2');
 
   return { bbcode: cleaned.trim(), notes };
 }
@@ -67,6 +70,28 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
   }
   if (tag.startsWith('ac:') || tag.startsWith('ac-')) {
     // For unhandled ac: elements, just process children
+    return processChildren(el, notes, context);
+  }
+
+  // Rendered clipboard: media wrapper div with data-file-name
+  // Structure: <div data-node-type="mediaSingle"><div data-file-name="x.gif"><img src="blob:..."></div><div data-media-caption="true">caption</div></div>
+  if (tag === 'div') {
+    const nodeType = el.getAttribute('data-node-type');
+
+    if (nodeType === 'mediaSingle') {
+      return processRenderedMedia(el, notes);
+    }
+
+    // Skip media inner divs — handled by processRenderedMedia
+    if (nodeType === 'media' || el.getAttribute('data-type') === 'file') {
+      return '';
+    }
+
+    // Caption divs — handled by processRenderedMedia
+    if (el.getAttribute('data-media-caption') === 'true') {
+      return '';
+    }
+
     return processChildren(el, notes, context);
   }
 
@@ -140,17 +165,27 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
       return `[quote]${processChildren(el, notes, context).trim()}[/quote]`;
 
     case 'img': {
+      // Inside a mediaSingle wrapper, the img is handled by processRenderedMedia
+      const parent = el.parentElement;
+      if (parent && (parent.getAttribute('data-node-type') === 'media' || parent.getAttribute('data-type') === 'file')) {
+        return '';
+      }
+
       // Handle <img> tags from rendered Confluence view (browser clipboard)
-      // These have auth-protected src URLs that won't work on Steam
       const src = el.getAttribute('src') || '';
       const alt = el.getAttribute('alt') || '';
+
+      // blob: URLs are never valid outside the browser session
+      if (src.startsWith('blob:')) {
+        const filename = alt || 'image.png';
+        addImageNote(notes);
+        return `\n[img]{image: ${filename}}[/img]\n`;
+      }
+
       if (isConfluenceUrl(src)) {
-        // Extract filename from URL or use alt text
         const filename = extractFilenameFromUrl(src) || alt || 'image.png';
-        if (!notes.some(n => n.includes('image attachment'))) {
-          notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
-        }
-        return `\n[img]{placeholder:${filename}}[/img]\n`;
+        addImageNote(notes);
+        return `\n[img]{image: ${filename}}[/img]\n`;
       }
       // Non-Confluence URL — pass through
       if (src) return `\n[img]${src}[/img]\n`;
@@ -161,7 +196,9 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
       return '\n[hr][/hr]\n';
 
     // Container elements — just process children
-    case 'div':
+    case 'meta':
+      return '';
+
     case 'span':
     case 'body':
     case 'html':
@@ -229,6 +266,40 @@ function findByTagName(el: Element, ...names: string[]): Element | null {
   return null;
 }
 
+function addImageNote(notes: string[]): void {
+  if (!notes.some(n => n.includes('image attachment'))) {
+    notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
+  }
+}
+
+/**
+ * Process rendered clipboard media wrapper.
+ * Structure: <div data-node-type="mediaSingle">
+ *              <div data-file-name="x.gif" data-node-type="media"><img src="blob:..."></div>
+ *              <div data-media-caption="true">Caption text</div>
+ *            </div>
+ */
+function processRenderedMedia(el: Element, notes: string[]): string {
+  const mediaDiv = el.querySelector('[data-file-name]');
+  if (!mediaDiv) return '';
+
+  const filename = mediaDiv.getAttribute('data-file-name') || mediaDiv.getAttribute('data-alt') || 'image.png';
+  addImageNote(notes);
+
+  let result = `\n[img]{image: ${filename}}[/img]`;
+
+  // Check for caption
+  const captionDiv = el.querySelector('[data-media-caption]');
+  if (captionDiv) {
+    const captionText = captionDiv.textContent?.trim() || '';
+    if (captionText) {
+      result += `\n${captionText}`;
+    }
+  }
+
+  return result + '\n';
+}
+
 function processConfluenceImage(el: Element, notes: string[]): string {
   // Find ri:attachment child for the filename
   const attachment = findByTagName(el, 'ri:attachment', 'ri-attachment');
@@ -239,11 +310,9 @@ function processConfluenceImage(el: Element, notes: string[]): string {
       const caption = findByTagName(el, 'ac:caption', 'ac-caption');
       const captionText = caption ? caption.textContent?.trim() || '' : '';
 
-      if (!notes.some(n => n.includes('image attachment'))) {
-        notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
-      }
+      addImageNote(notes);
 
-      let result = `\n[img]{placeholder:${filename}}[/img]`;
+      let result = `\n[img]{image: ${filename}}[/img]`;
       if (captionText) {
         result += `\n${captionText}`;
       }
@@ -259,10 +328,8 @@ function processConfluenceImage(el: Element, notes: string[]): string {
       // Check if this is a Confluence-internal URL that won't work externally
       if (isConfluenceUrl(url)) {
         const filename = extractFilenameFromUrl(url) || 'image.png';
-        if (!notes.some(n => n.includes('image attachment'))) {
-          notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
-        }
-        return `\n[img]{placeholder:${filename}}[/img]\n`;
+        addImageNote(notes);
+        return `\n[img]{image: ${filename}}[/img]\n`;
       }
       return `\n[img]${url}[/img]\n`;
     }
@@ -349,16 +416,32 @@ function processOrderedList(el: Element, notes: string[], context: SteamContext)
 }
 
 /**
- * Process a list item. Confluence wraps list item text in <p> tags,
- * which we strip. Nested lists become nested [list] blocks.
+ * Collect flat [*] items from a nested list, without [list]/[/list] wrappers.
+ * Used to flatten nested lists in rendered clipboard output.
  */
-function processListItem(li: Element, notes: string[], context: SteamContext): string {
-  let text = '';
-  let nestedList = '';
+function collectFlatListItems(el: Element, notes: string[], context: SteamContext): string[] {
+  const items: string[] = [];
+  for (const child of Array.from(el.children)) {
+    if (child.tagName.toLowerCase() === 'li') {
+      items.push(...collectListItemParts(child, notes, context));
+    }
+  }
+  return items;
+}
+
+/**
+ * Collect parts from a single list item, flattening any nested lists.
+ * Returns an array of lines (each starting with [*]).
+ */
+function collectListItemParts(li: Element, notes: string[], context: SteamContext): string[] {
+  const lines: string[] = [];
+  const textParts: string[] = [];
+  let hasMedia = false;
 
   for (const child of Array.from(li.childNodes)) {
     if (child.nodeType === Node.TEXT_NODE) {
-      text += child.textContent || '';
+      const t = child.textContent || '';
+      if (t.trim()) textParts.push(t.trim());
       continue;
     }
     if (child.nodeType !== Node.ELEMENT_NODE) continue;
@@ -366,23 +449,53 @@ function processListItem(li: Element, notes: string[], context: SteamContext): s
     const childEl = child as Element;
     const childTag = childEl.tagName.toLowerCase();
 
-    if (childTag === 'ul') {
-      nestedList += processUnorderedList(childEl, notes, context);
-    } else if (childTag === 'ol') {
-      nestedList += processOrderedList(childEl, notes, context);
+    if (childTag === 'ul' || childTag === 'ol') {
+      // Flatten: emit current text as a [*] line, then collect nested items
+      if (textParts.length > 0) {
+        lines.push(`[*]${textParts.join('\n')}`);
+        textParts.length = 0;
+      }
+      lines.push(...collectFlatListItems(childEl, notes, context));
+    } else if (childTag === 'div' && childEl.getAttribute('data-node-type') === 'mediaSingle') {
+      hasMedia = true;
+      const mediaText = processRenderedMedia(childEl, notes).trim();
+      textParts.push(mediaText);
     } else if (childTag === 'p') {
-      // Strip the <p> wrapper, just use its inline content
-      text += processChildren(childEl, notes, context).trim();
+      const pText = processChildren(childEl, notes, context).trim();
+      if (pText) textParts.push(pText);
     } else {
-      text += processNode(child, notes, context);
+      const nodeText = processNode(child, notes, context);
+      if (nodeText.trim()) textParts.push(nodeText.trim());
     }
   }
 
-  const itemText = text.trim();
-  if (nestedList) {
-    return `[*]${itemText}\n${nestedList.trim()}`;
+  // Emit any remaining text
+  if (textParts.length > 0) {
+    if (lines.length === 0) {
+      // First line gets the [*] prefix
+      if (hasMedia) {
+        // Multiple parts with media — join with newlines
+        lines.push(`[*]${textParts.join('\n')}`);
+      } else {
+        lines.push(`[*]${textParts.join('\n')}`);
+      }
+    } else {
+      // Additional text after nested items
+      lines.push(`[*]${textParts.join('\n')}`);
+    }
   }
-  return `[*]${itemText}`;
+
+  return lines;
+}
+
+/**
+ * Process a list item. Confluence wraps list item text in <p> tags,
+ * which we strip. Nested lists are flattened (Steam doesn't render nested lists well).
+ * Rendered clipboard may include mediaSingle divs (images) inside list items.
+ */
+function processListItem(li: Element, notes: string[], context: SteamContext): string {
+  const parts = collectListItemParts(li, notes, context);
+  return parts.join('\n');
 }
 
 function processTable(el: Element, notes: string[], context: SteamContext): string {

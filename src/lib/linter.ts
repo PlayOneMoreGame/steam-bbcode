@@ -538,7 +538,7 @@ function checkImagePlaceholders(
   warnings: LintMessage[],
   warningLines: Set<number>
 ): void {
-  const pattern = /\[img\]\{placeholder:([^}]+)\}\[\/img\]/gi;
+  const pattern = /\[img\]\{(?:image:\s*|placeholder:)([^}]+)\}\[\/img\]/gi;
   let match;
 
   while ((match = pattern.exec(bbcode)) !== null) {
