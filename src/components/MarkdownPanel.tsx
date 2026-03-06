@@ -31,6 +31,7 @@ interface MarkdownPanelProps {
   onSaveAs: () => void;
   detectedFormat?: InputFormat;
   context?: SteamContext;
+  blacklist?: string[];
 }
 
 export function MarkdownPanel({
@@ -41,6 +42,7 @@ export function MarkdownPanel({
   onSaveAs,
   detectedFormat = 'markdown',
   context = 'announcements',
+  blacklist = [],
 }: MarkdownPanelProps) {
   const [showDiscord, setShowDiscord] = useState(false);
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
@@ -73,8 +75,8 @@ export function MarkdownPanel({
         warningLines: result.warningLines,
       };
     }
-    return lintMarkdown(value);
-  }, [value, detectedFormat, context]);
+    return lintMarkdown(value, { blacklist });
+  }, [value, detectedFormat, context, blacklist]);
   const discordSections = useMemo(
     () => splitForDiscord(value, CHAR_LIMITS.discord),
     [value]
@@ -251,6 +253,7 @@ export function MarkdownPanel({
         warningLines={lintResult.warningLines}
         onSave={onSaveAs}
         onPaste={handlePaste}
+        blacklistTerms={blacklist}
       />
 
       <div className="panel-footer">

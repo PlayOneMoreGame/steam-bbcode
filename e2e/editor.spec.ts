@@ -285,6 +285,7 @@ test('tags button toggles reference panel', async ({ page }) => {
 
 test('keyboard hints are visible', async ({ page }) => {
   await expect(page.locator('.keyboard-hints')).toBeVisible();
+  await expect(page.locator('.keyboard-hints')).toContainText('Save As');
   await expect(page.locator('.keyboard-hints')).toContainText('Copy BBCode');
 });
 

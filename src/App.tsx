@@ -1,10 +1,14 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
-import { OutputPanel } from '@/components/OutputPanel';
+import { OutputPanel, type TranslationState } from '@/components/OutputPanel';
+import { SettingsPanel } from '@/components/SettingsPanel';
+import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm } from '@/lib/blacklist-store';
 import { markdownToBBCode } from '@/lib/converter';
 import { confluenceToBBCode } from '@/lib/confluence-converter';
 import { detectFormat, type InputFormat } from '@/lib/format-detector';
 import { extractPlaceholderImages, resolvePlaceholders, type ImageUrlMap } from '@/lib/image-placeholders';
+import { translateBBCode, hashString } from '@/lib/translation-service';
+import { getApiKey } from '@/lib/api-key-store';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
@@ -33,6 +37,20 @@ export function App() {
   // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Blacklist state — loaded from localStorage
+  const [blacklist, setBlacklist] = useState<string[]>(() => getBlacklist());
+
+  const handleAddBlacklistTerm = useCallback((term: string) => {
+    addBlacklistTerm(term);
+    setBlacklist(getBlacklist());
+  }, []);
+
+  const handleRemoveBlacklistTerm = useCallback((term: string) => {
+    removeBlacklistTerm(term);
+    setBlacklist(getBlacklist());
+  }, []);
 
   // Format detection (debounced)
   const [detectedFormat, setDetectedFormat] = useState<InputFormat>('markdown');
@@ -195,6 +213,73 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
 
+  // Translation state
+  const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const sourceHashRef = useRef<number>(0);
+
+  // Track source BBCode hash for stale detection
+  useEffect(() => {
+    const newHash = hashString(resolvedBBCode);
+    if (sourceHashRef.current !== 0 && sourceHashRef.current !== newHash) {
+      // Source changed — mark all completed translations as stale
+      setTranslations(prev => {
+        const next = { ...prev };
+        for (const lang of Object.keys(next)) {
+          if (next[lang].status === 'done') {
+            next[lang] = { ...next[lang], stale: true };
+          }
+        }
+        return next;
+      });
+    }
+    sourceHashRef.current = newHash;
+  }, [resolvedBBCode]);
+
+  const handleTranslate = useCallback(async (lang: string) => {
+    // Check for API key first
+    if (!getApiKey()) {
+      setApiKeyDialogOpen(true);
+      return;
+    }
+
+    // Set translating state
+    setTranslations(prev => ({
+      ...prev,
+      [lang]: { bbcode: '', status: 'translating', stale: false },
+    }));
+
+    trackEvent('translate_started', { lang });
+
+    const result = await translateBBCode(resolvedBBCode, lang);
+
+    if (result.ok) {
+      setTranslations(prev => ({
+        ...prev,
+        [lang]: { bbcode: result.bbcode, status: 'done', stale: false },
+      }));
+      trackEvent('translate_completed', { lang });
+    } else {
+      if (result.code === 'missing_api_key') {
+        setApiKeyDialogOpen(true);
+        setTranslations(prev => ({
+          ...prev,
+          [lang]: { bbcode: '', status: 'idle', stale: false },
+        }));
+      } else {
+        setTranslations(prev => ({
+          ...prev,
+          [lang]: { bbcode: '', status: 'error', error: result.error, stale: false },
+        }));
+        trackEvent('translate_error', { lang, error: result.error });
+      }
+    }
+  }, [resolvedBBCode]);
+
+  const handleApiKeySaved = useCallback(() => {
+    setApiKeyDialogOpen(false);
+  }, []);
+
   return (
     <div className="app">
       <div className="app-content">
@@ -232,6 +317,14 @@ export function App() {
               >
                 Tags
               </button>
+              <button
+                className={`btn btn-sm ${showSettings ? 'btn-active' : 'btn-secondary'}`}
+                onClick={() => setShowSettings(!showSettings)}
+                title="Settings"
+                data-testid="settings-btn"
+              >
+                Settings
+              </button>
             </div>
           </div>
 
@@ -248,6 +341,15 @@ export function App() {
 
           {/* Tag reference panel */}
           {showTagRef && <TagReference />}
+
+          {/* Settings panel */}
+          {showSettings && (
+            <SettingsPanel
+              blacklist={blacklist}
+              onAddTerm={handleAddBlacklistTerm}
+              onRemoveTerm={handleRemoveBlacklistTerm}
+            />
+          )}
         </header>
 
         {/* Two-panel layout */}
@@ -260,6 +362,7 @@ export function App() {
             onSaveAs={handleSaveMarkdownAs}
             detectedFormat={detectedFormat}
             context={context}
+            blacklist={blacklist}
           />
 
           <OutputPanel
@@ -269,18 +372,29 @@ export function App() {
             placeholderImages={placeholderImages}
             imageUrls={imageUrls}
             onImageUrlChange={handleImageUrlChange}
+            translations={translations}
+            onTranslate={handleTranslate}
+            apiKeyDialogOpen={apiKeyDialogOpen}
+            onApiKeyDialogClose={() => setApiKeyDialogOpen(false)}
+            onApiKeySaved={handleApiKeySaved}
           />
         </main>
 
         {/* Footer */}
         <footer className="footer">
-          <div className="footer-left">
-            <span className="keyboard-hints">
-              <kbd>⌘O</kbd> Open
-              <kbd>⌘S</kbd> Save
-              <kbd>⌘⇧C</kbd> Copy BBCode
-            </span>
-            <span className="footer-label">SteamBBEditor</span>
+          <span className="keyboard-hints">
+            <kbd>⌘O</kbd> Open
+            <kbd>⌘S</kbd> Save As
+            <kbd>⌘⇧C</kbd> Copy BBCode
+          </span>
+          <div className="footer-right">
+            <div className="footer-save-status">
+              {saveStatus === 'saving' && <span className="save-indicator saving">Saving...</span>}
+              {saveStatus === 'saved' && lastSaved && (
+                <span className="save-indicator saved">Saved {formatLastSaved(lastSaved)}</span>
+              )}
+              {saveStatus === 'unsaved' && <span className="save-indicator unsaved">●</span>}
+            </div>
             <a
               href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose"
               target="_blank"
@@ -289,13 +403,6 @@ export function App() {
             >
               Feedback
             </a>
-          </div>
-          <div className="footer-save-status">
-            {saveStatus === 'saving' && <span className="save-indicator saving">Saving...</span>}
-            {saveStatus === 'saved' && lastSaved && (
-              <span className="save-indicator saved">Saved {formatLastSaved(lastSaved)}</span>
-            )}
-            {saveStatus === 'unsaved' && <span className="save-indicator unsaved">●</span>}
           </div>
         </footer>
       </div>

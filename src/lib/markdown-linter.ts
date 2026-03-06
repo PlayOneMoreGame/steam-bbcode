@@ -2,6 +2,7 @@
 // Checks for common issues and Steam-incompatible patterns
 
 import { getLineNumber } from './utils';
+import { detectBlacklistTerms } from './blacklist-detector';
 
 export interface LintMessage {
   type: 'error' | 'warning' | 'info';
@@ -22,10 +23,14 @@ export interface MarkdownLintResult {
   warningLines: Set<number>;
 }
 
+export interface MarkdownLintOptions {
+  blacklist?: string[];
+}
+
 /**
  * Lint Markdown for issues
  */
-export function lintMarkdown(markdown: string): MarkdownLintResult {
+export function lintMarkdown(markdown: string, options?: MarkdownLintOptions): MarkdownLintResult {
   const errors: LintMessage[] = [];
   const warnings: LintMessage[] = [];
   const info: LintMessage[] = [];
@@ -62,6 +67,11 @@ export function lintMarkdown(markdown: string): MarkdownLintResult {
   // NOTE: Unformatted text check disabled - too noisy for real patch notes
   // which often have description paragraphs without formatting
   // checkUnformattedText(markdown, warnings, warningLines);
+
+  // Check for blacklisted terms
+  if (options?.blacklist && options.blacklist.length > 0) {
+    checkBlacklistTerms(markdown, options.blacklist, warnings, warningLines);
+  }
 
   return { errors, warnings, info, errorLines, warningLines };
 }
@@ -481,5 +491,21 @@ function checkImages(text: string, info: LintMessage[], warningLines: Set<number
       help: 'For Steam Announcements, [img] with a direct URL works fine. For Guides, you\'ll need to upload images through the Steam guide editor and use [previewimg]ID[/previewimg] instead.',
     });
     warningLines.add(firstLine);
+  }
+}
+
+function checkBlacklistTerms(text: string, blacklist: string[], warnings: LintMessage[], warningLines: Set<number>): void {
+  const matches = detectBlacklistTerms(text, blacklist);
+
+  for (const match of matches) {
+    warnings.push({
+      type: 'warning',
+      message: `'${match.term}' may not be appropriate — consider rephrasing`,
+      line: match.line,
+      column: match.column,
+      length: match.length,
+      help: 'This term is on your team\'s blacklist. You can edit the blacklist in Settings.',
+    });
+    warningLines.add(match.line);
   }
 }
