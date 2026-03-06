@@ -43,7 +43,7 @@ function checkUnsupportedMacros(
       const line = getLineNumber(xhtml, match.index);
       warnings.push({
         type: 'warning',
-        message: `Confluence "${name}" macro has no BBCode equivalent — content will be converted as plain text`,
+        message: `Confluence "${name}" panel has no Steam equivalent — the content inside will be kept as plain text`,
         line,
       });
       warningLines.add(line);
@@ -68,14 +68,14 @@ function checkImageAttachments(
   if (filenames.length > 0) {
     const line = getLineNumber(xhtml, xhtml.indexOf('ri:filename'));
     const contextNote = context === 'guides'
-      ? ' In guides, use [previewimg] with uploaded images.'
+      ? ' For Guides, upload them through Steam and use [previewimg].'
       : context === 'reviews'
-        ? ' Images are not supported in reviews.'
+        ? ' Images are not supported in Steam reviews.'
         : '';
 
     warnings.push({
       type: 'warning',
-      message: `${filenames.length} image attachment(s) reference Confluence files — upload to Steam and update URLs.${contextNote}`,
+      message: `${filenames.length} image${filenames.length === 1 ? '' : 's'} from Confluence — you'll need to upload ${filenames.length === 1 ? 'it' : 'them'} to Steam and update the URLs.${contextNote}`,
       line,
     });
     warningLines.add(line);
@@ -97,7 +97,7 @@ function checkEmptyLinks(
       const line = getLineNumber(xhtml, match.index);
       warnings.push({
         type: 'warning',
-        message: 'Confluence link with no target — may produce empty [url] tag',
+        message: 'Confluence link with no destination — this may produce an empty link on Steam',
         line,
       });
       warningLines.add(line);
@@ -118,7 +118,7 @@ function checkMalformedXhtml(
   if (openTags > 0 && Math.abs(openTags - closeTags) > openTags * 0.1) {
     errors.push({
       type: 'error',
-      message: `Possible malformed Confluence XHTML: ${openTags} opening vs ${closeTags} closing ac: tags`,
+      message: `This Confluence content looks incomplete or malformed (${openTags} opening tags, ${closeTags} closing tags) — the conversion may not work correctly`,
       line: 1,
     });
     errorLines.add(1);

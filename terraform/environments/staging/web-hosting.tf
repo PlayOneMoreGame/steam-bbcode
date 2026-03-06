@@ -93,6 +93,25 @@ resource "aws_s3_bucket_policy" "website" {
 }
 
 #######################################
+# Basic Auth (SSM + CloudFront Function)
+#######################################
+
+data "aws_ssm_parameter" "basic_auth_key" {
+  name = "/omg/staging/steam-bbcode/basic_auth_key"
+}
+
+resource "aws_cloudfront_function" "viewer_request" {
+  name    = "staging-steam-bbcode-vrf"
+  runtime = "cloudfront-js-2.0"
+  comment = "Basic auth for ${local.domain_name}"
+  publish = true
+  code = templatefile("${path.module}/scripts/viewer-request.js.tpl", {
+    auth_enabled         = "true"
+    expected_auth_header = data.aws_ssm_parameter.basic_auth_key.value
+  })
+}
+
+#######################################
 # CloudFront Distribution
 #######################################
 
@@ -126,6 +145,11 @@ resource "aws_cloudfront_distribution" "website" {
     forwarded_values {
       query_string = false
       cookies { forward = "none" }
+    }
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.viewer_request.arn
     }
 
     min_ttl     = 0

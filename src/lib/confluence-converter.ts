@@ -225,7 +225,7 @@ function processConfluenceImage(el: Element, notes: string[]): string {
         notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
       }
 
-      let result = `\n[img]${filename}[/img]`;
+      let result = `\n[img]{placeholder:${filename}}[/img]`;
       if (captionText) {
         result += `\n${captionText}`;
       }

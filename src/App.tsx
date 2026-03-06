@@ -1,7 +1,14 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
-import { OutputPanel } from '@/components/OutputPanel';
+import { OutputPanel, type TranslationState } from '@/components/OutputPanel';
+import { SettingsPanel } from '@/components/SettingsPanel';
+import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm } from '@/lib/blacklist-store';
 import { markdownToBBCode } from '@/lib/converter';
+import { confluenceToBBCode } from '@/lib/confluence-converter';
+import { detectFormat, type InputFormat } from '@/lib/format-detector';
+import { extractPlaceholderImages, resolvePlaceholders, type ImageUrlMap } from '@/lib/image-placeholders';
+import { translateBBCode, hashString } from '@/lib/translation-service';
+import { getApiKey } from '@/lib/api-key-store';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
@@ -16,35 +23,117 @@ import '@/styles/steam-theme.css';
 
 export function App() {
   // File service
-  const { openFile, openFilePath, saveFileAs, isDesktop, currentFile } = useFileService();
+  const { openFile, saveFileAs, isDesktop, currentFile } = useFileService();
 
   // Recent files (desktop only)
-  const { recentFiles, addRecentFile } = useRecentFiles();
+  const { addRecentFile } = useRecentFiles();
 
   // File names - null means we're showing the welcome doc
   const [mdFileName, setMdFileName] = useState<string | null>(null);
 
   // Markdown content - always starts with welcome doc on fresh load
   const [markdown, setMarkdown] = useState(WELCOME_MARKDOWN);
+  const baseContentRef = useRef(WELCOME_MARKDOWN);
 
   // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Blacklist state — loaded from localStorage
+  const [blacklist, setBlacklist] = useState<string[]>(() => getBlacklist());
+
+  const handleAddBlacklistTerm = useCallback((term: string) => {
+    addBlacklistTerm(term);
+    setBlacklist(getBlacklist());
+  }, []);
+
+  const handleRemoveBlacklistTerm = useCallback((term: string) => {
+    removeBlacklistTerm(term);
+    setBlacklist(getBlacklist());
+  }, []);
+
+  // Format detection (debounced)
+  const [detectedFormat, setDetectedFormat] = useState<InputFormat>('markdown');
+  const formatTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (formatTimerRef.current) {
+      clearTimeout(formatTimerRef.current);
+    }
+    formatTimerRef.current = setTimeout(() => {
+      setDetectedFormat(detectFormat(markdown));
+    }, 300);
+    return () => {
+      if (formatTimerRef.current) {
+        clearTimeout(formatTimerRef.current);
+      }
+    };
+  }, [markdown]);
 
   // Auto-save draft for crash recovery
   const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
 
-  // Convert Markdown to BBCode (derived state, not editable)
+  // Convert to BBCode using the appropriate converter based on detected format
   const { bbcode, notes } = useMemo(
-    () => markdownToBBCode(markdown, context),
-    [markdown, context]
+    () => {
+      if (detectedFormat === 'confluence') {
+        return confluenceToBBCode(markdown, context);
+      }
+      return markdownToBBCode(markdown, context);
+    },
+    [markdown, context, detectedFormat]
   );
+
+  // Image placeholder state — maps filename to Steam URL
+  const [imageUrls, setImageUrls] = useState<ImageUrlMap>({});
+
+  // Extract placeholder filenames from BBCode
+  const placeholderImages = useMemo(
+    () => extractPlaceholderImages(bbcode),
+    [bbcode]
+  );
+
+  // Resolve placeholders in BBCode using user-provided URLs
+  const resolvedBBCode = useMemo(
+    () => resolvePlaceholders(bbcode, imageUrls),
+    [bbcode, imageUrls]
+  );
+
+  // Handle image URL changes from the Images panel
+  const handleImageUrlChange = useCallback((filename: string, url: string) => {
+    setImageUrls(prev => ({ ...prev, [filename]: url }));
+  }, []);
+
+  // Clear image URLs when content changes significantly (new file opened)
+  const prevPlaceholdersRef = useRef<string[]>([]);
+  useEffect(() => {
+    const prev = prevPlaceholdersRef.current;
+    const curr = placeholderImages;
+    // If the set of filenames changed completely, reset the URL map
+    // but preserve URLs for filenames that still exist
+    if (prev.length > 0 && curr.length > 0) {
+      const currSet = new Set(curr);
+      const removed = prev.filter(f => !currSet.has(f));
+      if (removed.length > 0) {
+        setImageUrls(prevUrls => {
+          const next = { ...prevUrls };
+          for (const f of removed) {
+            delete next[f];
+          }
+          return next;
+        });
+      }
+    }
+    prevPlaceholdersRef.current = curr;
+  }, [placeholderImages]);
 
   // File operations
   const handleOpenMarkdown = useCallback(async () => {
     const content = await openFile(MD_FILTERS);
     if (content !== null) {
       setMarkdown(content);
+      baseContentRef.current = content;
       trackEvent('file_opened', { source: 'dialog' });
     }
   }, [openFile, setMarkdown]);
@@ -68,33 +157,25 @@ export function App() {
     }).catch(() => {});
   }, [mdFileName, isDesktop]);
 
-  // Open a recent file by path
-  const handleOpenRecentFile = useCallback(async (path: string) => {
-    const content = await openFilePath(path);
-    if (content !== null) {
-      setMarkdown(content);
-      trackEvent('file_opened', { source: 'recent' });
-    }
-  }, [openFilePath, setMarkdown]);
-
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';
     const savedPath = await saveFileAs(markdown, defaultName, MD_FILTERS);
     if (savedPath) {
       const name = savedPath.split('/').pop() || defaultName;
       setMdFileName(name);
+      baseContentRef.current = markdown;
     }
   }, [saveFileAs, markdown, mdFileName]);
 
   // Copy BBCode to clipboard (for keyboard shortcut)
   const handleCopyBBCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(bbcode);
+      await navigator.clipboard.writeText(resolvedBBCode);
       trackEvent('copy_clicked', { panel: 'bbcode', source: 'shortcut' });
     } catch {
       // Silently fail — OutputPanel has its own copy button with feedback
     }
-  }, [bbcode]);
+  }, [resolvedBBCode]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -121,7 +202,7 @@ export function App() {
   }, [handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode]);
 
   // Warn before leaving with unsaved changes
-  const hasChanges = markdown !== WELCOME_MARKDOWN;
+  const hasChanges = markdown !== baseContentRef.current;
 
   useEffect(() => {
     if (!hasChanges) return;
@@ -134,6 +215,73 @@ export function App() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
+
+  // Translation state
+  const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const sourceHashRef = useRef<number>(0);
+
+  // Track source BBCode hash for stale detection
+  useEffect(() => {
+    const newHash = hashString(resolvedBBCode);
+    if (sourceHashRef.current !== 0 && sourceHashRef.current !== newHash) {
+      // Source changed — mark all completed translations as stale
+      setTranslations(prev => {
+        const next = { ...prev };
+        for (const lang of Object.keys(next)) {
+          if (next[lang].status === 'done') {
+            next[lang] = { ...next[lang], stale: true };
+          }
+        }
+        return next;
+      });
+    }
+    sourceHashRef.current = newHash;
+  }, [resolvedBBCode]);
+
+  const handleTranslate = useCallback(async (lang: string) => {
+    // Check for API key first
+    if (!getApiKey()) {
+      setApiKeyDialogOpen(true);
+      return;
+    }
+
+    // Set translating state
+    setTranslations(prev => ({
+      ...prev,
+      [lang]: { bbcode: '', status: 'translating', stale: false },
+    }));
+
+    trackEvent('translate_started', { lang });
+
+    const result = await translateBBCode(resolvedBBCode, lang);
+
+    if (result.ok) {
+      setTranslations(prev => ({
+        ...prev,
+        [lang]: { bbcode: result.bbcode, status: 'done', stale: false },
+      }));
+      trackEvent('translate_completed', { lang });
+    } else {
+      if (result.code === 'missing_api_key') {
+        setApiKeyDialogOpen(true);
+        setTranslations(prev => ({
+          ...prev,
+          [lang]: { bbcode: '', status: 'idle', stale: false },
+        }));
+      } else {
+        setTranslations(prev => ({
+          ...prev,
+          [lang]: { bbcode: '', status: 'error', error: result.error, stale: false },
+        }));
+        trackEvent('translate_error', { lang, error: result.error });
+      }
+    }
+  }, [resolvedBBCode]);
+
+  const handleApiKeySaved = useCallback(() => {
+    setApiKeyDialogOpen(false);
+  }, []);
 
   return (
     <div className="app">
@@ -172,6 +320,14 @@ export function App() {
               >
                 Tags
               </button>
+              <button
+                className={`btn btn-sm ${showSettings ? 'btn-active' : 'btn-secondary'}`}
+                onClick={() => setShowSettings(!showSettings)}
+                title="Settings"
+                data-testid="settings-btn"
+              >
+                Settings
+              </button>
             </div>
           </div>
 
@@ -188,6 +344,15 @@ export function App() {
 
           {/* Tag reference panel */}
           {showTagRef && <TagReference />}
+
+          {/* Settings panel */}
+          {showSettings && (
+            <SettingsPanel
+              blacklist={blacklist}
+              onAddTerm={handleAddBlacklistTerm}
+              onRemoveTerm={handleRemoveBlacklistTerm}
+            />
+          )}
         </header>
 
         {/* Two-panel layout */}
@@ -197,28 +362,42 @@ export function App() {
             onChange={setMarkdown}
             fileName={mdFileName}
             onOpen={handleOpenMarkdown}
-            onOpenRecent={handleOpenRecentFile}
             onSaveAs={handleSaveMarkdownAs}
-            recentFiles={recentFiles}
-            isDesktop={isDesktop}
+            detectedFormat={detectedFormat}
+            context={context}
+            blacklist={blacklist}
           />
 
           <OutputPanel
-            bbcode={bbcode}
+            bbcode={resolvedBBCode}
             context={context}
             isDesktop={isDesktop}
+            placeholderImages={placeholderImages}
+            imageUrls={imageUrls}
+            onImageUrlChange={handleImageUrlChange}
+            translations={translations}
+            onTranslate={handleTranslate}
+            apiKeyDialogOpen={apiKeyDialogOpen}
+            onApiKeyDialogClose={() => setApiKeyDialogOpen(false)}
+            onApiKeySaved={handleApiKeySaved}
           />
         </main>
 
         {/* Footer */}
         <footer className="footer">
-          <div className="footer-left">
-            <span className="keyboard-hints">
-              <kbd>⌘O</kbd> Open
-              <kbd>⌘S</kbd> Save
-              <kbd>⌘⇧C</kbd> Copy BBCode
-            </span>
-            <span className="footer-label">SteamBBEditor</span>
+          <span className="keyboard-hints">
+            <kbd>⌘O</kbd> Open
+            <kbd>⌘S</kbd> Save As
+            <kbd>⌘⇧C</kbd> Copy BBCode
+          </span>
+          <div className="footer-right">
+            <div className="footer-save-status">
+              {saveStatus === 'saving' && <span className="save-indicator saving">Saving...</span>}
+              {saveStatus === 'saved' && lastSaved && (
+                <span className="save-indicator saved">Saved {formatLastSaved(lastSaved)}</span>
+              )}
+              {saveStatus === 'unsaved' && <span className="save-indicator unsaved">●</span>}
+            </div>
             <a
               href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose"
               target="_blank"
@@ -227,13 +406,6 @@ export function App() {
             >
               Feedback
             </a>
-          </div>
-          <div className="footer-save-status">
-            {saveStatus === 'saving' && <span className="save-indicator saving">Saving...</span>}
-            {saveStatus === 'saved' && lastSaved && (
-              <span className="save-indicator saved">Saved {formatLastSaved(lastSaved)}</span>
-            )}
-            {saveStatus === 'unsaved' && <span className="save-indicator unsaved">●</span>}
           </div>
         </footer>
       </div>

@@ -2,6 +2,7 @@
 // Checks for common issues and Steam-incompatible patterns
 
 import { getLineNumber } from './utils';
+import { detectBlacklistTerms } from './blacklist-detector';
 
 export interface LintMessage {
   type: 'error' | 'warning' | 'info';
@@ -11,6 +12,7 @@ export interface LintMessage {
   length?: number;  // Length of problematic text
   start?: number;   // Character offset in text
   end?: number;     // Character offset in text
+  help?: string;    // Expandable help text explaining the issue
 }
 
 export interface MarkdownLintResult {
@@ -21,10 +23,14 @@ export interface MarkdownLintResult {
   warningLines: Set<number>;
 }
 
+export interface MarkdownLintOptions {
+  blacklist?: string[];
+}
+
 /**
  * Lint Markdown for issues
  */
-export function lintMarkdown(markdown: string): MarkdownLintResult {
+export function lintMarkdown(markdown: string, options?: MarkdownLintOptions): MarkdownLintResult {
   const errors: LintMessage[] = [];
   const warnings: LintMessage[] = [];
   const info: LintMessage[] = [];
@@ -62,6 +68,11 @@ export function lintMarkdown(markdown: string): MarkdownLintResult {
   // which often have description paragraphs without formatting
   // checkUnformattedText(markdown, warnings, warningLines);
 
+  // Check for blacklisted terms
+  if (options?.blacklist && options.blacklist.length > 0) {
+    checkBlacklistTerms(markdown, options.blacklist, warnings, warningLines);
+  }
+
   return { errors, warnings, info, errorLines, warningLines };
 }
 
@@ -86,8 +97,9 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
     if (backticks % 2 !== 0) {
       errors.push({
         type: 'error',
-        message: 'Unclosed inline code',
+        message: 'Unclosed inline code — missing a closing backtick (`)',
         line: i + 1,
+        help: 'Each backtick (`) needs a matching closing backtick on the same line. Add the missing one, or remove the extra backtick.',
       });
       errorLines.add(i + 1);
     }
@@ -104,8 +116,9 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
       if (count % 2 !== 0 && i === lines.length - 1) {
         errors.push({
           type: 'error',
-          message: 'Unmatched ** (bold) marker',
+          message: 'Unmatched ** (bold) — missing a closing **',
           line: i + 1,
+          help: 'Bold text needs a ** at the start and end: **bold text**. It looks like one of the pairs is missing.',
         });
         errorLines.add(i + 1);
         break;
@@ -122,8 +135,9 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
         if (matches % 2 !== 0) {
           errors.push({
             type: 'error',
-            message: 'Unmatched ~~ (strikethrough) marker',
+            message: 'Unmatched ~~ (strikethrough) — missing a closing ~~',
             line: i + 1,
+            help: 'Strikethrough text needs ~~ at the start and end: ~~deleted text~~. It looks like one of the pairs is missing.',
           });
           errorLines.add(i + 1);
           break;
@@ -144,8 +158,9 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
     }
     errors.push({
       type: 'error',
-      message: 'Unclosed code block (```)',
+      message: 'Unclosed code block — add ``` on a new line to close it',
       line: lastOpener,
+      help: 'Code blocks start and end with ``` on their own line. It looks like the closing ``` is missing. Add one on a new line after your code.',
     });
     errorLines.add(lastOpener);
   }
@@ -176,8 +191,9 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
       if (match && match[1]) {
         warnings.push({
           type: 'warning',
-          message: 'Space after ** may prevent bold formatting',
+          message: 'Space after ** — this may not render as bold',
           line: i + 1,
+          help: 'Bold markers need to be right next to the text: **bold**, not ** bold**. Remove the space after the opening ** to fix it.',
         });
         warningLines.add(i + 1);
         continue;
@@ -188,8 +204,9 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
       if (matchEnd && matchEnd[2]) {
         warnings.push({
           type: 'warning',
-          message: 'Space before ** may prevent bold formatting',
+          message: 'Space before ** — this may not render as bold',
           line: i + 1,
+          help: 'Bold markers need to be right next to the text: **bold**, not **bold **. Remove the space before the closing ** to fix it.',
         });
         warningLines.add(i + 1);
         continue;
@@ -200,23 +217,25 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
     const tildePairs = (line.match(/~~/g) || []).length;
     
     if (tildePairs === 2) {
-      const match = line.match(/~~( +)([^~]+)~~/);
-      if (match && match[1]) {
+      const match2 = line.match(/~~( +)([^~]+)~~/);
+      if (match2 && match2[1]) {
         warnings.push({
           type: 'warning',
-          message: 'Space after ~~ may prevent strikethrough formatting',
+          message: 'Space after ~~ — this may not render as strikethrough',
           line: i + 1,
+          help: 'Strikethrough markers need to be right next to the text: ~~deleted~~, not ~~ deleted~~. Remove the space after the opening ~~ to fix it.',
         });
         warningLines.add(i + 1);
         continue;
       }
       
-      const matchEnd = line.match(/~~([^~]+)( +)~~/);
-      if (matchEnd && matchEnd[2]) {
+      const matchEnd2 = line.match(/~~([^~]+)( +)~~/);
+      if (matchEnd2 && matchEnd2[2]) {
         warnings.push({
           type: 'warning',
-          message: 'Space before ~~ may prevent strikethrough formatting',
+          message: 'Space before ~~ — this may not render as strikethrough',
           line: i + 1,
+          help: 'Strikethrough markers need to be right next to the text: ~~deleted~~, not ~~deleted ~~. Remove the space before the closing ~~ to fix it.',
         });
         warningLines.add(i + 1);
         continue;
@@ -227,8 +246,9 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
     if (/^#{1,6}[^\s#]/.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Missing space after # in header',
+        message: 'Missing space after # — this won\'t be treated as a heading',
         line: i + 1,
+        help: 'Headings need a space between the # and the text: "# Heading", not "#Heading". Without the space, it will show as plain text.',
       });
       warningLines.add(i + 1);
     }
@@ -238,8 +258,9 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
     if (/^[-+]\w/.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Missing space after list marker',
+        message: 'Missing space after list marker — this won\'t be treated as a list item',
         line: i + 1,
+        help: 'List items need a space after the dash: "- Item", not "-Item". Without the space, it will show as plain text instead of a bullet point.',
       });
       warningLines.add(i + 1);
     }
@@ -276,12 +297,13 @@ function checkInvalidBracketPatterns(text: string, errors: LintMessage[], errorL
         const start = charOffset + match.index;
         errors.push({
           type: 'error',
-          message: content ? `Invalid pattern [${content}] - not valid Markdown or BBCode` : `Empty brackets [] - not valid Markdown or BBCode`,
+          message: content ? `[${content}] isn't a valid tag — this will show as plain text` : `Empty brackets [] — this will show as plain text`,
           line: i + 1,
           column: match.index + 1,  // 1-indexed
           length: match[0].length,
           start,
           end: start + match[0].length,
+          help: 'This bracket pattern won\'t do anything in Markdown or BBCode and will appear as-is in the output. For list items, use "- " (dash then space). Otherwise, you can remove or rewrite this.',
         });
         errorLines.add(i + 1);
         break; // Only one error per line
@@ -300,8 +322,9 @@ function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: S
     const line = getLineNumber(text, match.index);
     warnings.push({
       type: 'warning',
-      message: 'Possible broken link: space between ] and (',
+      message: 'This link looks broken — there\'s a space between ] and (',
       line,
+      help: 'Markdown links can\'t have a space between the text and the URL: [text](url) works, but [text] (url) doesn\'t. Remove the space to fix it.',
     });
     warningLines.add(line);
   }
@@ -312,8 +335,9 @@ function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: S
     const line = getLineNumber(text, match.index);
     warnings.push({
       type: 'warning',
-      message: 'Link with empty text',
+      message: 'This link has no display text — it will be invisible',
       line,
+      help: 'Links need text between the brackets so readers can see and click them: [click here](https://example.com).',
     });
     warningLines.add(line);
   }
@@ -324,8 +348,9 @@ function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: S
     const line = getLineNumber(text, match.index);
     warnings.push({
       type: 'warning',
-      message: 'Link with empty URL',
+      message: 'This link is missing a URL — it won\'t go anywhere',
       line,
+      help: 'Links need a web address inside the parentheses: [link text](https://example.com). Add the URL to fix it.',
     });
     warningLines.add(line);
   }
@@ -341,8 +366,9 @@ function checkConfluenceSyntax(text: string, warnings: LintMessage[], warningLin
     if (/\{[a-z]+(\:[^\}]*)?\}/i.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Confluence macro detected - needs manual conversion',
+        message: 'Confluence element found — this will be converted to plain text',
         line: i + 1,
+        help: 'This looks like a Confluence macro (like {code} or {panel}). It doesn\'t have a Steam equivalent, so the content inside will be kept as plain text. For better results, paste the Confluence page source (View Storage Format) instead.',
       });
       warningLines.add(i + 1);
     }
@@ -351,8 +377,9 @@ function checkConfluenceSyntax(text: string, warnings: LintMessage[], warningLin
     if (/\[~[^\]]+\]/.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Confluence user mention detected',
+        message: 'Confluence @mention found — these don\'t work on Steam',
         line: i + 1,
+        help: 'Confluence mentions like [~username] won\'t carry over to Steam. Replace them with the person\'s name or remove the mention.',
       });
       warningLines.add(i + 1);
     }
@@ -361,8 +388,9 @@ function checkConfluenceSyntax(text: string, warnings: LintMessage[], warningLin
     if (/\{status[^\}]*\}/i.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Confluence status macro detected',
+        message: 'Confluence status badge found — these don\'t work on Steam',
         line: i + 1,
+        help: 'Confluence status badges aren\'t supported on Steam. You can replace them with plain text like [b]DONE[/b] or just remove them.',
       });
       warningLines.add(i + 1);
     }
@@ -385,8 +413,9 @@ function checkInlineCode(text: string, info: LintMessage[], warningLines: Set<nu
   if (count > 0 && firstLine) {
     info.push({
       type: 'info',
-      message: `${count} inline code span(s) will convert to [b]old in Steam`,
+      message: `${count} inline code snippet${count === 1 ? '' : 's'} will appear as bold on Steam`,
       line: firstLine,
+      help: 'Steam doesn\'t have inline code formatting, so the converter uses [b]bold[/b] as the closest alternative. The text will be preserved, just shown in bold instead of a code style.',
     });
     warningLines.add(firstLine);
   }
@@ -402,8 +431,9 @@ function checkNestedLists(text: string, warnings: LintMessage[], warningLines: S
     if (/^[ \t]+[-*+]\s/.test(line) || /^[ \t]+\d+\.\s/.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Nested list detected - Steam has fragile nested list support',
+        message: 'Nested list found — these can look inconsistent on Steam',
         line: i + 1,
+        help: 'Steam does support nested lists, but the rendering can be unpredictable. Consider flattening your list or using indented text instead. Check the preview to see how it looks.',
       });
       warningLines.add(i + 1);
       break; // Only warn once
@@ -413,8 +443,9 @@ function checkNestedLists(text: string, warnings: LintMessage[], warningLines: S
     if (/^[-*+][ \t]{2,}\S/.test(line)) {
       warnings.push({
         type: 'warning',
-        message: 'Extra whitespace after list marker may cause formatting issues',
+        message: 'Extra spaces after list marker — this may cause formatting issues',
         line: i + 1,
+        help: 'Use just one space after the dash: "- Item". Extra spaces can make the item look like a nested list or a code block, which may not render as expected on Steam.',
       });
       warningLines.add(i + 1);
     }
@@ -429,8 +460,9 @@ function checkTables(text: string, info: LintMessage[], warningLines: Set<number
     if (/^\|[-:]+\|/.test(lines[i])) {
       info.push({
         type: 'info',
-        message: 'Markdown table detected - conversion may need adjustment',
+        message: 'Table found — check the preview to make sure it looks right',
         line: i + 1,
+        help: 'This table will be converted to Steam\'s [table] format, but Steam tables are pretty basic. Check the preview to make sure the columns and alignment look acceptable.',
       });
       warningLines.add(i + 1);
       break; // Only warn once
@@ -454,9 +486,26 @@ function checkImages(text: string, info: LintMessage[], warningLines: Set<number
   if (count > 0 && firstLine) {
     info.push({
       type: 'info',
-      message: `${count} image(s) - for Guides, upload and use [previewimg]`,
+      message: `${count} image${count === 1 ? '' : 's'} found — Guides require uploaded images with [previewimg]`,
       line: firstLine,
+      help: 'For Steam Announcements, [img] with a direct URL works fine. For Guides, you\'ll need to upload images through the Steam guide editor and use [previewimg]ID[/previewimg] instead.',
     });
     warningLines.add(firstLine);
+  }
+}
+
+function checkBlacklistTerms(text: string, blacklist: string[], warnings: LintMessage[], warningLines: Set<number>): void {
+  const matches = detectBlacklistTerms(text, blacklist);
+
+  for (const match of matches) {
+    warnings.push({
+      type: 'warning',
+      message: `'${match.term}' may not be appropriate — consider rephrasing`,
+      line: match.line,
+      column: match.column,
+      length: match.length,
+      help: 'This term is on your team\'s blacklist. You can edit the blacklist in Settings.',
+    });
+    warningLines.add(match.line);
   }
 }

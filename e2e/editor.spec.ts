@@ -96,6 +96,66 @@ test('bbcode tab shows character count', async ({ page }) => {
   await expect(page.locator('.output-panel .char-count-inline')).toBeVisible();
 });
 
+test('preview tab shows character count in persistent footer', async ({ page }) => {
+  // Default tab is preview — char count should be visible without switching tabs
+  const previewTab = page.locator('.output-panel .preview-tab', { hasText: 'Steam Preview' });
+  await expect(previewTab).toHaveClass(/active/);
+  await expect(page.locator('.output-panel .char-count-inline')).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// Lint status indicator
+// ---------------------------------------------------------------------------
+
+test('lint status shows Ready when no errors', async ({ page }) => {
+  // Welcome doc should have no lint errors
+  const readyIndicator = page.locator('.output-panel .lint-status-ready');
+  await expect(readyIndicator).toBeVisible();
+  await expect(readyIndicator).toHaveText('Ready');
+});
+
+test('lint status shows error count on preview tab when errors exist', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('[b]unclosed bold');
+  await page.waitForTimeout(200);
+
+  // Should be on preview tab by default
+  const previewTab = page.locator('.output-panel .preview-tab', { hasText: 'Steam Preview' });
+  await expect(previewTab).toHaveClass(/active/);
+
+  // Error indicator should be visible in the header
+  const errorIndicator = page.locator('.output-panel .lint-status-error');
+  await expect(errorIndicator).toBeVisible();
+  await expect(errorIndicator).toContainText('error');
+});
+
+test('clicking lint error indicator switches to BBCode tab', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('[b]unclosed bold');
+  await page.waitForTimeout(200);
+
+  // Click the error indicator
+  const errorIndicator = page.locator('.output-panel .lint-status-error');
+  await errorIndicator.click();
+
+  // BBCode tab should now be active
+  const bbcodeTab = page.locator('.output-panel .preview-tab', { hasText: 'BBCode' });
+  await expect(bbcodeTab).toHaveClass(/active/);
+
+  // Lint messages should be visible
+  await expect(page.locator('.output-panel .panel-lint')).toBeVisible();
+});
+
+test('disabled copy button has tooltip explaining why', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('[b]unclosed bold');
+  await page.waitForTimeout(200);
+
+  const copyBtn = page.locator('.output-panel .btn-primary');
+  await expect(copyBtn).toBeDisabled();
+  await expect(copyBtn).toHaveAttribute('title', 'Fix errors before copying');
+});
+
 // ---------------------------------------------------------------------------
 // Copy BBCode
 // ---------------------------------------------------------------------------
@@ -134,14 +194,60 @@ test('cmd+shift+c shortcut triggers copy', async ({ page }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Markdown panel: Copy MD is secondary, not primary
+// Editor header simplification (SMD-4376)
 // ---------------------------------------------------------------------------
 
-test('markdown copy button is labeled Copy MD', async ({ page }) => {
-  const copyMdBtn = page.locator('.panel').first().getByRole('button', { name: 'Copy MD' });
-  await expect(copyMdBtn).toBeVisible();
-  // Should be secondary style, not primary
-  await expect(copyMdBtn).toHaveClass(/btn-secondary/);
+test('editor header has only Open button, no Copy MD / Revert / Save As', async ({ page }) => {
+  const editorPanel = page.locator('.panel').first();
+  const header = editorPanel.locator('.panel-header');
+
+  // Open button should still exist
+  await expect(header.getByRole('button', { name: 'Open' })).toBeVisible();
+
+  // These buttons should NOT exist
+  await expect(header.getByRole('button', { name: 'Copy MD' })).toHaveCount(0);
+  await expect(header.getByRole('button', { name: 'Revert' })).toHaveCount(0);
+  await expect(header.getByRole('button', { name: 'Save As' })).toHaveCount(0);
+});
+
+test('lint badges appear in editor header when there are issues', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  // Confluence macro triggers a warning
+  await mdEditor.fill('{code}some code{code}');
+
+  const header = page.locator('.panel').first().locator('.panel-header');
+  // Should have at least one lint badge in the header actions area
+  const badges = header.locator('.panel-actions .lint-badge');
+  await expect(badges).not.toHaveCount(0);
+});
+
+test('Tab key does not insert spaces in editor', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('hello');
+  await mdEditor.focus();
+
+  // Place cursor at end
+  await mdEditor.press('End');
+  await mdEditor.press('Tab');
+
+  // Tab should move focus away, NOT insert spaces
+  const value = await mdEditor.inputValue();
+  expect(value).toBe('hello');
+});
+
+test('lint messages use "Line" prefix instead of "L"', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('{code}some code{code}');
+
+  const lintPanel = page.locator('.panel').first().locator('.panel-lint');
+  await expect(lintPanel).toBeVisible();
+
+  // Check that lint line labels use "Line" not "L"
+  const lintLines = lintPanel.locator('.lint-line');
+  const count = await lintLines.count();
+  expect(count).toBeGreaterThan(0);
+  const firstLineText = await lintLines.first().textContent();
+  expect(firstLineText).toMatch(/^Line \d+$/);
 });
 
 // ---------------------------------------------------------------------------
@@ -179,6 +285,7 @@ test('tags button toggles reference panel', async ({ page }) => {
 
 test('keyboard hints are visible', async ({ page }) => {
   await expect(page.locator('.keyboard-hints')).toBeVisible();
+  await expect(page.locator('.keyboard-hints')).toContainText('Save As');
   await expect(page.locator('.keyboard-hints')).toContainText('Copy BBCode');
 });
 
@@ -188,4 +295,81 @@ test('feedback link exists', async ({ page }) => {
     'href',
     'https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose'
   );
+});
+
+// ---------------------------------------------------------------------------
+// Lint help text (SMD-4373)
+// ---------------------------------------------------------------------------
+
+test('markdown lint messages show Why? link when help text is available', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  // Confluence macro triggers a warning with help text
+  await mdEditor.fill('{code}some code{code}');
+
+  // Markdown panel lint messages should show
+  const lintPanel = page.locator('.panel').first().locator('.panel-lint');
+  await expect(lintPanel).toBeVisible();
+
+  // Should have a Why? button
+  const whyButton = lintPanel.locator('.lint-help-toggle').first();
+  await expect(whyButton).toBeVisible();
+  await expect(whyButton).toHaveText('Why?');
+});
+
+test('clicking Why? expands help text and clicking Hide collapses it', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('{code}some code{code}');
+
+  const lintPanel = page.locator('.panel').first().locator('.panel-lint');
+  const whyButton = lintPanel.locator('.lint-help-toggle').first();
+
+  // Initially no help text visible
+  await expect(lintPanel.locator('.lint-help-text')).toHaveCount(0);
+
+  // Click Why? to expand
+  await whyButton.click();
+  await expect(lintPanel.locator('.lint-help-text').first()).toBeVisible();
+  await expect(whyButton).toHaveText('Hide');
+
+  // Click Hide to collapse
+  await whyButton.click();
+  await expect(lintPanel.locator('.lint-help-text')).toHaveCount(0);
+  await expect(whyButton).toHaveText('Why?');
+});
+
+test('bbcode tab lint messages show Why? link with expandable help', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  // Input that produces BBCode with unclosed tags
+  await mdEditor.fill('[b]unclosed bold tag');
+
+  // Switch to BBCode tab
+  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
+
+  // Wait for lint messages
+  const lintPanel = page.locator('.output-panel .panel-lint');
+  // The BBCode output will have markdown syntax warnings, check for any Why? button
+  const whyButtons = lintPanel.locator('.lint-help-toggle');
+
+  // There should be at least one Why? button
+  const count = await whyButtons.count();
+  expect(count).toBeGreaterThan(0);
+
+  // Click first Why? to expand
+  await whyButtons.first().click();
+  await expect(lintPanel.locator('.lint-help-text').first()).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// hasChanges tracks base content, not WELCOME_MARKDOWN (SMD-4360)
+// ---------------------------------------------------------------------------
+
+test('welcome doc on load is not dirty', async ({ page }) => {
+  // On initial load with welcome doc, there should be no unsaved indicator
+  await expect(page.locator('.save-indicator.unsaved')).not.toBeVisible();
+});
+
+test('editing content shows dirty indicator', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('Some new content');
+  await expect(page.locator('.save-indicator.unsaved')).toBeVisible();
 });

@@ -101,12 +101,12 @@ describe('lintMarkdown', () => {
 
     it('warns about empty link text', () => {
       const result = lintMarkdown('Check [](https://example.com)');
-      expect(result.warnings.some(w => w.message.includes('empty text'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('no display text'))).toBe(true);
     });
 
     it('warns about empty link URL', () => {
       const result = lintMarkdown('Check [link text]()');
-      expect(result.warnings.some(w => w.message.includes('empty URL'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('missing a URL'))).toBe(true);
     });
 
     it('passes valid links', () => {
@@ -118,12 +118,12 @@ describe('lintMarkdown', () => {
   describe('Confluence syntax', () => {
     it('warns about Confluence macros', () => {
       const result = lintMarkdown('Here is {code}some code{code}');
-      expect(result.warnings.some(w => w.message.includes('Confluence macro'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Confluence element'))).toBe(true);
     });
 
     it('warns about Confluence user mentions', () => {
       const result = lintMarkdown('Ask [~username] about this');
-      expect(result.warnings.some(w => w.message.includes('Confluence user mention'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Confluence @mention'))).toBe(true);
     });
   });
 
@@ -142,24 +142,24 @@ describe('lintMarkdown', () => {
 
     it('warns about extra whitespace after list marker', () => {
       const result = lintMarkdown('-  Item with extra space');
-      expect(result.warnings.some(w => w.message.includes('Extra whitespace after list marker'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Extra spaces after list marker'))).toBe(true);
     });
 
     it('warns about multiple extra spaces after list marker', () => {
       const result = lintMarkdown('-   Item with more spaces');
-      expect(result.warnings.some(w => w.message.includes('Extra whitespace after list marker'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Extra spaces after list marker'))).toBe(true);
     });
 
     it('does not warn about normal list items', () => {
       const result = lintMarkdown('- Normal item');
-      expect(result.warnings.filter(w => w.message.includes('Extra whitespace'))).toHaveLength(0);
+      expect(result.warnings.filter(w => w.message.includes('Extra spaces'))).toHaveLength(0);
     });
   });
 
   describe('tables', () => {
     it('notes tables may need adjustment', () => {
       const result = lintMarkdown('| A | B |\n|---|---|\n| 1 | 2 |');
-      expect(result.info.some(i => i.message.includes('table'))).toBe(true);
+      expect(result.info.some(i => i.message.includes('Table found'))).toBe(true);
     });
   });
 
@@ -173,17 +173,17 @@ describe('lintMarkdown', () => {
   describe('invalid bracket patterns', () => {
     it('reports [-] as invalid pattern', () => {
       const result = lintMarkdown('text [-] more text');
-      expect(result.errors.some(e => e.message.includes('Invalid pattern [-]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[-]") && e.message.includes("isn't a valid tag"))).toBe(true);
     });
 
     it('reports [+] as invalid pattern', () => {
       const result = lintMarkdown('vote [+] here');
-      expect(result.errors.some(e => e.message.includes('Invalid pattern [+]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[+]") && e.message.includes("isn't a valid tag"))).toBe(true);
     });
 
     it('reports [.] as invalid pattern', () => {
       const result = lintMarkdown('text [.] text');
-      expect(result.errors.some(e => e.message.includes('Invalid pattern [.]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[.]") && e.message.includes("isn't a valid tag"))).toBe(true);
     });
 
     it('reports empty brackets []', () => {
@@ -201,7 +201,75 @@ describe('lintMarkdown', () => {
 
     it('does not flag brackets inside code blocks', () => {
       const result = lintMarkdown('```\n[-] in code\n```');
-      expect(result.errors.filter(e => e.message.includes('Invalid pattern'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes("isn't a valid tag"))).toHaveLength(0);
+    });
+  });
+
+  describe('help text', () => {
+    it('includes help text on unclosed inline code', () => {
+      const result = lintMarkdown('This has `unclosed code');
+      expect(result.errors[0].help).toBeDefined();
+      expect(result.errors[0].help).toContain('backtick');
+    });
+
+    it('includes help text on unmatched bold markers', () => {
+      const result = lintMarkdown('This is **bold but not closed');
+      expect(result.errors[0].help).toBeDefined();
+      expect(result.errors[0].help).toContain('**');
+    });
+
+    it('includes help text on Confluence macro warnings', () => {
+      const result = lintMarkdown('Here is {code}some code{code}');
+      const warning = result.warnings.find(w => w.message.includes('Confluence element'));
+      expect(warning?.help).toBeDefined();
+      expect(warning?.help).toContain('Confluence');
+      expect(warning?.help).toContain('View Storage Format');
+    });
+
+    it('includes help text on Confluence user mention warnings', () => {
+      const result = lintMarkdown('Ask [~username] about this');
+      const warning = result.warnings.find(w => w.message.includes('Confluence @mention'));
+      expect(warning?.help).toBeDefined();
+      expect(warning?.help).toContain('name');
+    });
+
+    it('includes help text on inline code info', () => {
+      const result = lintMarkdown('Use `npm install` to install');
+      const info = result.info.find(i => i.message.includes('inline code'));
+      expect(info?.help).toBeDefined();
+      expect(info?.help).toContain('[b]bold[/b]');
+    });
+
+    it('includes help text on nested list warnings', () => {
+      const result = lintMarkdown('- Item\n  - Nested item');
+      const warning = result.warnings.find(w => w.message.includes('Nested list'));
+      expect(warning?.help).toBeDefined();
+      expect(warning?.help).toContain('flattening');
+    });
+
+    it('includes help text on invalid bracket patterns', () => {
+      const result = lintMarkdown('text [-] more text');
+      const error = result.errors.find(e => e.message.includes("isn't a valid tag"));
+      expect(error?.help).toBeDefined();
+    });
+
+    it('includes help text on table info', () => {
+      const result = lintMarkdown('| A | B |\n|---|---|\n| 1 | 2 |');
+      const info = result.info.find(i => i.message.includes('Table found'));
+      expect(info?.help).toBeDefined();
+    });
+
+    it('includes help text on image info', () => {
+      const result = lintMarkdown('![alt](https://example.com/img.png)');
+      const info = result.info.find(i => i.message.includes('image'));
+      expect(info?.help).toBeDefined();
+      expect(info?.help).toContain('[previewimg]');
+    });
+
+    it('help field is optional - clean markdown has no messages', () => {
+      const result = lintMarkdown('Clean text with no issues');
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
     });
   });
 

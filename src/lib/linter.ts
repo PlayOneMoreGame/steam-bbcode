@@ -10,6 +10,7 @@ export interface LintMessage {
   line?: number;
   column?: number;  // 1-indexed column within line
   length?: number;  // Length of problematic text
+  help?: string;    // Expandable help text explaining the issue
 }
 
 export interface LintResult {
@@ -81,6 +82,9 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
   // NOTE: Unformatted text check disabled - too noisy for real content
   // checkUnformattedText(bbcode, warnings, warningLines);
 
+  // Check for unresolved image placeholders
+  checkImagePlaceholders(bbcode, warnings, warningLines);
+
   // Check character limits
   checkCharacterLimits(bbcode, context, errors, warnings);
 
@@ -112,10 +116,11 @@ function checkUnknownTags(
     const line = getLineNumber(bbcode, match.index);
     errors.push({
       type: 'error',
-      message: `Unknown tag [${tagName}]`,
+      message: `Steam doesn't support [${tagName}] — this won't display correctly`,
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
+      help: `[${tagName}] is not a tag Steam recognizes, so it will show as plain text. Supported tags include [b], [i], [u], [h1], [h2], [h3], [list], [url], [img], [code], [quote], [spoiler], and [table].`,
     });
     errorLines.add(line);
   }
@@ -171,15 +176,16 @@ function checkHtmlTags(
     };
     
     const suggestion = bbcodeEquiv[tagName] 
-      ? ` - use ${bbcodeEquiv[tagName]} instead`
+      ? ` — use ${bbcodeEquiv[tagName]} instead`
       : '';
     
     errors.push({
       type: 'error',
-      message: `HTML tag <${tagName}> not supported${suggestion}`,
+      message: `This looks like HTML (<${tagName}>)${suggestion}`,
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
+      help: 'Steam uses its own formatting called BBCode, not HTML. For example, <b> becomes [b], and <a href="..."> becomes [url=...]. The converter should handle this automatically — if you see this, something may not have converted.',
     });
     errorLines.add(line);
   }
@@ -195,15 +201,15 @@ function checkMarkdownSyntax(
 ): void {
   const lines = bbcode.split('\n');
   const patterns: Array<{ regex: RegExp; msg: string; suggestion: string }> = [
-    { regex: /^#{1,3}\s/, msg: 'Markdown header', suggestion: 'use [h1], [h2], [h3]' },
-    { regex: /\*\*[^*]+\*\*/, msg: 'Markdown bold **', suggestion: 'use [b]...[/b]' },
-    { regex: /(?<!\*)\*[^*]+\*(?!\*)/, msg: 'Markdown italic *', suggestion: 'use [i]...[/i]' },
-    { regex: /~~[^~]+~~/, msg: 'Markdown strikethrough ~~', suggestion: 'use [strike]...[/strike]' },
-    { regex: /`[^`]+`/, msg: 'Markdown code `', suggestion: 'use [code]...[/code] (block only)' },
-    { regex: /^\s*[-*+]\s/, msg: 'Markdown list -', suggestion: 'use [list][*]...[/list]' },
-    { regex: /^\s*\d+\.\s/, msg: 'Markdown numbered list', suggestion: 'use [olist][*]...[/olist]' },
-    { regex: /\[([^\]]+)\]\([^)]+\)/, msg: 'Markdown link []', suggestion: 'use [url=...]...[/url]' },
-    { regex: /!\[[^\]]*\]\([^)]+\)/, msg: 'Markdown image ![]', suggestion: 'use [img]...[/img]' },
+    { regex: /^#{1,3}\s/, msg: 'Markdown header found', suggestion: 'use [h1], [h2], [h3] instead' },
+    { regex: /\*\*[^*]+\*\*/, msg: 'Markdown bold (**) found', suggestion: 'use [b]...[/b] instead' },
+    { regex: /(?<!\*)\*[^*]+\*(?!\*)/, msg: 'Markdown italic (*) found', suggestion: 'use [i]...[/i] instead' },
+    { regex: /~~[^~]+~~/, msg: 'Markdown strikethrough (~~) found', suggestion: 'use [strike]...[/strike] instead' },
+    { regex: /`[^`]+`/, msg: 'Markdown code (`) found', suggestion: 'use [code]...[/code] for code blocks' },
+    { regex: /^\s*[-*+]\s/, msg: 'Markdown list found', suggestion: 'use [list][*]...[/list] instead' },
+    { regex: /^\s*\d+\.\s/, msg: 'Markdown numbered list found', suggestion: 'use [olist][*]...[/olist] instead' },
+    { regex: /\[([^\]]+)\]\([^)]+\)/, msg: 'Markdown link found', suggestion: 'use [url=...]...[/url] instead' },
+    { regex: /!\[[^\]]*\]\([^)]+\)/, msg: 'Markdown image found', suggestion: 'use [img]...[/img] instead' },
   ];
   
   const seen = new Set<string>();
@@ -216,8 +222,9 @@ function checkMarkdownSyntax(
         seen.add(msg);
         warnings.push({
           type: 'warning',
-          message: `${msg} detected - ${suggestion}`,
+          message: `${msg} — ${suggestion}`,
           line: i + 1,
+          help: 'This looks like Markdown formatting that wasn\'t converted to BBCode. The converter usually handles this automatically — if you see this, you may need to replace it manually with the suggested BBCode tag.',
         });
         warningLines.add(i + 1);
       }
@@ -246,8 +253,9 @@ function checkTagMatching(
       if (tagStack.length === 0) {
         errors.push({
           type: 'error',
-          message: `Unexpected closing [/${tagName}] with no opening tag`,
+          message: `Found [/${tagName}] but there's no matching [${tagName}] before it`,
           line,
+          help: `Every closing tag like [/${tagName}] needs a matching opening tag [${tagName}] earlier in the content. Either add the opening tag or remove this closing one.`,
         });
         errorLines.add(line);
       } else {
@@ -255,8 +263,9 @@ function checkTagMatching(
         if (expected.tag !== tagName) {
           errors.push({
             type: 'error',
-            message: `Mismatched tags: expected [/${expected.tag}] (line ${expected.line}), found [/${tagName}]`,
+            message: `Tag mismatch: expected [/${expected.tag}] (from line ${expected.line}) but found [/${tagName}]`,
             line,
+            help: `Tags need to be closed in the order they were opened. You opened [${expected.tag}] on line ${expected.line}, so close it before [/${tagName}]. Think of it like nesting: [b][i]text[/i][/b] works, but [b][i]text[/b][/i] does not.`,
           });
           errorLines.add(line);
           errorLines.add(expected.line);
@@ -271,8 +280,9 @@ function checkTagMatching(
   tagStack.forEach(({ tag, line }) => {
     errors.push({
       type: 'error',
-      message: `Unclosed [${tag}] tag`,
+      message: `[${tag}] is never closed — add [/${tag}] after your content`,
       line,
+      help: `Every [${tag}] needs a matching [/${tag}] to tell Steam where the formatting ends. Without it, Steam may format the rest of your post unexpectedly.`,
     });
     errorLines.add(line);
   });
@@ -306,8 +316,9 @@ function checkTagNesting(
           const line = getLineNumber(bbcode, match.index);
           errors.push({
             type: 'error',
-            message: `Overlapping tags: [${tagName}] closes before [${stack[stack.length - 1].tag}]`,
+            message: `Formatting tags overlap: [${tagName}] closes before [${stack[stack.length - 1].tag}] does`,
             line,
+            help: `Steam needs formatting tags closed in reverse order — last opened, first closed. For example: [b][i]text[/i][/b] works, but [b][i]text[/b][/i] will break the formatting.`,
           });
           errorLines.add(line);
         }
@@ -337,8 +348,9 @@ function checkEmptyTags(
       const line = getLineNumber(bbcode, match.index);
       warnings.push({
         type: 'warning',
-        message: `Empty [${tag}][/${tag}] tag - will render incorrectly`,
+        message: `Empty [${tag}][/${tag}] — nothing to format here`,
         line,
+        help: `There's nothing between [${tag}] and [/${tag}], so Steam will either show a blank space or skip it entirely. Add content between them, or remove the empty tag.`,
       });
       warningLines.add(line);
     }
@@ -373,15 +385,17 @@ function checkTagSupport(
     if (support[checkTag] === false) {
       errors.push({
         type: 'error',
-        message: `[${tagName}] not supported in ${context}`,
+        message: `[${tagName}] won't work in Steam ${context}`,
         line,
+        help: `Steam ${context} don't support [${tagName}], so this content won't show up. You can switch to a different Steam context (like Announcements or Guides) where this tag works, or remove it.`,
       });
       errorLines.add(line);
     } else if (support[checkTag] === 'limited') {
       warnings.push({
         type: 'warning',
-        message: `[${tagName}] has limited support in ${context}`,
+        message: `[${tagName}] may look different in ${context}`,
         line,
+        help: `[${tagName}] works in Steam ${context} but might not look exactly as expected. Check the preview and test on Steam to make sure it looks right.`,
       });
       warningLines.add(line);
     }
@@ -394,8 +408,9 @@ function checkTagSupport(
       const line = getLineNumber(bbcode, bbcode.indexOf('[img]'));
       warnings.push({
         type: 'warning',
-        message: 'For guides, upload images and use [previewimg] instead of [img]',
+        message: 'Steam Guides need uploaded images — use [previewimg] instead of [img]',
         line,
+        help: 'Steam Guides require you to upload images through the Steam guide editor. Use [previewimg]ID[/previewimg] with the uploaded image ID instead of [img] with an external URL.',
       });
       warningLines.add(line);
     }
@@ -423,12 +438,13 @@ function checkListItems(
     
     errors.push({
       type: 'error',
-      message: content 
-        ? `Invalid tag [${content}] - will render as plain text`
-        : `Empty brackets [] - will render as plain text`,
+      message: content
+        ? `[${content}] isn't a Steam tag — this will show as plain text`
+        : `Empty brackets [] — this will show as plain text`,
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
+      help: 'This looks like it was meant to be a tag, but Steam doesn\'t recognize it. For list items, use [*] inside a [list] block. Otherwise, you can remove or rewrite this.',
     });
     errorLines.add(line);
   }
@@ -442,10 +458,11 @@ function checkListItems(
     const line = getLineNumber(bbcode, originalIndex);
     errors.push({
       type: 'error',
-      message: '[*] found outside of [list] or [olist]',
+      message: 'List item [*] found outside of a [list] or [olist] block',
       line,
       column: getColumnInLine(bbcode, originalIndex),
       length: 3,
+      help: 'The [*] marker only works inside a [list] or [olist] block. Wrap your list items like this: [list][*]Item 1[*]Item 2[/list].',
     });
     errorLines.add(line);
   }
@@ -468,8 +485,9 @@ function checkListWhitespace(
     const line = getLineNumber(bbcode, match.index + blankLinePos);
     warnings.push({
       type: 'warning',
-      message: 'Blank line inside [list] may break formatting',
+      message: 'Blank line inside a list may break the formatting on Steam',
       line,
+      help: 'Steam can interpret blank lines inside a [list] as the end of the list, which breaks the rest of your items. Remove blank lines between [*] items to keep the list together.',
     });
     warningLines.add(line);
   }
@@ -491,8 +509,9 @@ function checkUrls(
     const line = getLineNumber(bbcode, match.index);
     warnings.push({
       type: 'warning',
-      message: 'Empty [url] tag',
+      message: 'This [url] link is empty — it needs an address and link text',
       line,
+      help: 'A link needs both a web address and display text. Use it like this: [url=https://example.com]click here[/url] or [url]https://example.com[/url].',
     });
     warningLines.add(line);
   }
@@ -503,8 +522,35 @@ function checkUrls(
     const line = getLineNumber(bbcode, match.index);
     warnings.push({
       type: 'warning',
-      message: 'URL may need https:// prefix',
+      message: 'This link may need https:// at the start to work on Steam',
       line,
+      help: 'Steam requires full web addresses with https:// at the beginning. Try: [url=https://example.com]link text[/url].',
+    });
+    warningLines.add(line);
+  }
+}
+
+/**
+ * Check for unresolved image placeholders from Confluence conversion
+ */
+function checkImagePlaceholders(
+  bbcode: string,
+  warnings: LintMessage[],
+  warningLines: Set<number>
+): void {
+  const pattern = /\[img\]\{placeholder:([^}]+)\}\[\/img\]/gi;
+  let match;
+
+  while ((match = pattern.exec(bbcode)) !== null) {
+    const filename = match[1];
+    const line = getLineNumber(bbcode, match.index);
+    warnings.push({
+      type: 'warning',
+      message: `Image '${filename}' — upload to Steam and enter URL before publishing`,
+      line,
+      column: getColumnInLine(bbcode, match.index),
+      length: match[0].length,
+      help: `Upload this image to Steam's partner dashboard, then paste the URL in the Images panel.`,
     });
     warningLines.add(line);
   }
@@ -525,12 +571,14 @@ function checkCharacterLimits(
   if (charCount > limit) {
     errors.push({
       type: 'error',
-      message: `Exceeds ${context} limit: ${charCount.toLocaleString()} / ${limit.toLocaleString()}`,
+      message: `Too long for Steam ${context}: ${charCount.toLocaleString()} / ${limit.toLocaleString()} characters`,
+      help: `Steam ${context} have a ${limit.toLocaleString()}-character limit and this content exceeds it. You'll need to shorten it or split it into multiple posts.`,
     });
   } else if (charCount > limit * 0.9) {
     warnings.push({
       type: 'warning',
-      message: `Approaching limit: ${charCount.toLocaleString()} / ${limit.toLocaleString()} (${Math.round(charCount / limit * 100)}%)`,
+      message: `Getting close to the limit: ${charCount.toLocaleString()} / ${limit.toLocaleString()} characters (${Math.round(charCount / limit * 100)}%)`,
+      help: `Steam ${context} have a ${limit.toLocaleString()}-character limit. You're almost there — consider trimming to leave some room.`,
     });
   }
 }

@@ -1,10 +1,11 @@
 import { useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
-import { 
-  tokenizeMarkdown, 
-  tokenizeBBCode, 
+import {
+  tokenizeMarkdown,
+  tokenizeBBCode,
   applyHighlighting,
-  type HighlightToken 
+  type HighlightToken
 } from '@/lib/highlighter';
+import { detectBlacklistTerms } from '@/lib/blacklist-detector';
 
 export interface SyntaxEditorHandle {
   scrollToLine: (line: number, column?: number, length?: number) => void;
@@ -21,6 +22,8 @@ interface SyntaxEditorProps {
   errorLines?: Set<number>;
   warningLines?: Set<number>;
   onSave?: () => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  blacklistTerms?: string[];
 }
 
 export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
@@ -32,6 +35,8 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   errorLines = new Set(),
   warningLines = new Set(),
   onSave,
+  onPaste,
+  blacklistTerms = [],
 }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
@@ -123,13 +128,33 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     }));
   }, [lineCount, errorLines, warningLines]);
 
-  // Tokenize and highlight
+  // Tokenize and highlight (including blacklist terms)
   const highlightedHtml = useMemo(() => {
-    const tokens: HighlightToken[] = language === 'markdown' 
+    const tokens: HighlightToken[] = language === 'markdown'
       ? tokenizeMarkdown(value)
       : tokenizeBBCode(value);
+
+    // Add blacklist term tokens
+    if (blacklistTerms.length > 0) {
+      const matches = detectBlacklistTerms(value, blacklistTerms);
+      const lines = value.split('\n');
+      for (const match of matches) {
+        // Convert line/column to character offset
+        let offset = 0;
+        for (let i = 0; i < match.line - 1 && i < lines.length; i++) {
+          offset += lines[i].length + 1;
+        }
+        offset += match.column - 1;
+        tokens.push({
+          type: 'highlight-blacklist',
+          start: offset,
+          end: offset + match.length,
+        });
+      }
+    }
+
     return applyHighlighting(value, tokens);
-  }, [value, language]);
+  }, [value, language, blacklistTerms]);
 
   // Sync on value change
   useEffect(() => {
@@ -139,34 +164,18 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const textarea = e.currentTarget;
-    
-    // Tab key - insert spaces instead of changing focus
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      
-      // Insert 2 spaces
-      const newValue = value.substring(0, start) + '  ' + value.substring(end);
-      onChange(newValue);
-      
-      // Move cursor after the inserted spaces
-      requestAnimationFrame(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-      });
-    }
-    
+
     // Ctrl+S / Cmd+S - Save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       onSave?.();
     }
-    
+
     // Escape - Blur editor
     if (e.key === 'Escape') {
       textarea.blur();
     }
-  }, [value, onChange, onSave]);
+  }, [onSave]);
 
   return (
     <div className="syntax-editor">
@@ -198,6 +207,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
           onChange={(e) => onChange(e.target.value)}
           onScroll={syncScroll}
           onKeyDown={handleKeyDown}
+          onPaste={onPaste}
           readOnly={readOnly}
           placeholder={placeholder}
           spellCheck={language === 'markdown'}
