@@ -13,6 +13,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
 import { useRecentFiles } from '@/hooks/useRecentFiles';
+import { useImageStore } from '@/hooks/useImageStore';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 import { WELCOME_MARKDOWN } from '@/lib/welcome';
@@ -86,6 +87,9 @@ export function App() {
     [markdown, context, detectedFormat]
   );
 
+  // In-memory image store for drag-and-drop / pasted images
+  const imageStore = useImageStore();
+
   // Image placeholder state — maps filename to Steam URL
   const [imageUrls, setImageUrls] = useState<ImageUrlMap>({});
 
@@ -105,6 +109,11 @@ export function App() {
   const handleImageUrlChange = useCallback((filename: string, url: string) => {
     setImageUrls(prev => ({ ...prev, [filename]: url }));
   }, []);
+
+  // Handle drag-and-drop / pasted images — store in memory
+  const handleImageDrop = useCallback((filename: string, dataUrl: string) => {
+    imageStore.addImage(filename, dataUrl);
+  }, [imageStore]);
 
   // Clear image URLs when content changes significantly (new file opened)
   const prevPlaceholdersRef = useRef<string[]>([]);
@@ -426,6 +435,7 @@ export function App() {
             detectedFormat={detectedFormat}
             context={context}
             blacklist={blacklist}
+            onImageDrop={handleImageDrop}
           />
 
           <OutputPanel
@@ -435,6 +445,7 @@ export function App() {
             placeholderImages={placeholderImages}
             imageUrls={imageUrls}
             onImageUrlChange={handleImageUrlChange}
+            imageDataUrls={imageStore.images}
             translations={translations}
             onTranslate={handleTranslate}
             apiKeyDialogOpen={apiKeyDialogOpen}

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef, useState } from 'react';
 import {
   tokenizeMarkdown,
   tokenizeBBCode,
@@ -13,6 +13,17 @@ export interface SyntaxEditorHandle {
   focus: () => void;
 }
 
+/** Accepted image MIME types for drag-and-drop and paste */
+const ACCEPTED_IMAGE_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+]);
+
+/** Maximum image file size in bytes (10 MB) */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
 interface SyntaxEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -23,6 +34,7 @@ interface SyntaxEditorProps {
   warningLines?: Set<number>;
   onSave?: () => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onImageDrop?: (filename: string, dataUrl: string) => void;
   blacklistTerms?: string[];
 }
 
@@ -36,11 +48,15 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   warningLines = new Set(),
   onSave,
   onPaste,
+  onImageDrop,
   blacklistTerms = [],
 }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
+  const pastedImageCountRef = useRef(0);
 
   // Sync scroll positions - defined early so useImperativeHandle can use it
   const syncScroll = useCallback(() => {
@@ -161,6 +177,112 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     syncScroll();
   }, [value, syncScroll]);
 
+  // Insert a markdown image tag at the current cursor position (or end of text)
+  const insertImageTag = useCallback((filename: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const tag = `![image](blob:${filename})`;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    // Insert at cursor, adding newlines if not at line start
+    const before = value.substring(0, start);
+    const after = value.substring(end);
+    const needsNewlineBefore = before.length > 0 && !before.endsWith('\n');
+    const needsNewlineAfter = after.length > 0 && !after.startsWith('\n');
+
+    const insert = (needsNewlineBefore ? '\n' : '') + tag + (needsNewlineAfter ? '\n' : '');
+    const newValue = before + insert + after;
+    onChange(newValue);
+
+    // Move cursor after the inserted tag
+    const newPos = before.length + insert.length;
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newPos, newPos);
+    });
+  }, [value, onChange]);
+
+  // Read a File as data URL and store it via onImageDrop
+  const processImageFile = useCallback((file: File, filenameOverride?: string) => {
+    if (!ACCEPTED_IMAGE_TYPES.has(file.type)) return;
+    if (file.size > MAX_IMAGE_SIZE) {
+      console.warn(`Image skipped: ${file.name} exceeds 10 MB limit (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+      return;
+    }
+
+    const filename = filenameOverride || file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      onImageDrop?.(filename, dataUrl);
+      insertImageTag(filename);
+    };
+    reader.readAsDataURL(file);
+  }, [onImageDrop, insertImageTag]);
+
+  // Drag-and-drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    dragCounterRef.current = 0;
+
+    const files = Array.from(e.dataTransfer.files);
+    for (const file of files) {
+      processImageFile(file);
+    }
+  }, [processImageFile]);
+
+  // Enhanced paste handler: detect image data in clipboard
+  const handleImagePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Check for image items in clipboard
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter(item => ACCEPTED_IMAGE_TYPES.has(item.type));
+
+    if (imageItems.length > 0) {
+      e.preventDefault();
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          pastedImageCountRef.current++;
+          const ext = file.type.split('/')[1] || 'png';
+          const filename = `pasted-image-${pastedImageCountRef.current}.${ext}`;
+          processImageFile(file, filename);
+        }
+      }
+      return;
+    }
+
+    // No image data — delegate to parent onPaste handler (e.g., Confluence detection)
+    onPaste?.(e);
+  }, [processImageFile, onPaste]);
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const textarea = e.currentTarget;
@@ -178,15 +300,21 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   }, [onSave]);
 
   return (
-    <div className="syntax-editor">
-      <div 
+    <div
+      className={`syntax-editor${isDragOver ? ' drag-over' : ''}`}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      <div
         ref={lineNumbersRef}
         className="line-numbers"
         aria-hidden="true"
       >
         {lineNumbers.map(({ num, hasError, hasWarning }) => (
-          <div 
-            key={num} 
+          <div
+            key={num}
             className={`line-number ${hasError ? 'line-error' : hasWarning ? 'line-warning' : ''}`}
           >
             {num}
@@ -207,12 +335,22 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
           onChange={(e) => onChange(e.target.value)}
           onScroll={syncScroll}
           onKeyDown={handleKeyDown}
-          onPaste={onPaste}
+          onPaste={handleImagePaste}
           readOnly={readOnly}
           placeholder={placeholder}
           spellCheck={language === 'markdown'}
         />
       </div>
+
+      {/* Drop zone overlay */}
+      {isDragOver && (
+        <div className="editor-drop-zone" aria-hidden="true">
+          <div className="editor-drop-zone-content">
+            <span className="editor-drop-zone-icon">&#x1F5BC;</span>
+            <span className="editor-drop-zone-text">Drop images here</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

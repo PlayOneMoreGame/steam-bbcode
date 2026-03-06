@@ -8,9 +8,11 @@ interface ImagesPanelProps {
   imageUrls: ImageUrlMap;
   onUrlChange: (filename: string, url: string) => void;
   context: SteamContext;
+  /** Map of blob filenames to data URLs for thumbnail previews */
+  imageDataUrls?: Map<string, string>;
 }
 
-export function ImagesPanel({ filenames, imageUrls, onUrlChange, context }: ImagesPanelProps) {
+export function ImagesPanel({ filenames, imageUrls, onUrlChange, context, imageDataUrls }: ImagesPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const unresolvedCount = countUnresolved(filenames, imageUrls);
@@ -50,9 +52,18 @@ export function ImagesPanel({ filenames, imageUrls, onUrlChange, context }: Imag
           {filenames.map(filename => {
             const url = imageUrls[filename] || '';
             const isResolved = url.trim().length > 0;
+            const thumbnailUrl = imageDataUrls?.get(filename);
             return (
               <div key={filename} className="images-panel-row">
-                <span className="images-panel-icon" aria-hidden="true">{'\uD83D\uDDBC'}</span>
+                {thumbnailUrl ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt={filename}
+                    className="images-panel-thumbnail"
+                  />
+                ) : (
+                  <span className="images-panel-icon" aria-hidden="true">{'\uD83D\uDDBC'}</span>
+                )}
                 <span className="images-panel-filename" title={filename}>{filename}</span>
                 <input
                   type="text"

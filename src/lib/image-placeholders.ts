@@ -8,17 +8,18 @@ export type ImageUrlMap = Record<string, string>;
 
 /**
  * Extract all placeholder image filenames from BBCode.
+ * Detects both `{placeholder:filename}` (Confluence) and `blob:filename` (drag/drop/paste).
  * Returns an array of unique filenames in order of first appearance.
  */
 export function extractPlaceholderImages(bbcode: string): string[] {
-  const pattern = /\[img\]\{placeholder:([^}]+)\}\[\/img\]/gi;
+  const pattern = /\[img\](?:\{placeholder:([^}]+)\}|blob:([^\[]+))\[\/img\]/gi;
   const seen = new Set<string>();
   const filenames: string[] = [];
   let match;
 
   while ((match = pattern.exec(bbcode)) !== null) {
-    const filename = match[1];
-    if (!seen.has(filename)) {
+    const filename = match[1] || match[2];
+    if (filename && !seen.has(filename)) {
       seen.add(filename);
       filenames.push(filename);
     }
@@ -29,10 +30,12 @@ export function extractPlaceholderImages(bbcode: string): string[] {
 
 /**
  * Replace placeholder URLs in BBCode with resolved Steam URLs.
- * Only replaces placeholders that have a non-empty URL in the map.
+ * Handles both `{placeholder:filename}` and `blob:filename` patterns.
+ * Only replaces entries that have a non-empty URL in the map.
  */
 export function resolvePlaceholders(bbcode: string, imageUrls: ImageUrlMap): string {
-  return bbcode.replace(
+  // Resolve {placeholder:...} patterns
+  let result = bbcode.replace(
     /\[img\]\{placeholder:([^}]+)\}\[\/img\]/gi,
     (original, filename: string) => {
       const url = imageUrls[filename];
@@ -42,6 +45,20 @@ export function resolvePlaceholders(bbcode: string, imageUrls: ImageUrlMap): str
       return original;
     }
   );
+
+  // Resolve blob:... patterns
+  result = result.replace(
+    /\[img\]blob:([^\[]+)\[\/img\]/gi,
+    (original, filename: string) => {
+      const url = imageUrls[filename];
+      if (url && url.trim()) {
+        return `[img]${url.trim()}[/img]`;
+      }
+      return original;
+    }
+  );
+
+  return result;
 }
 
 /**

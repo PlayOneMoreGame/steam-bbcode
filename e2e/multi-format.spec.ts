@@ -32,7 +32,7 @@ test('format badge shows Confluence for XHTML content', async ({ page }) => {
 
   const badge = page.getByTestId('format-badge');
   await expect(badge).toBeVisible();
-  await expect(badge).toHaveText('Confluence');
+  await expect(badge).toHaveText('Rich Text');
 });
 
 test('format badge shows Plain for plain text', async ({ page }) => {
@@ -113,7 +113,7 @@ test('pasting Confluence HTML from clipboard uses XHTML content', async ({ page 
 
   // The badge should show Confluence since the HTML was used
   const badge = page.getByTestId('format-badge');
-  await expect(badge).toHaveText('Confluence');
+  await expect(badge).toHaveText('Rich Text');
 
   // The BBCode output should contain the converted content, not plain text
   await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
@@ -163,7 +163,7 @@ test('format badge updates when content type changes', async ({ page }) => {
   // Replace with Confluence XHTML
   await mdEditor.fill('<h1>Title</h1><ac:structured-macro ac:name="toc"/><p>Content</p>');
   await page.waitForTimeout(500);
-  await expect(badge).toHaveText('Confluence');
+  await expect(badge).toHaveText('Rich Text');
 
   // Replace with plain text
   await mdEditor.fill('Just a simple note.');

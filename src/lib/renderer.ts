@@ -24,9 +24,17 @@ function escapeHtmlAttr(s: string): string {
 }
 
 /**
- * Convert Steam BBCode to HTML for preview
+ * A map from blob filename to data URL, used to resolve in-memory images
+ * in the preview renderer.
  */
-export function bbcodeToHTML(bbcode: string): string {
+export type ImageDataUrlMap = Map<string, string>;
+
+/**
+ * Convert Steam BBCode to HTML for preview.
+ * @param bbcode - The BBCode content to render
+ * @param imageDataUrls - Optional map of blob:filename to data URL for in-memory images
+ */
+export function bbcodeToHTML(bbcode: string, imageDataUrls?: ImageDataUrlMap): string {
   let html = bbcode;
 
   // Escape HTML entities first
@@ -61,8 +69,9 @@ export function bbcodeToHTML(bbcode: string): string {
     return `<a href="${safeUrl}" class="steam-link" target="_blank" rel="noopener">${safeUrl}</a>`;
   });
 
-  // Images — placeholder cards for Confluence attachments, normal img for URLs
+  // Images — placeholder cards for Confluence attachments, blob images, normal img for URLs
   html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (_match, src: string) => {
+    // Confluence placeholder images
     const placeholderMatch = src.match(/^\{placeholder:(.+)\}$/);
     if (placeholderMatch) {
       const filename = placeholderMatch[1]
@@ -71,6 +80,28 @@ export function bbcodeToHTML(bbcode: string): string {
         .replace(/>/g, '&gt;');
       return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${filename}</div><div class="steam-img-placeholder-hint">Enter Steam URL in Images panel</div></div>`;
     }
+
+    // In-memory blob images (drag-and-drop / paste)
+    const blobMatch = src.match(/^blob:(.+)$/);
+    if (blobMatch) {
+      const filename = blobMatch[1];
+      const dataUrl = imageDataUrls?.get(filename);
+      if (dataUrl) {
+        const safeSrc = escapeHtmlAttr(dataUrl);
+        const safeFilename = filename
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        return `<img src="${safeSrc}" class="steam-img" alt="${safeFilename}" loading="lazy" />`;
+      }
+      // No data URL available — show placeholder card
+      const safeFilename = filename
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${safeFilename}</div><div class="steam-img-placeholder-hint">Enter Steam URL in Images panel</div></div>`;
+    }
+
     const safeSrc = escapeHtmlAttr(sanitizeUrl(src));
     return `<img src="${safeSrc}" class="steam-img" alt="" loading="lazy" />`;
   });

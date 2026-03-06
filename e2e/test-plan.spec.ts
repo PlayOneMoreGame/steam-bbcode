@@ -171,7 +171,7 @@ test.describe('4. Confluence XHTML Input', () => {
     await mdEditor.fill(CONFLUENCE_INPUT);
     await page.waitForTimeout(500);
     const badge = page.locator('.panel').first().locator('.format-badge');
-    await expect(badge).toContainText('Confluence');
+    await expect(badge).toContainText('Rich Text');
     await page.screenshot({ path: '/private/tmp/test-plan/04-confluence-input.png', fullPage: true });
   });
 
@@ -218,7 +218,7 @@ test.describe('4. Confluence XHTML Input', () => {
     // Wait for format detection debounce (300ms) to recognize Confluence
     await page.waitForTimeout(500);
     const badge = page.locator('.panel').first().locator('.format-badge');
-    await expect(badge).toContainText('Confluence');
+    await expect(badge).toContainText('Rich Text');
     await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
     const text = await page.locator('.bbcode-readonly').textContent() || '';
     expect(text).not.toContain('local-id');

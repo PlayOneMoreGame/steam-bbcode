@@ -6,6 +6,7 @@ import { lintBBCode } from '@/lib/linter';
 import { SUPPORTED_LANGUAGES } from '@/lib/translation-service';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { ImageUrlMap } from '@/lib/image-placeholders';
+import type { ImageDataUrlMap } from '@/lib/renderer';
 import { trackEvent } from '@/lib/analytics';
 
 export type OutputTab = 'preview' | 'bbcode' | string; // string for translation lang codes
@@ -24,6 +25,7 @@ interface OutputPanelProps {
   placeholderImages?: string[];
   imageUrls?: ImageUrlMap;
   onImageUrlChange?: (filename: string, url: string) => void;
+  imageDataUrls?: ImageDataUrlMap;
   translations: Record<string, TranslationState>;
   onTranslate: (lang: string) => void;
   apiKeyDialogOpen: boolean;
@@ -38,6 +40,7 @@ export function OutputPanel({
   placeholderImages = [],
   imageUrls = {},
   onImageUrlChange,
+  imageDataUrls,
   translations,
   onTranslate,
   apiKeyDialogOpen,
@@ -260,7 +263,7 @@ export function OutputPanel({
       </div>
 
       {activeTab === 'preview' ? (
-        <PreviewPanel content={bbcode} />
+        <PreviewPanel content={bbcode} imageDataUrls={imageDataUrls} />
       ) : activeTab === 'bbcode' ? (
         <div className="output-bbcode-tab">
           {/* Lint messages */}
@@ -339,6 +342,7 @@ export function OutputPanel({
           imageUrls={imageUrls}
           onUrlChange={onImageUrlChange}
           context={context}
+          imageDataUrls={imageDataUrls}
         />
       )}
 

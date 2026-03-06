@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
-import { bbcodeToHTML } from '@/lib/renderer';
+import { bbcodeToHTML, type ImageDataUrlMap } from '@/lib/renderer';
 
 interface PreviewPanelProps {
   content: string;
+  imageDataUrls?: ImageDataUrlMap;
 }
 
-export function PreviewPanel({ content }: PreviewPanelProps) {
-  const html = useMemo(() => bbcodeToHTML(content), [content]);
+export function PreviewPanel({ content, imageDataUrls }: PreviewPanelProps) {
+  const html = useMemo(() => bbcodeToHTML(content, imageDataUrls), [content, imageDataUrls]);
 
   return (
     <div

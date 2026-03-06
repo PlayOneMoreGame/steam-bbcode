@@ -88,6 +88,38 @@ describe('bbcodeToHTML', () => {
       expect(html).toContain('<img src="https://cdn.steam.com/real.png"');
       expect(html).not.toContain('steam-img-placeholder');
     });
+
+    it('renders blob image using data URL from imageDataUrls map', () => {
+      const imageMap = new Map([['test.png', 'data:image/png;base64,abc123']]);
+      const html = bbcodeToHTML('[img]blob:test.png[/img]', imageMap);
+      expect(html).toContain('<img src="data:image/png;base64,abc123"');
+      expect(html).toContain('alt="test.png"');
+      expect(html).not.toContain('steam-img-placeholder');
+    });
+
+    it('renders placeholder card for unknown blob reference', () => {
+      const html = bbcodeToHTML('[img]blob:unknown.png[/img]');
+      expect(html).toContain('steam-img-placeholder');
+      expect(html).toContain('unknown.png');
+      expect(html).not.toContain('<img');
+    });
+
+    it('renders placeholder card for blob reference with empty imageDataUrls', () => {
+      const imageMap = new Map<string, string>();
+      const html = bbcodeToHTML('[img]blob:missing.png[/img]', imageMap);
+      expect(html).toContain('steam-img-placeholder');
+      expect(html).toContain('missing.png');
+    });
+
+    it('handles blob and placeholder images in the same document', () => {
+      const imageMap = new Map([['dropped.png', 'data:image/png;base64,xyz']]);
+      const bbcode = '[img]{placeholder:conf.png}[/img]\n[img]blob:dropped.png[/img]';
+      const html = bbcodeToHTML(bbcode, imageMap);
+      // Confluence placeholder shows placeholder card
+      expect(html).toContain('conf.png');
+      // Blob image renders actual img
+      expect(html).toContain('data:image/png;base64,xyz');
+    });
   });
 
   describe('youtube', () => {

@@ -7,10 +7,10 @@ import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { InputFormat } from '@/lib/format-detector';
 import { trackEvent } from '@/lib/analytics';
 
-/** Labels shown in the format badge */
+/** Labels shown in the format badge — user-facing, no technical jargon */
 const FORMAT_LABELS: Record<InputFormat, string> = {
   markdown: 'MD',
-  confluence: 'Confluence',
+  confluence: 'Rich Text',
   plaintext: 'Plain',
 };
 
@@ -32,6 +32,7 @@ interface MarkdownPanelProps {
   detectedFormat?: InputFormat;
   context?: SteamContext;
   blacklist?: string[];
+  onImageDrop?: (filename: string, dataUrl: string) => void;
 }
 
 export function MarkdownPanel({
@@ -43,6 +44,7 @@ export function MarkdownPanel({
   detectedFormat = 'markdown',
   context = 'announcements',
   blacklist = [],
+  onImageDrop,
 }: MarkdownPanelProps) {
   const [showDiscord, setShowDiscord] = useState(false);
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
@@ -87,28 +89,16 @@ export function MarkdownPanel({
                     lintResult.info.length > 0;
 
   // Handle paste: intercept clipboard HTML to detect Confluence content
-  // If the editor has content and a cursor position, insert at cursor instead of replacing
+  // Always replaces entire editor — Confluence paste is a "load document" action, not an insert
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData('text/html');
     if (html && isConfluenceHtml(html)) {
       e.preventDefault();
-      const textarea = e.currentTarget;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const hasExistingContent = value.trim().length > 0;
-
-      if (hasExistingContent) {
-        // Insert at cursor position instead of replacing everything
-        const newValue = value.substring(0, start) + html + value.substring(end);
-        onChange(newValue);
-      } else {
-        // Empty editor — replace entirely
-        onChange(html);
-      }
+      onChange(html);
       trackEvent('paste_confluence', { source: 'clipboard_html' });
     }
     // Otherwise, let the default paste (plain text) happen naturally
-  }, [onChange, value]);
+  }, [onChange]);
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
@@ -253,6 +243,7 @@ export function MarkdownPanel({
         warningLines={lintResult.warningLines}
         onSave={onSaveAs}
         onPaste={handlePaste}
+        onImageDrop={onImageDrop}
         blacklistTerms={blacklist}
       />
 

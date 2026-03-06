@@ -181,6 +181,41 @@ describe('confluenceToBBCode', () => {
       );
       expect(result.notes.some(n => n.toLowerCase().includes('upload') || n.toLowerCase().includes('confluence'))).toBe(true);
     });
+
+    it('converts <img> with Confluence src to placeholder', () => {
+      const result = confluenceToBBCode(
+        '<img src="https://onemoregame.atlassian.net/wiki/download/attachments/123/screenshot.png" alt="screenshot.png" />',
+        'announcements'
+      );
+      expect(result.bbcode).toContain('[img]{placeholder:screenshot.png}[/img]');
+      expect(result.bbcode).not.toContain('atlassian.net');
+    });
+
+    it('converts <img> with viewpageattachments URL to placeholder', () => {
+      const result = confluenceToBBCode(
+        '<img src="https://onemoregame.atlassian.net/wiki/pages/viewpageattachments.action?pageId=123&preview=/123/456/hero.png" />',
+        'announcements'
+      );
+      expect(result.bbcode).toContain('{placeholder:');
+      expect(result.bbcode).not.toContain('viewpageattachments');
+    });
+
+    it('passes through non-Confluence img src URLs', () => {
+      const result = confluenceToBBCode(
+        '<img src="https://cdn.steam.com/real-image.png" />',
+        'announcements'
+      );
+      expect(result.bbcode).toContain('[img]https://cdn.steam.com/real-image.png[/img]');
+      expect(result.bbcode).not.toContain('placeholder');
+    });
+
+    it('uses alt text as filename when URL has no extractable name', () => {
+      const result = confluenceToBBCode(
+        '<img src="https://onemoregame.atlassian.net/wiki/download/attachments/123/" alt="my-image.gif" />',
+        'announcements'
+      );
+      expect(result.bbcode).toContain('{placeholder:my-image.gif}');
+    });
   });
 
   describe('confluence macros', () => {

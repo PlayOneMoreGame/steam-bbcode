@@ -946,6 +946,58 @@ body {
   color: var(--text-muted);
 }
 
+/* Drag-over state */
+.syntax-editor.drag-over {
+  outline: 2px dashed var(--accent-blue);
+  outline-offset: -2px;
+}
+
+/* Drop zone overlay */
+.editor-drop-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 33, 39, 0.85);
+  pointer-events: none;
+}
+
+.editor-drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 32px;
+  border: 2px dashed var(--accent-blue);
+  border-radius: 8px;
+  background: var(--bg-blue-subtle);
+}
+
+.editor-drop-zone-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.editor-drop-zone-text {
+  font-family: var(--font-system);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-blue);
+}
+
+/* Image thumbnail in ImagesPanel */
+.images-panel-thumbnail {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 3px;
+  margin-right: 6px;
+  border: 1px solid var(--border-primary);
+}
+
 /* ==========================================================================
    Markdown Syntax Highlighting - One Dark Pro Colors
    ========================================================================== */

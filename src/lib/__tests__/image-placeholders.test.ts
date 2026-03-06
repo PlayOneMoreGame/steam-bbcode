@@ -35,6 +35,26 @@ describe('extractPlaceholderImages', () => {
   it('returns empty array for empty input', () => {
     expect(extractPlaceholderImages('')).toEqual([]);
   });
+
+  it('extracts filenames from blob [img] tags', () => {
+    const bbcode = '[img]blob:screenshot.png[/img]\n[img]blob:photo.jpg[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['screenshot.png', 'photo.jpg']);
+  });
+
+  it('deduplicates blob filenames', () => {
+    const bbcode = '[img]blob:hero.png[/img]\n[img]blob:hero.png[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['hero.png']);
+  });
+
+  it('extracts both placeholder and blob filenames together', () => {
+    const bbcode = '[img]{placeholder:confluence.png}[/img]\n[img]blob:dropped.png[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['confluence.png', 'dropped.png']);
+  });
+
+  it('handles blob filenames with special characters', () => {
+    const bbcode = '[img]blob:pasted-image-1.png[/img]';
+    expect(extractPlaceholderImages(bbcode)).toEqual(['pasted-image-1.png']);
+  });
 });
 
 describe('resolvePlaceholders', () => {
@@ -87,6 +107,29 @@ describe('resolvePlaceholders', () => {
     const bbcode = '[img]https://example.com/real.png[/img]';
     const urls: ImageUrlMap = {};
     expect(resolvePlaceholders(bbcode, urls)).toBe(bbcode);
+  });
+
+  it('resolves blob references with Steam URL', () => {
+    const bbcode = '[img]blob:dropped.png[/img]';
+    const urls: ImageUrlMap = { 'dropped.png': 'https://cdn.steam.com/dropped.png' };
+    expect(resolvePlaceholders(bbcode, urls)).toBe('[img]https://cdn.steam.com/dropped.png[/img]');
+  });
+
+  it('leaves unresolved blob references unchanged', () => {
+    const bbcode = '[img]blob:dropped.png[/img]';
+    const urls: ImageUrlMap = {};
+    expect(resolvePlaceholders(bbcode, urls)).toBe(bbcode);
+  });
+
+  it('resolves mixed placeholder and blob references', () => {
+    const bbcode = '[img]{placeholder:conf.png}[/img]\n[img]blob:local.png[/img]';
+    const urls: ImageUrlMap = {
+      'conf.png': 'https://cdn.steam.com/conf.png',
+      'local.png': 'https://cdn.steam.com/local.png',
+    };
+    const result = resolvePlaceholders(bbcode, urls);
+    expect(result).toContain('[img]https://cdn.steam.com/conf.png[/img]');
+    expect(result).toContain('[img]https://cdn.steam.com/local.png[/img]');
   });
 });
 

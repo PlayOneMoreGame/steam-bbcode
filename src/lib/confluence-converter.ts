@@ -139,6 +139,24 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
     case 'blockquote':
       return `[quote]${processChildren(el, notes, context).trim()}[/quote]`;
 
+    case 'img': {
+      // Handle <img> tags from rendered Confluence view (browser clipboard)
+      // These have auth-protected src URLs that won't work on Steam
+      const src = el.getAttribute('src') || '';
+      const alt = el.getAttribute('alt') || '';
+      if (isConfluenceUrl(src)) {
+        // Extract filename from URL or use alt text
+        const filename = extractFilenameFromUrl(src) || alt || 'image.png';
+        if (!notes.some(n => n.includes('image attachment'))) {
+          notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
+        }
+        return `\n[img]{placeholder:${filename}}[/img]\n`;
+      }
+      // Non-Confluence URL — pass through
+      if (src) return `\n[img]${src}[/img]\n`;
+      return '';
+    }
+
     case 'hr':
       return '\n[hr][/hr]\n';
 
@@ -237,7 +255,17 @@ function processConfluenceImage(el: Element, notes: string[]): string {
   const urlEl = findByTagName(el, 'ri:url', 'ri-url');
   if (urlEl) {
     const url = urlEl.getAttribute('ri:value') || urlEl.getAttribute('value') || '';
-    if (url) return `\n[img]${url}[/img]\n`;
+    if (url) {
+      // Check if this is a Confluence-internal URL that won't work externally
+      if (isConfluenceUrl(url)) {
+        const filename = extractFilenameFromUrl(url) || 'image.png';
+        if (!notes.some(n => n.includes('image attachment'))) {
+          notes.push('Image attachments reference Confluence files — upload to Steam and update URLs');
+        }
+        return `\n[img]{placeholder:${filename}}[/img]\n`;
+      }
+      return `\n[img]${url}[/img]\n`;
+    }
   }
 
   return '';
@@ -367,4 +395,26 @@ function processTable(el: Element, notes: string[], context: SteamContext): stri
   }
   result += '[/table]\n';
   return result;
+}
+
+/** Check if a URL points to a Confluence instance (auth-protected, won't work externally) */
+function isConfluenceUrl(url: string): boolean {
+  return /atlassian\.net\/wiki|\/wiki\/download\/|\/wiki\/pages\/viewpageattachments|\/rest\/documentConversion|confluence.*\/download\/attachments/i.test(url);
+}
+
+/** Extract a filename from a Confluence attachment URL */
+function extractFilenameFromUrl(url: string): string {
+  try {
+    // Try to get filename from URL path or query params
+    const decoded = decodeURIComponent(url);
+    // Match /filename.ext at end of path or in query params
+    const filenameMatch = decoded.match(/(?:\/|=)([^/?=&]+\.\w{2,4})(?:\?|$|&)/);
+    if (filenameMatch) return filenameMatch[1];
+    // Fallback: last path segment
+    const pathMatch = decoded.match(/\/([^/?]+)$/);
+    if (pathMatch) return pathMatch[1];
+  } catch {
+    // decodeURIComponent can throw on malformed URLs
+  }
+  return '';
 }
