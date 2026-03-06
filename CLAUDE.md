@@ -4,7 +4,7 @@ This file provides context for AI-assisted development with Claude Code or Claud
 
 ## Project Purpose
 
-SteamBBEditor converts Markdown (typically from Confluence) to Steam BBCode. This solves a specific pain point: Valve uses non-standard BBCode that differs from typical BBCode, and they refuse to support Markdown directly. This tool helps the marketing, community, and dev teams at One More Game publish patch notes and announcements to Steam.
+SteamBBEditor is a translator. Teams write content in whatever tool they prefer — Confluence, Word, markdown editors, Google Docs — then use this app to convert it into Steam's non-standard BBCode format. The goal: users never need to learn Steam BBCode. They import their content (paste, open file, drag and drop), fix anything that needs fixing, verify it looks right in the Steam preview, and copy the output to post on Steam. Import → Edit → Preview → Copy → Post.
 
 **This is NOT a general-purpose text editor.** It's a focused conversion tool for the Confluence → Steam pipeline.
 
@@ -15,8 +15,8 @@ src/
 ├── App.tsx              # Main app, state management, keyboard shortcuts
 ├── components/
 │   ├── MarkdownPanel    # Left panel - input, markdown linting
-│   ├── BBCodePanel      # Middle panel - converted output, bbcode linting
-│   ├── PreviewPanel     # Right panel - rendered preview
+│   ├── OutputPanel      # Right panel - Steam Preview tab + BBCode tab, copy button
+│   ├── PreviewPanel     # BBCode → HTML rendered preview
 │   └── SyntaxEditor     # Shared editor component with line numbers
 ├── hooks/
 │   ├── useFileService   # Tauri file dialogs (Open, Save As)
