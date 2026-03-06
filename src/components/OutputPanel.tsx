@@ -50,7 +50,7 @@ export function OutputPanel({
   const [translateMenuOpen, setTranslateMenuOpen] = useState(false);
   const translateMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close translate menu when clicking outside
+  // Close translate menu when clicking outside or pressing Escape
   useEffect(() => {
     if (!translateMenuOpen) return;
     const handleClick = (e: globalThis.MouseEvent) => {
@@ -58,8 +58,17 @@ export function OutputPanel({
         setTranslateMenuOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setTranslateMenuOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [translateMenuOpen]);
 
   const toggleHelp = useCallback((key: string, e: MouseEvent) => {

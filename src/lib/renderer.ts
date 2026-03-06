@@ -3,6 +3,26 @@
 
 import { youtubeImageRegex, imageRegex } from './utils';
 
+/** Sanitize URLs to prevent javascript: and other dangerous protocols */
+function sanitizeUrl(url: string): string {
+  const trimmed = url.trim();
+  // Allow http, https, steam, and relative URLs
+  if (/^(https?:|steam:|\/)/i.test(trimmed) || !trimmed.includes(':')) {
+    return trimmed;
+  }
+  return '#';
+}
+
+/** Escape a string for safe use inside an HTML attribute value */
+function escapeHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /**
  * Convert Steam BBCode to HTML for preview
  */
@@ -31,9 +51,15 @@ export function bbcodeToHTML(bbcode: string): string {
   // Code (block-level, Steam style)
   html = html.replace(/\[code\]([\s\S]*?)\[\/code\]/gi, '<pre class="steam-code"><code>$1</code></pre>');
 
-  // Links
-  html = html.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, '<a href="$1" class="steam-link" target="_blank" rel="noopener">$2</a>');
-  html = html.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, '<a href="$1" class="steam-link" target="_blank" rel="noopener">$1</a>');
+  // Links — sanitize URL protocol to prevent javascript: XSS
+  html = html.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, (_m, url: string, text: string) => {
+    const safeUrl = sanitizeUrl(url);
+    return `<a href="${safeUrl}" class="steam-link" target="_blank" rel="noopener">${text}</a>`;
+  });
+  html = html.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, (_m, url: string) => {
+    const safeUrl = sanitizeUrl(url);
+    return `<a href="${safeUrl}" class="steam-link" target="_blank" rel="noopener">${safeUrl}</a>`;
+  });
 
   // Images — placeholder cards for Confluence attachments, normal img for URLs
   html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (_match, src: string) => {
@@ -45,7 +71,8 @@ export function bbcodeToHTML(bbcode: string): string {
         .replace(/>/g, '&gt;');
       return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${filename}</div><div class="steam-img-placeholder-hint">Enter Steam URL in Images panel</div></div>`;
     }
-    return `<img src="${src}" class="steam-img" alt="" loading="lazy" />`;
+    const safeSrc = escapeHtmlAttr(sanitizeUrl(src));
+    return `<img src="${safeSrc}" class="steam-img" alt="" loading="lazy" />`;
   });
 
   // YouTube videos (previewyoutube tag)

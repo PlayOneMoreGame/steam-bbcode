@@ -1,10 +1,46 @@
 /**
- * Static BBCode tag reference table
- * Shows Markdown ↔ BBCode equivalents
+ * BBCode tag reference floating popover
+ * Shows Markdown <-> BBCode equivalents and Steam quirks
  */
-export function TagReference() {
+import { useEffect, useRef } from 'react';
+
+interface TagReferenceProps {
+  onClose: () => void;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+}
+
+export function TagReference({ onClose, anchorRef }: TagReferenceProps) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        popoverRef.current && !popoverRef.current.contains(target) &&
+        anchorRef.current && !anchorRef.current.contains(target)
+      ) {
+        onClose();
+      }
+    };
+    // Use mousedown so the click is caught before the button's onClick toggles
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose, anchorRef]);
+
   return (
-    <div className="tag-reference">
+    <div className="tag-reference-popover" ref={popoverRef}>
       <table className="tag-ref-table">
         <thead>
           <tr>
@@ -25,9 +61,19 @@ export function TagReference() {
             <td><code>[i]text[/i]</code></td>
           </tr>
           <tr>
+            <td>Underline</td>
+            <td className="tag-ref-na">--</td>
+            <td><code>[u]text[/u]</code></td>
+          </tr>
+          <tr>
             <td>Strikethrough</td>
             <td><code>~~text~~</code></td>
             <td><code>[strike]text[/strike]</code></td>
+          </tr>
+          <tr>
+            <td>Spoiler</td>
+            <td className="tag-ref-na">--</td>
+            <td><code>[spoiler]text[/spoiler]</code></td>
           </tr>
           <tr>
             <td>Header 1</td>
@@ -55,6 +101,11 @@ export function TagReference() {
             <td><code>[img]url[/img]</code></td>
           </tr>
           <tr>
+            <td>Guide image</td>
+            <td className="tag-ref-na">--</td>
+            <td><code>[previewimg]id[/previewimg]</code></td>
+          </tr>
+          <tr>
             <td>Bullet list</td>
             <td><code>- Item</code></td>
             <td><code>[list][*]Item[/list]</code></td>
@@ -75,6 +126,11 @@ export function TagReference() {
             <td><code>[code]code[/code]</code></td>
           </tr>
           <tr>
+            <td>Noparse</td>
+            <td className="tag-ref-na">--</td>
+            <td><code>[noparse]text[/noparse]</code></td>
+          </tr>
+          <tr>
             <td>Horizontal rule</td>
             <td><code>---</code></td>
             <td><code>[hr][/hr]</code></td>
@@ -91,8 +147,15 @@ export function TagReference() {
           </tr>
         </tbody>
       </table>
-      <div className="tag-ref-note">
-        Underline (<code>[u]</code>) and Spoiler (<code>[spoiler]</code>) have no Markdown equivalent — edit BBCode directly.
+
+      <div className="tag-ref-quirks">
+        <h4 className="tag-ref-quirks-title">Steam Quirks</h4>
+        <ul className="tag-ref-quirks-list">
+          <li><code>[hr]</code> requires a closing tag: <code>[hr][/hr]</code> (not self-closing)</li>
+          <li>Nested lists: Steam doesn't support nesting <code>[list]</code> inside <code>[list]</code> — flatten to a single level</li>
+          <li><code>[img]</code> vs <code>[previewimg]</code>: Announcements use <code>[img]URL[/img]</code>, guides use <code>[previewimg]ID[/previewimg]</code></li>
+          <li>Inline code: No inline code tag exists — backticks are converted to <code>[b]</code></li>
+        </ul>
       </div>
     </div>
   );

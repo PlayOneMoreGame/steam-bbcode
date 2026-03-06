@@ -161,6 +161,47 @@ describe('bbcodeToHTML', () => {
       expect(bbcodeToHTML('[B]bold[/B]')).toContain('<strong>bold</strong>');
     });
   });
+
+  describe('XSS prevention', () => {
+    it('blocks javascript: URLs in [url=...]', () => {
+      const html = bbcodeToHTML('[url=javascript:alert(1)]click me[/url]');
+      expect(html).not.toContain('javascript:');
+      expect(html).toContain('href="#"');
+    });
+
+    it('blocks javascript: URLs in [url]...[/url]', () => {
+      const html = bbcodeToHTML('[url]javascript:alert(1)[/url]');
+      expect(html).not.toContain('javascript:');
+      expect(html).toContain('href="#"');
+    });
+
+    it('blocks data: URLs in links', () => {
+      const html = bbcodeToHTML('[url=data:text/html,<script>alert(1)</script>]xss[/url]');
+      expect(html).not.toContain('data:text/html');
+      expect(html).toContain('href="#"');
+    });
+
+    it('allows https URLs', () => {
+      const html = bbcodeToHTML('[url=https://store.steampowered.com]Steam[/url]');
+      expect(html).toContain('href="https://store.steampowered.com"');
+    });
+
+    it('allows steam: protocol URLs', () => {
+      const html = bbcodeToHTML('[url=steam://run/12345]Launch[/url]');
+      expect(html).toContain('href="steam://run/12345"');
+    });
+
+    it('escapes quotes in img src to prevent attribute injection', () => {
+      const html = bbcodeToHTML('[img]https://example.com/img.png" onload="alert(1)[/img]');
+      expect(html).not.toContain('onload="');
+      expect(html).toContain('&quot;');
+    });
+
+    it('blocks javascript: in img src', () => {
+      const html = bbcodeToHTML('[img]javascript:alert(1)[/img]');
+      expect(html).not.toContain('javascript:');
+    });
+  });
 });
 
 describe('extractMedia', () => {

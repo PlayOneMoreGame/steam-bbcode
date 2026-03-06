@@ -1,0 +1,97 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - heading "SteamBBEditor" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]: "Steam Context:"
+          - combobox [ref=e11] [cursor=pointer]:
+            - option "Announcements" [selected]
+            - option "Guides"
+            - option "Forums"
+            - option "Reviews"
+        - button "Tags" [ref=e13] [cursor=pointer]
+        - button "Settings" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - text: Editor
+          - generic [ref=e19]: MD
+        - button "Open" [ref=e21] [cursor=pointer]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: "1"
+          - generic [ref=e25]: "2"
+          - generic [ref=e26]: "3"
+          - generic [ref=e27]: "4"
+          - generic [ref=e28]: "5"
+          - generic [ref=e29]: "6"
+          - generic [ref=e30]: "7"
+          - generic [ref=e31]: "8"
+          - generic [ref=e32]: "9"
+          - generic [ref=e33]: "10"
+          - generic [ref=e34]: "11"
+          - generic [ref=e35]: "12"
+          - generic [ref=e36]: "13"
+          - generic [ref=e37]: "14"
+          - generic [ref=e38]: "15"
+          - generic [ref=e39]: "16"
+          - generic [ref=e40]: "17"
+        - generic [ref=e41]:
+          - generic: "# Patch Notes v2.0 **SWAPMEAT** — Major balance changes and bug fixes. ## Gameplay - Currencies capped at 9999 - Renamed \"Elite Enemies\" to \"Shiny Enemies\" - New \"Flash Freeze\" artifact replaces \"Armor of Chill\" ## Bug Fixes - Fixed moleman leg \"tunneling\" off cliffs - Fixed weapons retained between runs - Fixed Frank's minions spawning less than designed > Note: Performance tuning is still in progress. Visit [Steam Community](https://steamcommunity.com) for feedback."
+          - textbox "Paste your Markdown here, or click Open to load a file..." [active] [ref=e42]: "# Patch Notes v2.0 **SWAPMEAT** — Major balance changes and bug fixes. ## Gameplay - Currencies capped at 9999 - Renamed \"Elite Enemies\" to \"Shiny Enemies\" - New \"Flash Freeze\" artifact replaces \"Armor of Chill\" ## Bug Fixes - Fixed moleman leg \"tunneling\" off cliffs - Fixed weapons retained between runs - Fixed Frank's minions spawning less than designed > Note: Performance tuning is still in progress. Visit [Steam Community](https://steamcommunity.com) for feedback."
+      - generic [ref=e43]:
+        - button "Discord (1)" [ref=e44] [cursor=pointer]
+        - generic [ref=e45]: 477 chars
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - button "Steam Preview" [ref=e49] [cursor=pointer]
+          - button "BBCode 1" [ref=e50] [cursor=pointer]:
+            - text: BBCode
+            - generic [ref=e51]: "1"
+          - button "Translate ▾" [ref=e53] [cursor=pointer]
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: "!"
+            - text: 1 warning
+          - button "Copy BBCode" [ref=e57] [cursor=pointer]
+      - generic [ref=e58]:
+        - heading "Patch Notes v2.0" [level=1] [ref=e59]
+        - strong [ref=e60]: SWAPMEAT
+        - text: — Major balance changes and bug fixes.
+        - heading "Gameplay" [level=2] [ref=e61]
+        - list [ref=e62]:
+          - listitem [ref=e63]: Currencies capped at 9999
+          - listitem [ref=e64]: Renamed "Elite Enemies" to "Shiny Enemies"
+          - listitem [ref=e65]: New "Flash Freeze" artifact replaces "Armor of Chill"
+        - heading "Bug Fixes" [level=2] [ref=e66]
+        - list [ref=e67]:
+          - listitem [ref=e68]: Fixed moleman leg "tunneling" off cliffs
+          - listitem [ref=e69]: Fixed weapons retained between runs
+          - listitem [ref=e70]: Fixed Frank's minions spawning less than designed
+        - blockquote [ref=e71]: "Note: Performance tuning is still in progress."
+        - text: Visit
+        - link "Steam Community" [ref=e72] [cursor=pointer]:
+          - /url: https://steamcommunity.com
+        - text: for feedback.
+      - generic [ref=e76]: 556 / 8,000
+  - contentinfo [ref=e77]:
+    - generic [ref=e78]:
+      - generic [ref=e79]: ⌘N
+      - text: New
+      - generic [ref=e80]: ⌘O
+      - text: Open
+      - generic [ref=e81]: ⌘S
+      - text: Save As
+      - generic [ref=e82]: ⌘⇧C
+      - text: Copy BBCode
+    - generic [ref=e83]:
+      - generic [ref=e84]: ●
+      - link "Feedback" [ref=e85] [cursor=pointer]:
+        - /url: https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose
+```

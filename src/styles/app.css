@@ -167,17 +167,6 @@ body {
   gap: var(--spacing-sm);
 }
 
-.title-badge {
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--text-muted);
-  background-color: var(--bg-elevated);
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
 .format-badge {
   font-size: 9px;
@@ -293,13 +282,25 @@ body {
    Tag Reference Panel
    ========================================================================== */
 
-.tag-reference {
+.tag-reference-wrapper {
+  position: relative;
+}
+
+.tag-reference-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--spacing-xs);
   padding: var(--spacing-md);
   background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: var(--radius-md);
-  margin-top: var(--spacing-sm);
-  max-height: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-height: min(500px, calc(100vh - 120px));
+  min-width: 420px;
+  max-width: 520px;
   overflow-y: auto;
+  z-index: 100;
 }
 
 /* Legacy section styles - keeping for backwards compatibility */
@@ -331,8 +332,10 @@ body {
 }
 
 @media (max-width: 768px) {
-  .tag-reference {
-    max-height: 300px;
+  .tag-reference-popover {
+    min-width: 0;
+    max-width: calc(100vw - 2rem);
+    right: -1rem;
   }
 }
 
@@ -465,7 +468,7 @@ body {
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
-  user-select: all;
+  user-select: text;
   cursor: text;
 }
 
@@ -1370,18 +1373,52 @@ body {
   font-size: 0.75rem;
 }
 
-.tag-ref-note {
+.tag-ref-na {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.tag-ref-quirks {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-color);
-  font-size: 0.75rem;
-  color: var(--text-muted);
 }
 
-.tag-ref-note code {
+.tag-ref-quirks-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.4rem;
+}
+
+.tag-ref-quirks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.tag-ref-quirks-list li {
+  padding: 0.25rem 0;
+  padding-left: 0.75rem;
+  position: relative;
+}
+
+.tag-ref-quirks-list li::before {
+  content: '\2022';
+  position: absolute;
+  left: 0;
+  color: var(--text-dim);
+}
+
+.tag-ref-quirks-list code {
   background: var(--bg-input);
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
+  font-size: 0.7rem;
 }
 
 /* ==========================================================================

@@ -1,0 +1,111 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - heading "SteamBBEditor" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]: "Steam Context:"
+          - combobox [ref=e11] [cursor=pointer]:
+            - option "Announcements" [selected]
+            - option "Guides"
+            - option "Forums"
+            - option "Reviews"
+        - button "Tags" [ref=e13] [cursor=pointer]
+        - button "Settings" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - heading "Blacklisted Terms" [level=3] [ref=e17]
+        - paragraph [ref=e18]: Terms that will trigger warnings in the editor. Each team configures their own list.
+        - generic [ref=e20]:
+          - generic [ref=e21]: damn
+          - button "Remove damn" [ref=e22] [cursor=pointer]: x
+        - generic [ref=e23]:
+          - textbox "Add a term..." [active] [ref=e24]
+          - button "Add" [disabled] [ref=e25]
+      - generic [ref=e26]:
+        - heading "Do Not Translate Terms" [level=3] [ref=e27]
+        - paragraph [ref=e28]: These terms are preserved exactly when translating. Read-only — defined in code.
+        - generic [ref=e29]:
+          - generic [ref=e31]: SWAPMEAT
+          - generic [ref=e33]: Tangus
+          - generic [ref=e35]: Jangus
+          - generic [ref=e37]: Smart Meat
+          - generic [ref=e39]: Gobble Gazer
+          - generic [ref=e41]: Paper Bobby
+          - generic [ref=e43]: Boombot
+          - generic [ref=e45]: BoxFace
+          - generic [ref=e47]: Rocketbot
+          - generic [ref=e49]: Rangus
+          - generic [ref=e51]: Franken Meat
+          - generic [ref=e53]: Franken Beans
+          - generic [ref=e55]: Squat Daddy
+          - generic [ref=e57]: Coach Dan
+          - generic [ref=e59]: Dingus
+          - generic [ref=e61]: Micro Jackson
+          - generic [ref=e63]: Highbeam
+          - generic [ref=e65]: Zorpjet
+          - generic [ref=e67]: Pestie
+          - generic [ref=e69]: Peeperoni
+          - generic [ref=e71]: Bean Minion
+          - generic [ref=e73]: Wheelie
+          - generic [ref=e75]: Creeper
+          - generic [ref=e77]: Katana
+          - generic [ref=e79]: Clobberbot
+          - generic [ref=e81]: Plasma
+          - generic [ref=e83]: Slime
+          - generic [ref=e85]: Hard
+          - generic [ref=e87]: Standard
+          - generic [ref=e89]: Casual
+          - generic [ref=e91]: Nightmare
+          - generic [ref=e93]: Random Solar System
+  - main [ref=e94]:
+    - generic [ref=e95]:
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - text: Editor
+          - generic [ref=e98]: Plain
+        - generic [ref=e99]:
+          - generic [ref=e100]: "1"
+          - button "Open" [ref=e101] [cursor=pointer]
+      - button "⚠ Line 1 'damn' may not be appropriate — consider rephrasing Why?" [ref=e104] [cursor=pointer]:
+        - generic [ref=e105]: ⚠
+        - generic [ref=e106]: Line 1
+        - generic [ref=e107]: "'damn' may not be appropriate — consider rephrasing"
+        - button "Why?" [ref=e108]
+      - generic [ref=e109]:
+        - generic [ref=e111]: "1"
+        - generic [ref=e112]:
+          - generic: This is a damn good test
+          - textbox "Paste your Markdown here, or click Open to load a file..." [ref=e113]: This is a damn good test
+      - generic [ref=e114]:
+        - button "Discord (1)" [ref=e115] [cursor=pointer]
+        - generic [ref=e116]: 24 chars
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - button "Steam Preview" [ref=e120] [cursor=pointer]
+          - button "BBCode" [ref=e121] [cursor=pointer]
+          - button "Translate ▾" [ref=e123] [cursor=pointer]
+        - generic [ref=e124]:
+          - generic [ref=e125]: Ready
+          - button "Copy BBCode" [ref=e126] [cursor=pointer]
+      - generic [ref=e127]: This is a damn good test
+      - generic [ref=e130]: 24 / 8,000
+  - contentinfo [ref=e131]:
+    - generic [ref=e132]:
+      - generic [ref=e133]: ⌘N
+      - text: New
+      - generic [ref=e134]: ⌘O
+      - text: Open
+      - generic [ref=e135]: ⌘S
+      - text: Save As
+      - generic [ref=e136]: ⌘⇧C
+      - text: Copy BBCode
+    - generic [ref=e137]:
+      - generic [ref=e138]: ●
+      - link "Feedback" [ref=e139] [cursor=pointer]:
+        - /url: https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose
+```

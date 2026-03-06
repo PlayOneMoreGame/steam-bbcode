@@ -269,14 +269,51 @@ test('context selector changes character limit', async ({ page }) => {
 // Tags reference
 // ---------------------------------------------------------------------------
 
-test('tags button toggles reference panel', async ({ page }) => {
+test('tags button toggles reference popover', async ({ page }) => {
   const tagsBtn = page.getByRole('button', { name: 'Tags' });
 
-  await expect(page.locator('.tag-reference')).not.toBeVisible();
+  await expect(page.locator('.tag-reference-popover')).not.toBeVisible();
   await tagsBtn.click();
-  await expect(page.locator('.tag-reference')).toBeVisible();
+  await expect(page.locator('.tag-reference-popover')).toBeVisible();
   await tagsBtn.click();
-  await expect(page.locator('.tag-reference')).not.toBeVisible();
+  await expect(page.locator('.tag-reference-popover')).not.toBeVisible();
+});
+
+test('tags popover closes when clicking outside', async ({ page }) => {
+  const tagsBtn = page.getByRole('button', { name: 'Tags' });
+  await tagsBtn.click();
+  await expect(page.locator('.tag-reference-popover')).toBeVisible();
+
+  // Click on the main content area (outside the popover)
+  await page.locator('.main-grid').click({ position: { x: 10, y: 10 } });
+  await expect(page.locator('.tag-reference-popover')).not.toBeVisible();
+});
+
+test('tags popover closes on Escape key', async ({ page }) => {
+  const tagsBtn = page.getByRole('button', { name: 'Tags' });
+  await tagsBtn.click();
+  await expect(page.locator('.tag-reference-popover')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.tag-reference-popover')).not.toBeVisible();
+});
+
+test('tags popover contains Steam Quirks section', async ({ page }) => {
+  const tagsBtn = page.getByRole('button', { name: 'Tags' });
+  await tagsBtn.click();
+
+  const popover = page.locator('.tag-reference-popover');
+  await expect(popover).toBeVisible();
+
+  // Verify the Steam Quirks section is present
+  await expect(popover.locator('.tag-ref-quirks-title')).toHaveText('Steam Quirks');
+  await expect(popover.locator('.tag-ref-quirks-list li')).toHaveCount(4);
+
+  // Verify specific quirk content
+  await expect(popover.locator('.tag-ref-quirks-list')).toContainText('[hr] requires a closing tag');
+  await expect(popover.locator('.tag-ref-quirks-list')).toContainText('Nested lists');
+  await expect(popover.locator('.tag-ref-quirks-list')).toContainText('[img] vs [previewimg]');
+  await expect(popover.locator('.tag-ref-quirks-list')).toContainText('Inline code');
 });
 
 // ---------------------------------------------------------------------------

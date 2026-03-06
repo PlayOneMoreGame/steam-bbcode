@@ -38,6 +38,7 @@ export function App() {
   // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
+  const tagsBtnRef = useRef<HTMLButtonElement>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   // Blacklist state — loaded from localStorage
@@ -157,6 +158,14 @@ export function App() {
     }).catch(() => {});
   }, [mdFileName, isDesktop]);
 
+  // Reset editor to welcome document (New)
+  const handleNew = useCallback(() => {
+    setMarkdown(WELCOME_MARKDOWN);
+    setMdFileName(null);
+    baseContentRef.current = WELCOME_MARKDOWN;
+    trackEvent('new_document');
+  }, []);
+
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';
     const savedPath = await saveFileAs(markdown, defaultName, MD_FILTERS);
@@ -178,8 +187,23 @@ export function App() {
   }, [resolvedBBCode]);
 
   // Global keyboard shortcuts
+  // Native menu captures Cmd+N, Cmd+O, Cmd+S in desktop mode; this handler covers web mode.
+  // Cmd+Shift+C (Copy BBCode) is not in the native menu — handled here in both modes.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+C or Ctrl+Shift+C - Copy BBCode (not in native menu, handle in both modes)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        handleCopyBBCode();
+        return;
+      }
+      // In desktop mode, Tauri native menu handles Cmd+N/O/S — skip to avoid double-fire
+      if (isDesktop) return;
+      // Cmd+N or Ctrl+N - New
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        handleNew();
+      }
       // Cmd+O or Ctrl+O - Open
       if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
         e.preventDefault();
@@ -190,16 +214,46 @@ export function App() {
         e.preventDefault();
         handleSaveMarkdownAs();
       }
-      // Cmd+Shift+C or Ctrl+Shift+C - Copy BBCode
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'C') {
-        e.preventDefault();
-        handleCopyBBCode();
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode]);
+  }, [isDesktop, handleNew, handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode]);
+
+  // Listen for native menu events from Tauri (desktop only)
+  useEffect(() => {
+    if (!('__TAURI__' in window)) return;
+
+    let unlisten: (() => void) | undefined;
+
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      listen<string>('menu-event', (event) => {
+        switch (event.payload) {
+          case 'new':
+            handleNew();
+            break;
+          case 'open':
+            handleOpenMarkdown();
+            break;
+          case 'save-as':
+            handleSaveMarkdownAs();
+            break;
+          case 'toggle-tags':
+            setShowTagRef(prev => !prev);
+            break;
+          case 'toggle-settings':
+            setShowSettings(prev => !prev);
+            break;
+        }
+      }).then((fn) => {
+        unlisten = fn;
+      });
+    });
+
+    return () => {
+      unlisten?.();
+    };
+  }, [handleNew, handleOpenMarkdown, handleSaveMarkdownAs]);
 
   // Warn before leaving with unsaved changes
   const hasChanges = markdown !== baseContentRef.current;
@@ -291,7 +345,7 @@ export function App() {
           <div className="header-top">
             <h1 className="title">
               SteamBBEditor
-              {isDesktop && <span className="title-badge">Desktop</span>}
+
             </h1>
 
             <div className="controls">
@@ -313,13 +367,22 @@ export function App() {
                   ))}
                 </select>
               </div>
-              <button
-                className={`btn btn-sm ${showTagRef ? 'btn-active' : 'btn-secondary'}`}
-                onClick={() => setShowTagRef(!showTagRef)}
-                title="BBCode tag reference"
-              >
-                Tags
-              </button>
+              <div className="tag-reference-wrapper">
+                <button
+                  ref={tagsBtnRef}
+                  className={`btn btn-sm ${showTagRef ? 'btn-active' : 'btn-secondary'}`}
+                  onClick={() => setShowTagRef(!showTagRef)}
+                  title="BBCode tag reference"
+                >
+                  Tags
+                </button>
+                {showTagRef && (
+                  <TagReference
+                    onClose={() => setShowTagRef(false)}
+                    anchorRef={tagsBtnRef}
+                  />
+                )}
+              </div>
               <button
                 className={`btn btn-sm ${showSettings ? 'btn-active' : 'btn-secondary'}`}
                 onClick={() => setShowSettings(!showSettings)}
@@ -341,9 +404,6 @@ export function App() {
               ))}
             </div>
           )}
-
-          {/* Tag reference panel */}
-          {showTagRef && <TagReference />}
 
           {/* Settings panel */}
           {showSettings && (
@@ -386,6 +446,7 @@ export function App() {
         {/* Footer */}
         <footer className="footer">
           <span className="keyboard-hints">
+            <kbd>⌘N</kbd> New
             <kbd>⌘O</kbd> Open
             <kbd>⌘S</kbd> Save As
             <kbd>⌘⇧C</kbd> Copy BBCode
