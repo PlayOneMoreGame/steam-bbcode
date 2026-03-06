@@ -14,7 +14,7 @@ const localStorageMock = {
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
 // Import after localStorage is mocked
-import { getBlacklist, setBlacklist, addTerm, removeTerm, DEFAULT_BLACKLIST } from '../blacklist-store';
+import { getBlacklist, setBlacklist, addTerm, removeTerm, DEFAULT_BLOCKED_WORDS, resetBlacklist, isDefaultBlockedWord } from '../blacklist-store';
 
 describe('blacklist-store', () => {
   beforeEach(() => {
@@ -22,15 +22,23 @@ describe('blacklist-store', () => {
     vi.clearAllMocks();
   });
 
-  describe('DEFAULT_BLACKLIST', () => {
-    it('is an empty array', () => {
-      expect(DEFAULT_BLACKLIST).toEqual([]);
+  describe('DEFAULT_BLOCKED_WORDS', () => {
+    it('contains hundreds of terms', () => {
+      expect(DEFAULT_BLOCKED_WORDS.length).toBeGreaterThan(700);
+    });
+
+    it('is sorted and lowercase', () => {
+      for (const term of DEFAULT_BLOCKED_WORDS) {
+        expect(term).toBe(term.toLowerCase());
+      }
+      const sorted = [...DEFAULT_BLOCKED_WORDS].sort();
+      expect(DEFAULT_BLOCKED_WORDS).toEqual(sorted);
     });
   });
 
   describe('getBlacklist', () => {
-    it('returns empty array when nothing stored', () => {
-      expect(getBlacklist()).toEqual([]);
+    it('returns default list when nothing stored', () => {
+      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
     });
 
     it('returns stored terms', () => {
@@ -38,14 +46,14 @@ describe('blacklist-store', () => {
       expect(getBlacklist()).toEqual(['bad', 'worse']);
     });
 
-    it('returns empty array for corrupted JSON', () => {
+    it('returns default list for corrupted JSON', () => {
       store['steambb-blacklist-terms'] = 'not-json';
-      expect(getBlacklist()).toEqual([]);
+      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
     });
 
-    it('returns empty array for non-array JSON', () => {
+    it('returns default list for non-array JSON', () => {
       store['steambb-blacklist-terms'] = '{"not": "array"}';
-      expect(getBlacklist()).toEqual([]);
+      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
     });
   });
 
@@ -63,40 +71,46 @@ describe('blacklist-store', () => {
   });
 
   describe('addTerm', () => {
-    it('adds a term to empty blacklist', () => {
+    it('adds a term to the list', () => {
+      setBlacklist([]);
       addTerm('bad');
       expect(getBlacklist()).toEqual(['bad']);
     });
 
-    it('adds a term to existing blacklist', () => {
+    it('adds a term to existing list', () => {
       setBlacklist(['existing']);
       addTerm('new');
       expect(getBlacklist()).toEqual(['existing', 'new']);
     });
 
     it('prevents duplicates (case-insensitive)', () => {
+      setBlacklist([]);
       addTerm('bad');
       addTerm('BAD');
       expect(getBlacklist()).toEqual(['bad']);
     });
 
     it('prevents duplicates (exact match)', () => {
+      setBlacklist([]);
       addTerm('bad');
       addTerm('bad');
       expect(getBlacklist()).toEqual(['bad']);
     });
 
     it('trims whitespace', () => {
+      setBlacklist([]);
       addTerm('  bad  ');
       expect(getBlacklist()).toEqual(['bad']);
     });
 
     it('does not add empty string', () => {
+      setBlacklist([]);
       addTerm('');
       expect(getBlacklist()).toEqual([]);
     });
 
     it('does not add whitespace-only string', () => {
+      setBlacklist([]);
       addTerm('   ');
       expect(getBlacklist()).toEqual([]);
     });
@@ -119,6 +133,34 @@ describe('blacklist-store', () => {
       setBlacklist(['bad']);
       removeTerm('nothere');
       expect(getBlacklist()).toEqual(['bad']);
+    });
+  });
+
+  describe('resetBlacklist', () => {
+    it('restores defaults after modifications', () => {
+      setBlacklist(['custom-only']);
+      resetBlacklist();
+      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+    });
+
+    it('clears localStorage key', () => {
+      setBlacklist(['custom']);
+      resetBlacklist();
+      expect(store['steambb-blacklist-terms']).toBeUndefined();
+    });
+  });
+
+  describe('isDefaultBlockedWord', () => {
+    it('returns true for default terms', () => {
+      expect(isDefaultBlockedWord(DEFAULT_BLOCKED_WORDS[0])).toBe(true);
+    });
+
+    it('is case-insensitive', () => {
+      expect(isDefaultBlockedWord(DEFAULT_BLOCKED_WORDS[0].toUpperCase())).toBe(true);
+    });
+
+    it('returns false for non-default terms', () => {
+      expect(isDefaultBlockedWord('xyzzy-not-a-word')).toBe(false);
     });
   });
 });

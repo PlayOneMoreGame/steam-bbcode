@@ -392,4 +392,45 @@ Visit [url=https://example.com]our site[/url] for more info.`;
       expect(result.errors).toHaveLength(0);
     });
   });
+
+  describe('blocked words in output', () => {
+    it('detects blocked words in BBCode text content', () => {
+      const result = lintBBCode('[b]This has a badword in it[/b]', 'announcements', {
+        blacklist: ['badword'],
+      });
+      expect(result.warnings.some(w => w.message.includes('badword'))).toBe(true);
+    });
+
+    it('ignores blocked words inside BBCode tags', () => {
+      // The tag name itself shouldn't trigger a match
+      const result = lintBBCode('[url=http://example.com]link[/url]', 'announcements', {
+        blacklist: ['url'],
+      });
+      // 'url' appears in tags but not in text content
+      const blockedWarnings = result.warnings.filter(w => w.message.includes('Blocked word'));
+      expect(blockedWarnings).toHaveLength(0);
+    });
+
+    it('returns no blocked word warnings when blacklist is empty', () => {
+      const result = lintBBCode('[b]anything[/b]', 'announcements', {
+        blacklist: [],
+      });
+      const blockedWarnings = result.warnings.filter(w => w.message.includes('Blocked word'));
+      expect(blockedWarnings).toHaveLength(0);
+    });
+
+    it('returns no blocked word warnings when no blacklist option', () => {
+      const result = lintBBCode('[b]anything[/b]', 'announcements');
+      const blockedWarnings = result.warnings.filter(w => w.message.includes('Blocked word'));
+      expect(blockedWarnings).toHaveLength(0);
+    });
+
+    it('includes help text for blocked word warnings', () => {
+      const result = lintBBCode('some badterm here', 'announcements', {
+        blacklist: ['badterm'],
+      });
+      const match = result.warnings.find(w => w.message.includes('badterm'));
+      expect(match?.help).toContain('Settings');
+    });
+  });
 });

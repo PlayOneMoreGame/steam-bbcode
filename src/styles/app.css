@@ -1934,10 +1934,10 @@ body {
   border-radius: 12px;
 }
 
-.settings-chip-readonly {
+.settings-chip-default {
   color: var(--text-secondary);
   background-color: var(--bg-tertiary);
-  border-color: var(--border-primary);
+  border-style: dashed;
 }
 
 .settings-chip-text {
@@ -1967,6 +1967,23 @@ body {
 .settings-chip-remove:focus-visible {
   outline: 1px solid var(--accent-blue);
   outline-offset: 1px;
+}
+
+.settings-count {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 6px;
+}
+
+.settings-search-results {
+  margin-top: var(--spacing-sm);
+}
+
+.settings-chip-overflow {
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 3px 8px;
 }
 
 .settings-empty {

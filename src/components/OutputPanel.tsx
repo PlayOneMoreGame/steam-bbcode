@@ -21,6 +21,7 @@ interface OutputPanelProps {
   bbcode: string;
   context: SteamContext;
   bbcodeLint: LintResult;
+  blacklist: string[];
   isDesktop: boolean;
   placeholderImages?: string[];
   imageDataUrls?: ImageDataUrlMap;
@@ -36,6 +37,7 @@ export function OutputPanel({
   bbcode,
   context,
   bbcodeLint,
+  blacklist,
   isDesktop,
   placeholderImages = [],
   imageDataUrls,
@@ -322,6 +324,7 @@ export function OutputPanel({
           lang={activeTab}
           translation={translations[activeTab]}
           context={context}
+          blacklist={blacklist}
           onRetranslate={() => onTranslate(activeTab)}
           expandedHelp={expandedHelp}
           toggleHelp={toggleHelp}
@@ -364,6 +367,7 @@ function TranslationTabContent({
   lang,
   translation,
   context,
+  blacklist,
   onRetranslate,
   expandedHelp,
   toggleHelp,
@@ -371,6 +375,7 @@ function TranslationTabContent({
   lang: string;
   translation: TranslationState | undefined;
   context: SteamContext;
+  blacklist: string[];
   onRetranslate: () => void;
   expandedHelp: Set<string>;
   toggleHelp: (key: string, e: MouseEvent) => void;
@@ -404,7 +409,7 @@ function TranslationTabContent({
   }
 
   // status === 'done'
-  const lintResult = lintBBCode(translation.bbcode, context);
+  const lintResult = lintBBCode(translation.bbcode, context, { blacklist });
   const hasLintErrors = lintResult.errors.length > 0;
   const hasLintWarnings = lintResult.warnings.length > 0;
 

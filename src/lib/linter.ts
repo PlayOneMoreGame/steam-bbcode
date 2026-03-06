@@ -3,6 +3,7 @@
 
 import { TAG_SUPPORT, CHAR_LIMITS, type SteamContext } from './contexts';
 import { getLineNumber, getColumnInLine } from './utils';
+import { detectBlacklistTerms } from './blacklist-detector';
 
 export interface LintMessage {
   type: 'error' | 'warning' | 'info';
@@ -39,10 +40,14 @@ const VALID_TAGS = new Set([
  */
 const CONTENT_TAGS = new Set(['b', 'i', 'u', 'strike', 'url', 'h1', 'h2', 'h3']);
 
+export interface LintBBCodeOptions {
+  blacklist?: string[];
+}
+
 /**
  * Lint BBCode for structural and context-specific issues
  */
-export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
+export function lintBBCode(bbcode: string, context: SteamContext, options?: LintBBCodeOptions): LintResult {
   const errors: LintMessage[] = [];
   const warnings: LintMessage[] = [];
   const errorLines = new Set<number>();
@@ -84,6 +89,23 @@ export function lintBBCode(bbcode: string, context: SteamContext): LintResult {
 
   // Check character limits
   checkCharacterLimits(bbcode, context, errors, warnings);
+
+  // Check for blocked words in BBCode text content (strips tags first)
+  if (options?.blacklist && options.blacklist.length > 0) {
+    const textOnly = bbcode.replace(/\[[^\]]*\]/g, '');
+    const matches = detectBlacklistTerms(textOnly, options.blacklist);
+    for (const m of matches) {
+      warnings.push({
+        type: 'warning',
+        message: `Blocked word "${m.term}" found in output`,
+        line: m.line,
+        column: m.column,
+        length: m.length,
+        help: 'This word is on your blocked words list. You can edit the list in Settings.',
+      });
+      warningLines.add(m.line);
+    }
+  }
 
   return { errors, warnings, errorLines, warningLines };
 }

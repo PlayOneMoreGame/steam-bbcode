@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
 import { OutputPanel, type TranslationState } from '@/components/OutputPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
-import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm } from '@/lib/blacklist-store';
+import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm, resetBlacklist } from '@/lib/blacklist-store';
+import { getDntTerms, addDntTerm, removeDntTerm, resetDntTerms } from '@/lib/dnt-store';
 import { markdownToBBCode } from '@/lib/converter';
 import { lintBBCode } from '@/lib/linter';
 import { detectFormat, type InputFormat } from '@/lib/format-detector';
@@ -70,6 +71,33 @@ export function App() {
     trackEvent('blacklist_term_removed', { term });
   }, []);
 
+  const handleResetBlacklist = useCallback(() => {
+    resetBlacklist();
+    setBlacklist(getBlacklist());
+    trackEvent('blacklist_terms_reset');
+  }, []);
+
+  // DNT (Do Not Translate) state — loaded from localStorage
+  const [dntTerms, setDntTerms] = useState<string[]>(() => getDntTerms());
+
+  const handleAddDntTerm = useCallback((term: string) => {
+    addDntTerm(term);
+    setDntTerms(getDntTerms());
+    trackEvent('dnt_term_added', { term });
+  }, []);
+
+  const handleRemoveDntTerm = useCallback((term: string) => {
+    removeDntTerm(term);
+    setDntTerms(getDntTerms());
+    trackEvent('dnt_term_removed', { term });
+  }, []);
+
+  const handleResetDntTerms = useCallback(() => {
+    resetDntTerms();
+    setDntTerms(getDntTerms());
+    trackEvent('dnt_terms_reset');
+  }, []);
+
   // Format detection (debounced)
   const [detectedFormat, setDetectedFormat] = useState<InputFormat>('markdown');
   const formatTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -99,8 +127,8 @@ export function App() {
 
   // Lint BBCode output — used by both panels (status indicator + error list)
   const bbcodeLint = useMemo(
-    () => lintBBCode(bbcode, context),
-    [bbcode, context]
+    () => lintBBCode(bbcode, context, { blacklist }),
+    [bbcode, context, blacklist]
   );
 
   // In-memory image store for drag-and-drop / pasted images
@@ -309,7 +337,7 @@ export function App() {
 
     trackEvent('translate_started', { lang });
 
-    const result = await translateBBCode(bbcode, lang);
+    const result = await translateBBCode(bbcode, lang, dntTerms);
 
     if (result.ok) {
       setTranslations(prev => ({
@@ -332,7 +360,7 @@ export function App() {
         trackEvent('translate_error', { lang, error: result.error });
       }
     }
-  }, [bbcode]);
+  }, [bbcode, dntTerms]);
 
   const handleApiKeySaved = useCallback(() => {
     setApiKeyDialogOpen(false);
@@ -412,6 +440,11 @@ export function App() {
               blacklist={blacklist}
               onAddTerm={handleAddBlacklistTerm}
               onRemoveTerm={handleRemoveBlacklistTerm}
+              onResetBlacklist={handleResetBlacklist}
+              dntTerms={dntTerms}
+              onAddDntTerm={handleAddDntTerm}
+              onRemoveDntTerm={handleRemoveDntTerm}
+              onResetDntTerms={handleResetDntTerms}
             />
           )}
         </header>
@@ -439,6 +472,7 @@ export function App() {
             bbcode={bbcode}
             context={context}
             bbcodeLint={bbcodeLint}
+            blacklist={blacklist}
             isDesktop={isDesktop}
             placeholderImages={placeholderImages}
             imageDataUrls={imageStore.images}

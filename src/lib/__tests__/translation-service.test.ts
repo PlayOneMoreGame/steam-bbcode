@@ -48,11 +48,19 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('pt-BR');
   });
 
-  it('includes all Do Not Translate terms', () => {
+  it('includes all default Do Not Translate terms when no custom terms provided', () => {
     const prompt = buildSystemPrompt('es-LATAM');
     for (const term of DO_NOT_TRANSLATE) {
       expect(prompt).toContain(term);
     }
+  });
+
+  it('uses custom terms when provided', () => {
+    const prompt = buildSystemPrompt('es-LATAM', ['CustomGame', 'BossName']);
+    expect(prompt).toContain('CustomGame');
+    expect(prompt).toContain('BossName');
+    // Should NOT contain default terms that weren't passed
+    expect(prompt).not.toContain('Tangus');
   });
 
   it('includes instructions to preserve BBCode tags', () => {

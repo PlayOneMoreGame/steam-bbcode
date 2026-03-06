@@ -4,7 +4,8 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { DO_NOT_TRANSLATE, DO_NOT_TRANSLATE_PATTERNS } from './glossary';
+import { DO_NOT_TRANSLATE_PATTERNS } from './glossary';
+import { getDntTerms } from './dnt-store';
 import { getApiKey } from './api-key-store';
 
 export interface TranslationSuccess {
@@ -28,10 +29,12 @@ export const SUPPORTED_LANGUAGES: Record<string, string> = {
 
 /**
  * Build the system prompt for translation, including the Do Not Translate glossary.
+ * When dntTerms is provided, those are used; otherwise the current stored terms are loaded.
  */
-export function buildSystemPrompt(targetLang: string): string {
+export function buildSystemPrompt(targetLang: string, dntTerms?: string[]): string {
   const langName = SUPPORTED_LANGUAGES[targetLang] || targetLang;
-  const glossaryList = DO_NOT_TRANSLATE.map(term => `- ${term}`).join('\n');
+  const terms = dntTerms ?? getDntTerms();
+  const glossaryList = terms.map(term => `- ${term}`).join('\n');
   const patternDescriptions = DO_NOT_TRANSLATE_PATTERNS.map(p => `- Pattern: ${p.source}`).join('\n');
 
   return `You are a professional translator. Translate the following BBCode content into ${langName} (${targetLang}).
@@ -58,7 +61,8 @@ Return only the translated BBCode content, nothing else.`;
  */
 export async function translateBBCode(
   bbcode: string,
-  targetLang: string
+  targetLang: string,
+  dntTerms?: string[]
 ): Promise<TranslationResult> {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -78,7 +82,7 @@ export async function translateBBCode(
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 8192,
-      system: buildSystemPrompt(targetLang),
+      system: buildSystemPrompt(targetLang, dntTerms),
       messages: [
         {
           role: 'user',
