@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect, type MouseEvent } fr
 import { PreviewPanel } from './PreviewPanel';
 import { ImagesPanel } from './ImagesPanel';
 import { ApiKeyDialog } from './ApiKeyDialog';
-import { lintBBCode } from '@/lib/linter';
+import { lintBBCode, type LintResult } from '@/lib/linter';
 import { SUPPORTED_LANGUAGES } from '@/lib/translation-service';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { ImageDataUrlMap } from '@/lib/renderer';
@@ -20,6 +20,7 @@ export interface TranslationState {
 interface OutputPanelProps {
   bbcode: string;
   context: SteamContext;
+  bbcodeLint: LintResult;
   isDesktop: boolean;
   placeholderImages?: string[];
   imageDataUrls?: ImageDataUrlMap;
@@ -34,6 +35,7 @@ interface OutputPanelProps {
 export function OutputPanel({
   bbcode,
   context,
+  bbcodeLint,
   isDesktop,
   placeholderImages = [],
   imageDataUrls,
@@ -47,6 +49,7 @@ export function OutputPanel({
   const [activeTab, setActiveTab] = useState<OutputTab>('preview');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
+  const [lintExpanded, setLintExpanded] = useState(false);
   const [translateMenuOpen, setTranslateMenuOpen] = useState(false);
   const translateMenuRef = useRef<HTMLDivElement>(null);
 
@@ -84,20 +87,14 @@ export function OutputPanel({
     });
   }, []);
 
-  // Lint the source BBCode
-  const lintResult = useMemo(
-    () => lintBBCode(bbcode, context),
-    [bbcode, context]
-  );
-
   const charLimit = CHAR_LIMITS[context];
   const charCount = bbcode.length;
   const charPercent = Math.min(100, Math.round((charCount / charLimit) * 100));
 
-  const hasErrors = lintResult.errors.length > 0;
-  const hasWarnings = lintResult.warnings.length > 0;
-  const errorCount = lintResult.errors.length;
-  const warningCount = lintResult.warnings.length;
+  const hasErrors = bbcodeLint.errors.length > 0;
+  const hasWarnings = bbcodeLint.warnings.length > 0;
+  const errorCount = bbcodeLint.errors.length;
+  const warningCount = bbcodeLint.warnings.length;
 
   // Determine what content to copy based on active tab
   const activeCopyContent = useMemo(() => {
@@ -134,10 +131,6 @@ export function OutputPanel({
     }
   }, [activeCopyContent, activeTab, onWorkflowComplete]);
 
-  const handleLintClick = useCallback(() => {
-    setActiveTab('bbcode');
-  }, []);
-
   const handleTranslateSelect = useCallback((lang: string) => {
     setTranslateMenuOpen(false);
     onTranslate(lang);
@@ -173,12 +166,6 @@ export function OutputPanel({
             onClick={() => setActiveTab('bbcode')}
           >
             BBCode
-            {hasErrors && (
-              <span className="lint-badge error">{errorCount}</span>
-            )}
-            {hasWarnings && (
-              <span className="lint-badge warning">{warningCount}</span>
-            )}
           </button>
 
           {/* Translation tabs */}
@@ -233,21 +220,28 @@ export function OutputPanel({
           </div>
         </div>
         <div className="panel-actions">
-          {/* Lint status indicator -- visible on all tabs */}
+          {/* Lint status indicator -- clickable to expand/collapse issue list */}
           {hasErrors ? (
             <button
               className="lint-status lint-status-error"
-              onClick={handleLintClick}
-              title="Switch to BBCode tab to see errors"
+              onClick={() => setLintExpanded(!lintExpanded)}
+              title={lintExpanded ? 'Hide issues' : 'Show issues'}
             >
               <span className="lint-status-icon">!</span>
               {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+              {hasWarnings && <>, {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}</>}
+              <span className={`lint-status-chevron ${lintExpanded ? 'expanded' : ''}`}>&#x25BE;</span>
             </button>
           ) : hasWarnings ? (
-            <span className="lint-status lint-status-warning">
+            <button
+              className="lint-status lint-status-warning"
+              onClick={() => setLintExpanded(!lintExpanded)}
+              title={lintExpanded ? 'Hide issues' : 'Show issues'}
+            >
               <span className="lint-status-icon">!</span>
               {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}
-            </span>
+              <span className={`lint-status-chevron ${lintExpanded ? 'expanded' : ''}`}>&#x25BE;</span>
+            </button>
           ) : (
             <span className="lint-status lint-status-ready">Ready</span>
           )}
@@ -262,64 +256,64 @@ export function OutputPanel({
         </div>
       </div>
 
+      {/* Collapsible lint message list */}
+      {lintExpanded && (hasErrors || hasWarnings) && (
+        <div className="panel-lint collapsible-lint">
+          {bbcodeLint.errors.map((msg, i) => {
+            const key = `e${i}`;
+            return (
+              <div key={key} className="lint-message-group">
+                <div className="lint-message error">
+                  <span className="lint-icon">&#x2717;</span>
+                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  <span className="lint-text">{msg.message}</span>
+                  {msg.help && (
+                    <button
+                      className="lint-help-toggle"
+                      onClick={(e) => toggleHelp(key, e)}
+                      aria-expanded={expandedHelp.has(key)}
+                    >
+                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                    </button>
+                  )}
+                </div>
+                {msg.help && expandedHelp.has(key) && (
+                  <div className="lint-help-text">{msg.help}</div>
+                )}
+              </div>
+            );
+          })}
+          {bbcodeLint.warnings.map((msg, i) => {
+            const key = `w${i}`;
+            return (
+              <div key={key} className="lint-message-group">
+                <div className="lint-message warning">
+                  <span className="lint-icon">&#x26a0;</span>
+                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  <span className="lint-text">{msg.message}</span>
+                  {msg.help && (
+                    <button
+                      className="lint-help-toggle"
+                      onClick={(e) => toggleHelp(key, e)}
+                      aria-expanded={expandedHelp.has(key)}
+                    >
+                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                    </button>
+                  )}
+                </div>
+                {msg.help && expandedHelp.has(key) && (
+                  <div className="lint-help-text">{msg.help}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {activeTab === 'preview' ? (
         <PreviewPanel content={bbcode} imageDataUrls={imageDataUrls} />
       ) : activeTab === 'bbcode' ? (
         <div className="output-bbcode-tab">
-          {/* Lint messages */}
-          {(hasErrors || hasWarnings) && (
-            <div className="panel-lint">
-              {lintResult.errors.map((msg, i) => {
-                const key = `e${i}`;
-                return (
-                  <div key={key} className="lint-message-group">
-                    <div className="lint-message error">
-                      <span className="lint-icon">&#x2717;</span>
-                      {msg.line && <span className="lint-line">L{msg.line}</span>}
-                      <span className="lint-text">{msg.message}</span>
-                      {msg.help && (
-                        <button
-                          className="lint-help-toggle"
-                          onClick={(e) => toggleHelp(key, e)}
-                          aria-expanded={expandedHelp.has(key)}
-                        >
-                          {expandedHelp.has(key) ? 'Hide' : 'Why?'}
-                        </button>
-                      )}
-                    </div>
-                    {msg.help && expandedHelp.has(key) && (
-                      <div className="lint-help-text">{msg.help}</div>
-                    )}
-                  </div>
-                );
-              })}
-              {lintResult.warnings.map((msg, i) => {
-                const key = `w${i}`;
-                return (
-                  <div key={key} className="lint-message-group">
-                    <div className="lint-message warning">
-                      <span className="lint-icon">&#x26a0;</span>
-                      {msg.line && <span className="lint-line">L{msg.line}</span>}
-                      <span className="lint-text">{msg.message}</span>
-                      {msg.help && (
-                        <button
-                          className="lint-help-toggle"
-                          onClick={(e) => toggleHelp(key, e)}
-                          aria-expanded={expandedHelp.has(key)}
-                        >
-                          {expandedHelp.has(key) ? 'Hide' : 'Why?'}
-                        </button>
-                      )}
-                    </div>
-                    {msg.help && expandedHelp.has(key) && (
-                      <div className="lint-help-text">{msg.help}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           <pre className="bbcode-readonly">{bbcode}</pre>
         </div>
       ) : (

@@ -623,6 +623,18 @@ body {
 .lint-status-warning {
   color: var(--accent-orange);
   background-color: var(--bg-orange-subtle);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.lint-status-warning:hover {
+  background-color: rgba(209, 154, 102, 0.25);
+}
+
+.lint-status-warning:focus-visible {
+  outline: 1px solid var(--accent-orange);
+  outline-offset: 1px;
 }
 
 .lint-status-warning .lint-status-icon {
@@ -630,9 +642,22 @@ body {
   color: var(--text-inverse);
 }
 
+.lint-status-chevron {
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.lint-status-chevron.expanded {
+  transform: rotate(180deg);
+}
+
 .lint-status-ready {
   color: var(--accent-green);
   background-color: var(--bg-green-subtle);
+}
+
+.collapsible-lint {
+  border-bottom: 1px solid var(--border);
 }
 
 .lint-badge {

@@ -97,6 +97,12 @@ export function App() {
     [markdown, context]
   );
 
+  // Lint BBCode output — used by both panels (status indicator + error list)
+  const bbcodeLint = useMemo(
+    () => lintBBCode(bbcode, context),
+    [bbcode, context]
+  );
+
   // In-memory image store for drag-and-drop / pasted images
   const imageStore = useImageStore();
 
@@ -166,13 +172,12 @@ export function App() {
     try {
       await navigator.clipboard.writeText(bbcode);
       trackEvent('copy_clicked', { panel: 'bbcode', source: 'shortcut' });
-      const lint = lintBBCode(bbcode, context);
       trackEvent('workflow_completed', buildWorkflowProperties({
         inputMethod: inputMethodRef.current,
         bbcodeLength: bbcode.length,
         imageCount: placeholderImages.length,
-        lintErrorCount: lint.errors.length,
-        lintWarningCount: lint.warnings.length,
+        lintErrorCount: bbcodeLint.errors.length,
+        lintWarningCount: bbcodeLint.warnings.length,
         pasteTimestamp: pasteTimestampRef.current,
         context,
         editedAfterPaste: contentAtPasteRef.current !== '' && markdown !== contentAtPasteRef.current,
@@ -180,7 +185,7 @@ export function App() {
     } catch {
       // Silently fail — OutputPanel has its own copy button with feedback
     }
-  }, [bbcode, context, markdown, placeholderImages.length]);
+  }, [bbcode, bbcodeLint, context, markdown, placeholderImages.length]);
 
   // Global keyboard shortcuts
   // Native menu captures Cmd+N, Cmd+O, Cmd+S in desktop mode; this handler covers web mode.
@@ -433,6 +438,7 @@ export function App() {
           <OutputPanel
             bbcode={bbcode}
             context={context}
+            bbcodeLint={bbcodeLint}
             isDesktop={isDesktop}
             placeholderImages={placeholderImages}
             imageDataUrls={imageStore.images}
@@ -442,13 +448,12 @@ export function App() {
             onApiKeyDialogClose={() => setApiKeyDialogOpen(false)}
             onApiKeySaved={handleApiKeySaved}
             onWorkflowComplete={() => {
-              const lint = lintBBCode(bbcode, context);
               trackEvent('workflow_completed', buildWorkflowProperties({
                 inputMethod: inputMethodRef.current,
                 bbcodeLength: bbcode.length,
                 imageCount: placeholderImages.length,
-                lintErrorCount: lint.errors.length,
-                lintWarningCount: lint.warnings.length,
+                lintErrorCount: bbcodeLint.errors.length,
+                lintWarningCount: bbcodeLint.warnings.length,
                 pasteTimestamp: pasteTimestampRef.current,
                 context,
                 editedAfterPaste: contentAtPasteRef.current !== '' && markdown !== contentAtPasteRef.current,
