@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
 import { OutputPanel } from '@/components/OutputPanel';
 import { markdownToBBCode } from '@/lib/converter';
+import { confluenceToBBCode } from '@/lib/confluence-converter';
+import { detectFormat, type InputFormat } from '@/lib/format-detector';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
@@ -31,13 +33,36 @@ export function App() {
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
 
+  // Format detection (debounced)
+  const [detectedFormat, setDetectedFormat] = useState<InputFormat>('markdown');
+  const formatTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (formatTimerRef.current) {
+      clearTimeout(formatTimerRef.current);
+    }
+    formatTimerRef.current = setTimeout(() => {
+      setDetectedFormat(detectFormat(markdown));
+    }, 300);
+    return () => {
+      if (formatTimerRef.current) {
+        clearTimeout(formatTimerRef.current);
+      }
+    };
+  }, [markdown]);
+
   // Auto-save draft for crash recovery
   const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
 
-  // Convert Markdown to BBCode (derived state, not editable)
+  // Convert to BBCode using the appropriate converter based on detected format
   const { bbcode, notes } = useMemo(
-    () => markdownToBBCode(markdown, context),
-    [markdown, context]
+    () => {
+      if (detectedFormat === 'confluence') {
+        return confluenceToBBCode(markdown, context);
+      }
+      return markdownToBBCode(markdown, context);
+    },
+    [markdown, context, detectedFormat]
   );
 
   // File operations
@@ -201,6 +226,8 @@ export function App() {
             onSaveAs={handleSaveMarkdownAs}
             recentFiles={recentFiles}
             isDesktop={isDesktop}
+            detectedFormat={detectedFormat}
+            context={context}
           />
 
           <OutputPanel

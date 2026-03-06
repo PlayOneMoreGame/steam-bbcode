@@ -11,6 +11,7 @@ export interface LintMessage {
   length?: number;  // Length of problematic text
   start?: number;   // Character offset in text
   end?: number;     // Character offset in text
+  help?: string;    // Expandable help text explaining the issue
 }
 
 export interface MarkdownLintResult {
@@ -88,6 +89,7 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
         type: 'error',
         message: 'Unclosed inline code',
         line: i + 1,
+        help: 'Each backtick (`) needs a matching closing backtick on the same line. Add the missing backtick or remove the extra one.',
       });
       errorLines.add(i + 1);
     }
@@ -106,6 +108,7 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
           type: 'error',
           message: 'Unmatched ** (bold) marker',
           line: i + 1,
+          help: 'Bold text needs matching ** markers: **bold text**. Check that you have an even number of ** pairs.',
         });
         errorLines.add(i + 1);
         break;
@@ -124,6 +127,7 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
             type: 'error',
             message: 'Unmatched ~~ (strikethrough) marker',
             line: i + 1,
+            help: 'Strikethrough text needs matching ~~ markers: ~~deleted text~~. Check that you have an even number of ~~ pairs.',
           });
           errorLines.add(i + 1);
           break;
@@ -146,6 +150,7 @@ function checkUnclosedFormatting(text: string, errors: LintMessage[], errorLines
       type: 'error',
       message: 'Unclosed code block (```)',
       line: lastOpener,
+      help: 'Code blocks need matching ``` on their own line to open and close. Add a closing ``` on a new line after your code.',
     });
     errorLines.add(lastOpener);
   }
@@ -178,6 +183,7 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
           type: 'warning',
           message: 'Space after ** may prevent bold formatting',
           line: i + 1,
+          help: 'Markdown bold markers must be immediately next to the text: **bold**, not ** bold**. Remove the space after the opening **.',
         });
         warningLines.add(i + 1);
         continue;
@@ -190,6 +196,7 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
           type: 'warning',
           message: 'Space before ** may prevent bold formatting',
           line: i + 1,
+          help: 'Markdown bold markers must be immediately next to the text: **bold**, not **bold **. Remove the space before the closing **.',
         });
         warningLines.add(i + 1);
         continue;
@@ -200,23 +207,25 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
     const tildePairs = (line.match(/~~/g) || []).length;
     
     if (tildePairs === 2) {
-      const match = line.match(/~~( +)([^~]+)~~/);
-      if (match && match[1]) {
+      const match2 = line.match(/~~( +)([^~]+)~~/);
+      if (match2 && match2[1]) {
         warnings.push({
           type: 'warning',
           message: 'Space after ~~ may prevent strikethrough formatting',
           line: i + 1,
+          help: 'Strikethrough markers must be immediately next to the text: ~~deleted~~, not ~~ deleted~~. Remove the space after the opening ~~.',
         });
         warningLines.add(i + 1);
         continue;
       }
       
-      const matchEnd = line.match(/~~([^~]+)( +)~~/);
-      if (matchEnd && matchEnd[2]) {
+      const matchEnd2 = line.match(/~~([^~]+)( +)~~/);
+      if (matchEnd2 && matchEnd2[2]) {
         warnings.push({
           type: 'warning',
           message: 'Space before ~~ may prevent strikethrough formatting',
           line: i + 1,
+          help: 'Strikethrough markers must be immediately next to the text: ~~deleted~~, not ~~deleted ~~. Remove the space before the closing ~~.',
         });
         warningLines.add(i + 1);
         continue;
@@ -229,6 +238,7 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
         type: 'warning',
         message: 'Missing space after # in header',
         line: i + 1,
+        help: 'Markdown headers need a space after the # symbols: "# Header", not "#Header". Without the space, it will not be treated as a header.',
       });
       warningLines.add(i + 1);
     }
@@ -240,6 +250,7 @@ function checkWhitespaceInFormatting(text: string, warnings: LintMessage[], warn
         type: 'warning',
         message: 'Missing space after list marker',
         line: i + 1,
+        help: 'List items need a space after the marker: "- Item", not "-Item". Without the space, it will not be treated as a list.',
       });
       warningLines.add(i + 1);
     }
@@ -282,6 +293,7 @@ function checkInvalidBracketPatterns(text: string, errors: LintMessage[], errorL
           length: match[0].length,
           start,
           end: start + match[0].length,
+          help: 'This bracket pattern is not valid in Markdown or BBCode and will appear as literal text. If you intended a list item, use "- " (dash space) in Markdown.',
         });
         errorLines.add(i + 1);
         break; // Only one error per line
@@ -302,6 +314,7 @@ function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: S
       type: 'warning',
       message: 'Possible broken link: space between ] and (',
       line,
+      help: 'Markdown links must not have a space between the text and URL parts: [text](url), not [text] (url). Remove the space to fix the link.',
     });
     warningLines.add(line);
   }
@@ -314,6 +327,7 @@ function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: S
       type: 'warning',
       message: 'Link with empty text',
       line,
+      help: 'This link has no display text. Add text between the brackets: [link text](https://example.com).',
     });
     warningLines.add(line);
   }
@@ -326,6 +340,7 @@ function checkBrokenLinks(text: string, warnings: LintMessage[], warningLines: S
       type: 'warning',
       message: 'Link with empty URL',
       line,
+      help: 'This link has no URL. Add a URL inside the parentheses: [link text](https://example.com).',
     });
     warningLines.add(line);
   }
@@ -343,6 +358,7 @@ function checkConfluenceSyntax(text: string, warnings: LintMessage[], warningLin
         type: 'warning',
         message: 'Confluence macro detected - needs manual conversion',
         line: i + 1,
+        help: 'This looks like a Confluence macro. SteamBBEditor can convert Confluence content directly -- paste the page source (View Storage Format) for better results.',
       });
       warningLines.add(i + 1);
     }
@@ -353,6 +369,7 @@ function checkConfluenceSyntax(text: string, warnings: LintMessage[], warningLin
         type: 'warning',
         message: 'Confluence user mention detected',
         line: i + 1,
+        help: 'Confluence user mentions like [~username] have no equivalent in Steam BBCode. Replace with the person\'s display name or remove the mention.',
       });
       warningLines.add(i + 1);
     }
@@ -363,6 +380,7 @@ function checkConfluenceSyntax(text: string, warnings: LintMessage[], warningLin
         type: 'warning',
         message: 'Confluence status macro detected',
         line: i + 1,
+        help: 'Confluence status macros have no Steam BBCode equivalent. Replace with plain text like [b]STATUS[/b] or remove it.',
       });
       warningLines.add(i + 1);
     }
@@ -387,6 +405,7 @@ function checkInlineCode(text: string, info: LintMessage[], warningLines: Set<nu
       type: 'info',
       message: `${count} inline code span(s) will convert to [b]old in Steam`,
       line: firstLine,
+      help: 'Steam has no inline code formatting. The converter uses [b]bold[/b] as the closest visual approximation for `inline code` spans.',
     });
     warningLines.add(firstLine);
   }
@@ -404,6 +423,7 @@ function checkNestedLists(text: string, warnings: LintMessage[], warningLines: S
         type: 'warning',
         message: 'Nested list detected - Steam has fragile nested list support',
         line: i + 1,
+        help: 'Steam BBCode supports nested lists but rendering can be inconsistent. Consider flattening your list or using indented text instead of nested bullets.',
       });
       warningLines.add(i + 1);
       break; // Only warn once
@@ -415,6 +435,7 @@ function checkNestedLists(text: string, warnings: LintMessage[], warningLines: S
         type: 'warning',
         message: 'Extra whitespace after list marker may cause formatting issues',
         line: i + 1,
+        help: 'Use exactly one space after the list marker: "- Item". Extra spaces may cause the item to be interpreted as a nested list or code block.',
       });
       warningLines.add(i + 1);
     }
@@ -431,6 +452,7 @@ function checkTables(text: string, info: LintMessage[], warningLines: Set<number
         type: 'info',
         message: 'Markdown table detected - conversion may need adjustment',
         line: i + 1,
+        help: 'Markdown tables convert to [table] BBCode but Steam table rendering is basic. Check the preview to verify alignment and column widths look acceptable.',
       });
       warningLines.add(i + 1);
       break; // Only warn once
@@ -456,6 +478,7 @@ function checkImages(text: string, info: LintMessage[], warningLines: Set<number
       type: 'info',
       message: `${count} image(s) - for Guides, upload and use [previewimg]`,
       line: firstLine,
+      help: 'For Announcements, [img] with a direct URL works. For Guides, you must upload images through the Steam guide editor and use [previewimg]ID[/previewimg] instead.',
     });
     warningLines.add(firstLine);
   }

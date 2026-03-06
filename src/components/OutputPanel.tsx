@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, type MouseEvent } from 'react';
 import { PreviewPanel } from './PreviewPanel';
 import { lintBBCode } from '@/lib/linter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
@@ -15,6 +15,20 @@ interface OutputPanelProps {
 export function OutputPanel({ bbcode, context, isDesktop }: OutputPanelProps) {
   const [activeTab, setActiveTab] = useState<OutputTab>('preview');
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
+
+  const toggleHelp = useCallback((key: string, e: MouseEvent) => {
+    e.stopPropagation();
+    setExpandedHelp(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
 
   // Lint the BBCode
   const lintResult = useMemo(
@@ -83,20 +97,54 @@ export function OutputPanel({ bbcode, context, isDesktop }: OutputPanelProps) {
           {/* Lint messages */}
           {(hasErrors || hasWarnings) && (
             <div className="panel-lint">
-              {lintResult.errors.map((msg, i) => (
-                <div key={`e${i}`} className="lint-message error">
-                  <span className="lint-icon">✗</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
-                  <span className="lint-text">{msg.message}</span>
-                </div>
-              ))}
-              {lintResult.warnings.map((msg, i) => (
-                <div key={`w${i}`} className="lint-message warning">
-                  <span className="lint-icon">⚠</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
-                  <span className="lint-text">{msg.message}</span>
-                </div>
-              ))}
+              {lintResult.errors.map((msg, i) => {
+                const key = `e${i}`;
+                return (
+                  <div key={key} className="lint-message-group">
+                    <div className="lint-message error">
+                      <span className="lint-icon">✗</span>
+                      {msg.line && <span className="lint-line">L{msg.line}</span>}
+                      <span className="lint-text">{msg.message}</span>
+                      {msg.help && (
+                        <button
+                          className="lint-help-toggle"
+                          onClick={(e) => toggleHelp(key, e)}
+                          aria-expanded={expandedHelp.has(key)}
+                        >
+                          {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                        </button>
+                      )}
+                    </div>
+                    {msg.help && expandedHelp.has(key) && (
+                      <div className="lint-help-text">{msg.help}</div>
+                    )}
+                  </div>
+                );
+              })}
+              {lintResult.warnings.map((msg, i) => {
+                const key = `w${i}`;
+                return (
+                  <div key={key} className="lint-message-group">
+                    <div className="lint-message warning">
+                      <span className="lint-icon">⚠</span>
+                      {msg.line && <span className="lint-line">L{msg.line}</span>}
+                      <span className="lint-text">{msg.message}</span>
+                      {msg.help && (
+                        <button
+                          className="lint-help-toggle"
+                          onClick={(e) => toggleHelp(key, e)}
+                          aria-expanded={expandedHelp.has(key)}
+                        >
+                          {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                        </button>
+                      )}
+                    </div>
+                    {msg.help && expandedHelp.has(key) && (
+                      <div className="lint-help-text">{msg.help}</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

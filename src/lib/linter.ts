@@ -10,6 +10,7 @@ export interface LintMessage {
   line?: number;
   column?: number;  // 1-indexed column within line
   length?: number;  // Length of problematic text
+  help?: string;    // Expandable help text explaining the issue
 }
 
 export interface LintResult {
@@ -116,6 +117,7 @@ function checkUnknownTags(
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
+      help: `[${tagName}] is not a valid Steam BBCode tag. Valid tags include: [b], [i], [u], [h1], [h2], [h3], [list], [url], [img], [code], [quote], [spoiler], [table], and more.`,
     });
     errorLines.add(line);
   }
@@ -180,6 +182,7 @@ function checkHtmlTags(
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
+      help: 'Steam uses BBCode, not HTML. Replace HTML tags with their BBCode equivalents. For example: <b> becomes [b], <a href="..."> becomes [url=...].',
     });
     errorLines.add(line);
   }
@@ -218,6 +221,7 @@ function checkMarkdownSyntax(
           type: 'warning',
           message: `${msg} detected - ${suggestion}`,
           line: i + 1,
+          help: 'This looks like Markdown syntax in the BBCode output. If you see this, the converter may not have handled this pattern. You can manually replace it with the suggested BBCode tag.',
         });
         warningLines.add(i + 1);
       }
@@ -248,6 +252,7 @@ function checkTagMatching(
           type: 'error',
           message: `Unexpected closing [/${tagName}] with no opening tag`,
           line,
+          help: `Found [/${tagName}] but there is no matching [${tagName}] before it. Every closing tag needs a corresponding opening tag.`,
         });
         errorLines.add(line);
       } else {
@@ -257,6 +262,7 @@ function checkTagMatching(
             type: 'error',
             message: `Mismatched tags: expected [/${expected.tag}] (line ${expected.line}), found [/${tagName}]`,
             line,
+            help: `Tags must be closed in the order they were opened. You opened [${expected.tag}] on line ${expected.line}, so it must be closed before [/${tagName}]. Example: [b][i]text[/i][/b], not [b][i]text[/b][/i].`,
           });
           errorLines.add(line);
           errorLines.add(expected.line);
@@ -273,6 +279,7 @@ function checkTagMatching(
       type: 'error',
       message: `Unclosed [${tag}] tag`,
       line,
+      help: `Every opening tag needs a matching closing tag. Add [/${tag}] after your content. Example: [${tag}]text[/${tag}].`,
     });
     errorLines.add(line);
   });
@@ -308,6 +315,7 @@ function checkTagNesting(
             type: 'error',
             message: `Overlapping tags: [${tagName}] closes before [${stack[stack.length - 1].tag}]`,
             line,
+            help: `BBCode tags must be closed in reverse order (last opened = first closed). Example: [b][i]text[/i][/b], not [b][i]text[/b][/i].`,
           });
           errorLines.add(line);
         }
@@ -339,6 +347,7 @@ function checkEmptyTags(
         type: 'warning',
         message: `Empty [${tag}][/${tag}] tag - will render incorrectly`,
         line,
+        help: `An empty tag like [${tag}][/${tag}] has no content between the opening and closing tags. Steam may render this as a blank space or not at all. Add content or remove the empty tag.`,
       });
       warningLines.add(line);
     }
@@ -375,6 +384,7 @@ function checkTagSupport(
         type: 'error',
         message: `[${tagName}] not supported in ${context}`,
         line,
+        help: `Steam ${context} do not support the [${tagName}] tag. Switch to a different Steam context (e.g., Announcements or Guides) for full tag support, or remove this tag.`,
       });
       errorLines.add(line);
     } else if (support[checkTag] === 'limited') {
@@ -382,6 +392,7 @@ function checkTagSupport(
         type: 'warning',
         message: `[${tagName}] has limited support in ${context}`,
         line,
+        help: `The [${tagName}] tag works in ${context} but may not render exactly as expected. Test your post on Steam to verify it looks correct.`,
       });
       warningLines.add(line);
     }
@@ -396,6 +407,7 @@ function checkTagSupport(
         type: 'warning',
         message: 'For guides, upload images and use [previewimg] instead of [img]',
         line,
+        help: 'Steam Guides require images to be uploaded through the Steam guide editor. Use [previewimg]ID[/previewimg] with the uploaded image ID, not external URLs with [img].',
       });
       warningLines.add(line);
     }
@@ -423,12 +435,13 @@ function checkListItems(
     
     errors.push({
       type: 'error',
-      message: content 
+      message: content
         ? `Invalid tag [${content}] - will render as plain text`
         : `Empty brackets [] - will render as plain text`,
       line,
       column: getColumnInLine(bbcode, match.index),
       length: match[0].length,
+      help: 'This looks like a tag attempt but is not valid BBCode. If you intended a list item, use [*] inside a [list] or [olist] block. Otherwise, remove or escape the brackets.',
     });
     errorLines.add(line);
   }
@@ -446,6 +459,7 @@ function checkListItems(
       line,
       column: getColumnInLine(bbcode, originalIndex),
       length: 3,
+      help: 'The [*] marker is only valid inside a [list] or [olist] block. Wrap your list items: [list][*]Item 1[*]Item 2[/list].',
     });
     errorLines.add(line);
   }
@@ -470,6 +484,7 @@ function checkListWhitespace(
       type: 'warning',
       message: 'Blank line inside [list] may break formatting',
       line,
+      help: 'Steam may interpret blank lines inside a [list] block as the end of the list. Remove blank lines between [*] items to avoid formatting issues.',
     });
     warningLines.add(line);
   }
@@ -493,6 +508,7 @@ function checkUrls(
       type: 'warning',
       message: 'Empty [url] tag',
       line,
+      help: 'A URL tag needs both an address and link text. Use [url=https://example.com]link text[/url] or [url]https://example.com[/url].',
     });
     warningLines.add(line);
   }
@@ -505,6 +521,7 @@ function checkUrls(
       type: 'warning',
       message: 'URL may need https:// prefix',
       line,
+      help: 'Steam requires full URLs with a protocol. Add https:// at the start: [url=https://example.com]link text[/url].',
     });
     warningLines.add(line);
   }
@@ -526,11 +543,13 @@ function checkCharacterLimits(
     errors.push({
       type: 'error',
       message: `Exceeds ${context} limit: ${charCount.toLocaleString()} / ${limit.toLocaleString()}`,
+      help: `Steam enforces a ${limit.toLocaleString()} character limit for ${context}. Shorten your content or split it into multiple posts.`,
     });
   } else if (charCount > limit * 0.9) {
     warnings.push({
       type: 'warning',
       message: `Approaching limit: ${charCount.toLocaleString()} / ${limit.toLocaleString()} (${Math.round(charCount / limit * 100)}%)`,
+      help: `Steam enforces a ${limit.toLocaleString()} character limit for ${context}. Consider shortening your content to stay within the limit.`,
     });
   }
 }

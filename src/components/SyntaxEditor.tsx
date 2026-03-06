@@ -21,6 +21,7 @@ interface SyntaxEditorProps {
   errorLines?: Set<number>;
   warningLines?: Set<number>;
   onSave?: () => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }
 
 export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
@@ -32,6 +33,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   errorLines = new Set(),
   warningLines = new Set(),
   onSave,
+  onPaste,
 }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
@@ -198,6 +200,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
           onChange={(e) => onChange(e.target.value)}
           onScroll={syncScroll}
           onKeyDown={handleKeyDown}
+          onPaste={onPaste}
           readOnly={readOnly}
           placeholder={placeholder}
           spellCheck={language === 'markdown'}

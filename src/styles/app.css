@@ -179,6 +179,40 @@ body {
   letter-spacing: 0.5px;
 }
 
+.format-badge {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background-color: var(--bg-elevated);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.format-badge.format-confluence {
+  color: var(--accent-blue);
+  background-color: var(--bg-blue-subtle);
+}
+
+.format-badge.format-markdown {
+  color: var(--text-muted);
+  background-color: var(--bg-elevated);
+}
+
+.format-badge.format-plaintext {
+  color: var(--text-dim);
+  background-color: var(--bg-elevated);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .format-badge {
+    transition: none;
+  }
+}
+
 .file-name {
   font-size: 11px;
   font-weight: 400;
@@ -497,6 +531,44 @@ body {
 .lint-message.clickable:focus-visible {
   outline: 1px solid var(--accent-blue);
   outline-offset: 1px;
+}
+
+.lint-message-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.lint-help-toggle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  padding: 0 4px;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.lint-help-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.lint-help-toggle:focus-visible {
+  outline: 1px solid var(--accent-blue);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.lint-help-text {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  padding: 4px 0 4px 22px;
+  margin-left: 0;
 }
 
 .lint-badge {

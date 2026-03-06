@@ -189,3 +189,65 @@ test('feedback link exists', async ({ page }) => {
     'https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose'
   );
 });
+
+// ---------------------------------------------------------------------------
+// Lint help text (SMD-4373)
+// ---------------------------------------------------------------------------
+
+test('markdown lint messages show Why? link when help text is available', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  // Confluence macro triggers a warning with help text
+  await mdEditor.fill('{code}some code{code}');
+
+  // Markdown panel lint messages should show
+  const lintPanel = page.locator('.panel').first().locator('.panel-lint');
+  await expect(lintPanel).toBeVisible();
+
+  // Should have a Why? button
+  const whyButton = lintPanel.locator('.lint-help-toggle').first();
+  await expect(whyButton).toBeVisible();
+  await expect(whyButton).toHaveText('Why?');
+});
+
+test('clicking Why? expands help text and clicking Hide collapses it', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('{code}some code{code}');
+
+  const lintPanel = page.locator('.panel').first().locator('.panel-lint');
+  const whyButton = lintPanel.locator('.lint-help-toggle').first();
+
+  // Initially no help text visible
+  await expect(lintPanel.locator('.lint-help-text')).toHaveCount(0);
+
+  // Click Why? to expand
+  await whyButton.click();
+  await expect(lintPanel.locator('.lint-help-text').first()).toBeVisible();
+  await expect(whyButton).toHaveText('Hide');
+
+  // Click Hide to collapse
+  await whyButton.click();
+  await expect(lintPanel.locator('.lint-help-text')).toHaveCount(0);
+  await expect(whyButton).toHaveText('Why?');
+});
+
+test('bbcode tab lint messages show Why? link with expandable help', async ({ page }) => {
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  // Input that produces BBCode with unclosed tags
+  await mdEditor.fill('[b]unclosed bold tag');
+
+  // Switch to BBCode tab
+  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
+
+  // Wait for lint messages
+  const lintPanel = page.locator('.output-panel .panel-lint');
+  // The BBCode output will have markdown syntax warnings, check for any Why? button
+  const whyButtons = lintPanel.locator('.lint-help-toggle');
+
+  // There should be at least one Why? button
+  const count = await whyButtons.count();
+  expect(count).toBeGreaterThan(0);
+
+  // Click first Why? to expand
+  await whyButtons.first().click();
+  await expect(lintPanel.locator('.lint-help-text').first()).toBeVisible();
+});

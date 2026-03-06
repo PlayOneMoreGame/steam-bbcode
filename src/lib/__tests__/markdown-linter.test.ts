@@ -205,6 +205,74 @@ describe('lintMarkdown', () => {
     });
   });
 
+  describe('help text', () => {
+    it('includes help text on unclosed inline code', () => {
+      const result = lintMarkdown('This has `unclosed code');
+      expect(result.errors[0].help).toBeDefined();
+      expect(result.errors[0].help).toContain('backtick');
+    });
+
+    it('includes help text on unmatched bold markers', () => {
+      const result = lintMarkdown('This is **bold but not closed');
+      expect(result.errors[0].help).toBeDefined();
+      expect(result.errors[0].help).toContain('**');
+    });
+
+    it('includes help text on Confluence macro warnings', () => {
+      const result = lintMarkdown('Here is {code}some code{code}');
+      const warning = result.warnings.find(w => w.message.includes('Confluence macro'));
+      expect(warning?.help).toBeDefined();
+      expect(warning?.help).toContain('Confluence');
+      expect(warning?.help).toContain('View Storage Format');
+    });
+
+    it('includes help text on Confluence user mention warnings', () => {
+      const result = lintMarkdown('Ask [~username] about this');
+      const warning = result.warnings.find(w => w.message.includes('Confluence user mention'));
+      expect(warning?.help).toBeDefined();
+      expect(warning?.help).toContain('display name');
+    });
+
+    it('includes help text on inline code info', () => {
+      const result = lintMarkdown('Use `npm install` to install');
+      const info = result.info.find(i => i.message.includes('inline code'));
+      expect(info?.help).toBeDefined();
+      expect(info?.help).toContain('[b]bold[/b]');
+    });
+
+    it('includes help text on nested list warnings', () => {
+      const result = lintMarkdown('- Item\n  - Nested item');
+      const warning = result.warnings.find(w => w.message.includes('Nested list'));
+      expect(warning?.help).toBeDefined();
+      expect(warning?.help).toContain('flattening');
+    });
+
+    it('includes help text on invalid bracket patterns', () => {
+      const result = lintMarkdown('text [-] more text');
+      const error = result.errors.find(e => e.message.includes('Invalid pattern'));
+      expect(error?.help).toBeDefined();
+    });
+
+    it('includes help text on table info', () => {
+      const result = lintMarkdown('| A | B |\n|---|---|\n| 1 | 2 |');
+      const info = result.info.find(i => i.message.includes('table'));
+      expect(info?.help).toBeDefined();
+    });
+
+    it('includes help text on image info', () => {
+      const result = lintMarkdown('![alt](https://example.com/img.png)');
+      const info = result.info.find(i => i.message.includes('image'));
+      expect(info?.help).toBeDefined();
+      expect(info?.help).toContain('[previewimg]');
+    });
+
+    it('help field is optional - clean markdown has no messages', () => {
+      const result = lintMarkdown('Clean text with no issues');
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+    });
+  });
+
   describe('line numbers', () => {
     it('reports correct line number for errors', () => {
       const result = lintMarkdown('Line 1\nLine 2\n`unclosed');

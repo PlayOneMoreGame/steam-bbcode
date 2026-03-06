@@ -1,10 +1,28 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, type MouseEvent } from 'react';
 import { SyntaxEditor, type SyntaxEditorHandle } from './SyntaxEditor';
 import { lintMarkdown } from '@/lib/markdown-linter';
+import { lintConfluence } from '@/lib/confluence-linter';
 import { splitForDiscord } from '@/lib/splitter';
-import { CHAR_LIMITS } from '@/lib/contexts';
+import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
+import type { InputFormat } from '@/lib/format-detector';
 import type { RecentFile } from '@/hooks/useRecentFiles';
 import { trackEvent } from '@/lib/analytics';
+
+/** Labels shown in the format badge */
+const FORMAT_LABELS: Record<InputFormat, string> = {
+  markdown: 'MD',
+  confluence: 'Confluence',
+  plaintext: 'Plain',
+};
+
+/**
+ * Check if HTML clipboard content contains Confluence markers.
+ * Confluence pages copied from the browser include XHTML in the clipboard HTML
+ * with ac:, ri:, or atlassian-specific attributes.
+ */
+function isConfluenceHtml(html: string): boolean {
+  return /(<ac:[a-z-]+|<ri:[a-z-]+|atlassian|confluence)/i.test(html);
+}
 
 interface MarkdownPanelProps {
   value: string;
@@ -15,6 +33,8 @@ interface MarkdownPanelProps {
   onSaveAs: () => void;
   recentFiles?: RecentFile[];
   isDesktop?: boolean;
+  detectedFormat?: InputFormat;
+  context?: SteamContext;
 }
 
 export function MarkdownPanel({
@@ -26,14 +46,45 @@ export function MarkdownPanel({
   onSaveAs,
   recentFiles = [],
   isDesktop = false,
+  detectedFormat = 'markdown',
+  context = 'announcements',
 }: MarkdownPanelProps) {
   const [copyFeedback, setCopyFeedback] = useState('');
   const [showDiscord, setShowDiscord] = useState(false);
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [savedValue, setSavedValue] = useState(value);
+  const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
   const editorRef = useRef<SyntaxEditorHandle>(null);
 
-  const lintResult = useMemo(() => lintMarkdown(value), [value]);
+  const toggleHelp = useCallback((key: string, e: MouseEvent) => {
+    e.stopPropagation();
+    setExpandedHelp(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  // Use the appropriate linter based on detected format
+  const lintResult = useMemo(() => {
+    if (detectedFormat === 'confluence') {
+      // Confluence linter returns LintResult (errors, warnings, errorLines, warningLines)
+      // but MarkdownLintResult also has `info`. Normalize the shape.
+      const result = lintConfluence(value, context);
+      return {
+        errors: result.errors,
+        warnings: result.warnings,
+        info: [] as { type: 'info'; message: string; line?: number; help?: string }[],
+        errorLines: result.errorLines,
+        warningLines: result.warningLines,
+      };
+    }
+    return lintMarkdown(value);
+  }, [value, detectedFormat, context]);
   const discordSections = useMemo(
     () => splitForDiscord(value, CHAR_LIMITS.discord),
     [value]
@@ -66,6 +117,17 @@ export function MarkdownPanel({
     }
   }, [value]);
 
+  // Handle paste: intercept clipboard HTML to detect Confluence content
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    if (html && isConfluenceHtml(html)) {
+      e.preventDefault();
+      onChange(html);
+      trackEvent('paste_confluence', { source: 'clipboard_html' });
+    }
+    // Otherwise, let the default paste (plain text) happen naturally
+  }, [onChange]);
+
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
 
@@ -94,7 +156,10 @@ export function MarkdownPanel({
     <section className="panel">
       <div className="panel-header">
         <span className="panel-label">
-          Markdown
+          Editor
+          <span className={`format-badge format-${detectedFormat}`} data-testid="format-badge">
+            {FORMAT_LABELS[detectedFormat]}
+          </span>
           {fileName && <span className="file-name" title={fileName}>{fileName}</span>}
           {isDirty && <span className="modified-indicator" title="Unsaved changes">●</span>}
           {lintResult.errors.length > 0 && (
@@ -168,45 +233,93 @@ export function MarkdownPanel({
       {/* Lint messages - clickable */}
       {hasIssues && (
         <div className="panel-lint">
-          {lintResult.errors.map((msg, i) => (
-            <div 
-              key={`e${i}`} 
-              className="lint-message error clickable"
-              onClick={() => handleLintClick(msg)}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="lint-icon">✗</span>
-              {msg.line && <span className="lint-line">L{msg.line}</span>}
-              <span className="lint-text">{msg.message}</span>
-            </div>
-          ))}
-          {lintResult.warnings.map((msg, i) => (
-            <div 
-              key={`w${i}`} 
-              className="lint-message warning clickable"
-              onClick={() => handleLintClick(msg)}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="lint-icon">⚠</span>
-              {msg.line && <span className="lint-line">L{msg.line}</span>}
-              <span className="lint-text">{msg.message}</span>
-            </div>
-          ))}
-          {lintResult.info.map((msg, i) => (
-            <div 
-              key={`i${i}`} 
-              className="lint-message note clickable"
-              onClick={() => handleLintClick(msg)}
-              role="button"
-              tabIndex={0}
-            >
-              <span className="lint-icon">ℹ</span>
-              {msg.line && <span className="lint-line">L{msg.line}</span>}
-              <span className="lint-text">{msg.message}</span>
-            </div>
-          ))}
+          {lintResult.errors.map((msg, i) => {
+            const key = `e${i}`;
+            return (
+              <div key={key} className="lint-message-group">
+                <div
+                  className="lint-message error clickable"
+                  onClick={() => handleLintClick(msg)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span className="lint-icon">✗</span>
+                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  <span className="lint-text">{msg.message}</span>
+                  {msg.help && (
+                    <button
+                      className="lint-help-toggle"
+                      onClick={(e) => toggleHelp(key, e)}
+                      aria-expanded={expandedHelp.has(key)}
+                    >
+                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                    </button>
+                  )}
+                </div>
+                {msg.help && expandedHelp.has(key) && (
+                  <div className="lint-help-text">{msg.help}</div>
+                )}
+              </div>
+            );
+          })}
+          {lintResult.warnings.map((msg, i) => {
+            const key = `w${i}`;
+            return (
+              <div key={key} className="lint-message-group">
+                <div
+                  className="lint-message warning clickable"
+                  onClick={() => handleLintClick(msg)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span className="lint-icon">⚠</span>
+                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  <span className="lint-text">{msg.message}</span>
+                  {msg.help && (
+                    <button
+                      className="lint-help-toggle"
+                      onClick={(e) => toggleHelp(key, e)}
+                      aria-expanded={expandedHelp.has(key)}
+                    >
+                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                    </button>
+                  )}
+                </div>
+                {msg.help && expandedHelp.has(key) && (
+                  <div className="lint-help-text">{msg.help}</div>
+                )}
+              </div>
+            );
+          })}
+          {lintResult.info.map((msg, i) => {
+            const key = `i${i}`;
+            return (
+              <div key={key} className="lint-message-group">
+                <div
+                  className="lint-message note clickable"
+                  onClick={() => handleLintClick(msg)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span className="lint-icon">ℹ</span>
+                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  <span className="lint-text">{msg.message}</span>
+                  {msg.help && (
+                    <button
+                      className="lint-help-toggle"
+                      onClick={(e) => toggleHelp(key, e)}
+                      aria-expanded={expandedHelp.has(key)}
+                    >
+                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
+                    </button>
+                  )}
+                </div>
+                {msg.help && expandedHelp.has(key) && (
+                  <div className="lint-help-text">{msg.help}</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -219,6 +332,7 @@ export function MarkdownPanel({
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
         onSave={handleSaveAs}
+        onPaste={handlePaste}
       />
 
       <div className="panel-footer">
