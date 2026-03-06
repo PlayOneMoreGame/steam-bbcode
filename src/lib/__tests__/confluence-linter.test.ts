@@ -6,25 +6,25 @@ describe('lintConfluence', () => {
     it('warns about info panel macro', () => {
       const xhtml = '<ac:structured-macro ac:name="info"><ac:rich-text-body><p>Note</p></ac:rich-text-body></ac:structured-macro>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('info'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('"info"'))).toBe(true);
     });
 
     it('warns about warning panel macro', () => {
       const xhtml = '<ac:structured-macro ac:name="warning"><ac:rich-text-body><p>Warning</p></ac:rich-text-body></ac:structured-macro>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('warning'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('"warning"'))).toBe(true);
     });
 
     it('warns about note panel macro', () => {
       const xhtml = '<ac:structured-macro ac:name="note"><ac:rich-text-body><p>Note</p></ac:rich-text-body></ac:structured-macro>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('note'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('"note"'))).toBe(true);
     });
 
     it('warns about toc macro', () => {
       const xhtml = '<ac:structured-macro ac:name="toc" />';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('toc'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('"toc"'))).toBe(true);
     });
 
     it('does not warn about code macro (supported)', () => {
@@ -45,7 +45,7 @@ describe('lintConfluence', () => {
     it('warns about image attachments needing upload', () => {
       const xhtml = '<ac:image><ri:attachment ri:filename="screenshot.png" /></ac:image>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('image attachment'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('image') && w.message.includes('Confluence'))).toBe(true);
     });
 
     it('counts multiple images', () => {
@@ -63,13 +63,13 @@ describe('lintConfluence', () => {
     it('adds reviews-specific note about unsupported images', () => {
       const xhtml = '<ac:image><ri:attachment ri:filename="test.png" /></ac:image>';
       const result = lintConfluence(xhtml, 'reviews');
-      expect(result.warnings.some(w => w.message.includes('not supported in reviews'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('not supported in') && w.message.includes('reviews'))).toBe(true);
     });
 
     it('no image warning when no attachments', () => {
       const xhtml = '<p>Just text</p>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('image attachment'))).toBe(false);
+      expect(result.warnings.some(w => w.message.includes('image') && w.message.includes('Confluence'))).toBe(false);
     });
   });
 
@@ -77,13 +77,13 @@ describe('lintConfluence', () => {
     it('warns about ac:link without target', () => {
       const xhtml = '<ac:link><ac:plain-text-link-body>broken link</ac:plain-text-link-body></ac:link>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('no target'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('no destination'))).toBe(true);
     });
 
     it('does not warn about ac:link with ri:page', () => {
       const xhtml = '<ac:link><ri:page ri:content-title="SomePage" /><ac:plain-text-link-body>link</ac:plain-text-link-body></ac:link>';
       const result = lintConfluence(xhtml, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('no target'))).toBe(false);
+      expect(result.warnings.some(w => w.message.includes('no destination'))).toBe(false);
     });
   });
 

@@ -5,12 +5,12 @@ describe('lintBBCode', () => {
   describe('unknown tags', () => {
     it('reports unknown tags', () => {
       const result = lintBBCode('[foo]text[/foo]', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Unknown tag [foo]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("doesn't support [foo]"))).toBe(true);
     });
 
     it('does not report valid tags', () => {
       const result = lintBBCode('[b]bold[/b]', 'announcements');
-      expect(result.errors.filter(e => e.message.includes('Unknown tag'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes("doesn't support"))).toHaveLength(0);
     });
 
     it('recognizes all valid tags', () => {
@@ -20,7 +20,7 @@ describe('lintBBCode', () => {
       
       for (const tag of validTags) {
         const result = lintBBCode(`[${tag}]content[/${tag}]`, 'announcements');
-        expect(result.errors.filter(e => e.message.includes('Unknown tag'))).toHaveLength(0);
+        expect(result.errors.filter(e => e.message.includes("doesn't support"))).toHaveLength(0);
       }
     });
   });
@@ -28,7 +28,7 @@ describe('lintBBCode', () => {
   describe('HTML tags', () => {
     it('reports HTML tags', () => {
       const result = lintBBCode('<b>bold</b>', 'announcements');
-      expect(result.errors.some(e => e.message.includes('HTML tag <b>'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('HTML') && e.message.includes('<b>'))).toBe(true);
     });
 
     it('suggests BBCode equivalent for common HTML tags', () => {
@@ -82,34 +82,34 @@ describe('lintBBCode', () => {
   describe('tag matching', () => {
     it('reports unclosed tags', () => {
       const result = lintBBCode('[b]unclosed bold', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Unclosed [b]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('[b]') && e.message.includes('never closed'))).toBe(true);
     });
 
     it('reports mismatched tags', () => {
       const result = lintBBCode('[b]text[/i]', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Mismatched') || e.message.includes('Unexpected'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('mismatch') || e.message.includes('no matching'))).toBe(true);
     });
 
     it('reports unexpected closing tags', () => {
       const result = lintBBCode('text[/b]', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Unexpected closing'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('no matching'))).toBe(true);
     });
 
     it('handles properly nested tags', () => {
       const result = lintBBCode('[b][i]text[/i][/b]', 'announcements');
-      expect(result.errors.filter(e => e.message.includes('Unclosed') || e.message.includes('Mismatched'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes('never closed') || e.message.includes('mismatch'))).toHaveLength(0);
     });
 
     it('handles multiple unclosed tags', () => {
       const result = lintBBCode('[b][i]text', 'announcements');
-      expect(result.errors.filter(e => e.message.includes('Unclosed'))).toHaveLength(2);
+      expect(result.errors.filter(e => e.message.includes('never closed'))).toHaveLength(2);
     });
   });
 
   describe('tag nesting', () => {
     it('reports overlapping tags', () => {
       const result = lintBBCode('[b][i]text[/b][/i]', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Overlapping') || e.message.includes('Mismatched'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('overlap') || e.message.includes('mismatch'))).toBe(true);
     });
   });
 
@@ -138,22 +138,22 @@ describe('lintBBCode', () => {
   describe('context-specific tag support', () => {
     it('reports unsupported img in reviews', () => {
       const result = lintBBCode('[img]test.png[/img]', 'reviews');
-      expect(result.errors.some(e => e.message.includes('not supported in reviews'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("won't work") && e.message.includes('reviews'))).toBe(true);
     });
 
     it('reports unsupported video in forums', () => {
       const result = lintBBCode('[video]test[/video]', 'forums');
-      expect(result.errors.some(e => e.message.includes('not supported in forums'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("won't work") && e.message.includes('forums'))).toBe(true);
     });
 
     it('allows spoiler in reviews', () => {
       const result = lintBBCode('[spoiler]text[/spoiler]', 'reviews');
-      expect(result.errors.filter(e => e.message.includes('not supported'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes("won't work"))).toHaveLength(0);
     });
 
     it('reports unsupported table in reviews', () => {
       const result = lintBBCode('[table][tr][td]cell[/td][/tr][/table]', 'reviews');
-      expect(result.errors.some(e => e.message.includes('not supported in reviews'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("won't work") && e.message.includes('reviews'))).toBe(true);
     });
 
     it('warns about limited img support in guides', () => {
@@ -164,24 +164,24 @@ describe('lintBBCode', () => {
     it('allows all tags in announcements', () => {
       const bbcode = '[h1]Title[/h1][img]img.png[/img][spoiler]text[/spoiler]';
       const result = lintBBCode(bbcode, 'announcements');
-      expect(result.errors.filter(e => e.message.includes('not supported'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes("won't work"))).toHaveLength(0);
     });
   });
 
   describe('list items and invalid bracket patterns', () => {
     it('reports invalid [-] pattern anywhere', () => {
       const result = lintBBCode('some text [-] more text', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Invalid tag [-]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[-]") && e.message.includes("isn't a Steam tag"))).toBe(true);
     });
 
     it('reports invalid [+] pattern anywhere', () => {
       const result = lintBBCode('vote [+] here', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Invalid tag [+]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[+]") && e.message.includes("isn't a Steam tag"))).toBe(true);
     });
 
     it('reports invalid [.] pattern anywhere', () => {
       const result = lintBBCode('text [.] text', 'announcements');
-      expect(result.errors.some(e => e.message.includes('Invalid tag [.]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[.]") && e.message.includes("isn't a Steam tag"))).toBe(true);
     });
 
     it('reports empty brackets []', () => {
@@ -191,19 +191,19 @@ describe('lintBBCode', () => {
 
     it('does not report valid [*] markers inside lists', () => {
       const result = lintBBCode('[list][*]Item[/list]', 'announcements');
-      expect(result.errors.filter(e => e.message.includes('Invalid tag'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes("isn't a Steam tag"))).toHaveLength(0);
     });
 
     it('reports [*] outside of list blocks', () => {
       const result = lintBBCode('Stray [*] item here', 'announcements');
-      expect(result.errors.some(e => e.message.includes('[*] found outside'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('[*]') && e.message.includes('outside'))).toBe(true);
     });
   });
 
   describe('URL validation', () => {
     it('warns about empty URLs', () => {
       const result = lintBBCode('[url][/url]', 'announcements');
-      expect(result.warnings.some(w => w.message.includes('Empty [url]'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('[url]') && w.message.includes('empty'))).toBe(true);
     });
 
     it('warns about URLs without protocol', () => {
@@ -226,25 +226,25 @@ describe('lintBBCode', () => {
     it('reports error when exceeding limit', () => {
       const longText = '[b]' + 'a'.repeat(10000) + '[/b]';
       const result = lintBBCode(longText, 'announcements');
-      expect(result.errors.some(e => e.message.includes('Exceeds'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('Too long'))).toBe(true);
     });
 
     it('warns when approaching limit', () => {
       const text = 'a'.repeat(7500); // 93.75% of 8000
       const result = lintBBCode(text, 'announcements');
-      expect(result.warnings.some(w => w.message.includes('Approaching'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Getting close'))).toBe(true);
     });
 
     it('uses correct limit for forums (4000)', () => {
       const text = 'a'.repeat(4500); // Over forums limit
       const result = lintBBCode(text, 'forums');
-      expect(result.errors.some(e => e.message.includes('Exceeds'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes('Too long'))).toBe(true);
     });
 
     it('does not warn for short content', () => {
       const result = lintBBCode('short text', 'announcements');
-      expect(result.warnings.filter(w => w.message.includes('Approaching'))).toHaveLength(0);
-      expect(result.errors.filter(e => e.message.includes('Exceeds'))).toHaveLength(0);
+      expect(result.warnings.filter(w => w.message.includes('Getting close'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes('Too long'))).toHaveLength(0);
     });
   });
 
@@ -272,41 +272,41 @@ describe('lintBBCode', () => {
   describe('help text', () => {
     it('includes help text on unknown tag errors', () => {
       const result = lintBBCode('[foo]text[/foo]', 'announcements');
-      const error = result.errors.find(e => e.message.includes('Unknown tag'));
+      const error = result.errors.find(e => e.message.includes("[foo]"));
       expect(error?.help).toBeDefined();
-      expect(error?.help).toContain('not a valid Steam BBCode tag');
+      expect(error?.help).toContain('Steam recognizes');
     });
 
     it('includes help text on unclosed tag errors', () => {
       const result = lintBBCode('[b]unclosed bold', 'announcements');
-      const error = result.errors.find(e => e.message.includes('Unclosed'));
+      const error = result.errors.find(e => e.message.includes('never closed'));
       expect(error?.help).toBeDefined();
-      expect(error?.help).toContain('matching closing tag');
+      expect(error?.help).toContain('matching');
     });
 
     it('includes help text on mismatched tag errors', () => {
       const result = lintBBCode('[b]text[/i]', 'announcements');
-      const error = result.errors.find(e => e.message.includes('Mismatched') || e.message.includes('Unexpected'));
+      const error = result.errors.find(e => e.message.includes('mismatch') || e.message.includes('no matching'));
       expect(error?.help).toBeDefined();
     });
 
     it('includes help text on overlapping tag errors', () => {
       const result = lintBBCode('[b][i]text[/b][/i]', 'announcements');
-      const error = result.errors.find(e => e.message.includes('Overlapping'));
+      const error = result.errors.find(e => e.message.includes('overlap'));
       expect(error?.help).toBeDefined();
       expect(error?.help).toContain('reverse order');
     });
 
     it('includes help text on HTML tag errors', () => {
       const result = lintBBCode('<b>bold</b>', 'announcements');
-      const error = result.errors.find(e => e.message.includes('HTML tag'));
+      const error = result.errors.find(e => e.message.includes('HTML'));
       expect(error?.help).toBeDefined();
       expect(error?.help).toContain('BBCode');
     });
 
     it('includes help text on unsupported context tag errors', () => {
       const result = lintBBCode('[img]test.png[/img]', 'reviews');
-      const error = result.errors.find(e => e.message.includes('not supported'));
+      const error = result.errors.find(e => e.message.includes("won't work"));
       expect(error?.help).toBeDefined();
       expect(error?.help).toContain('reviews');
     });
@@ -314,7 +314,7 @@ describe('lintBBCode', () => {
     it('includes help text on character limit exceeded', () => {
       const longText = '[b]' + 'a'.repeat(10000) + '[/b]';
       const result = lintBBCode(longText, 'announcements');
-      const error = result.errors.find(e => e.message.includes('Exceeds'));
+      const error = result.errors.find(e => e.message.includes('Too long'));
       expect(error?.help).toBeDefined();
       expect(error?.help).toContain('character limit');
     });
@@ -322,7 +322,7 @@ describe('lintBBCode', () => {
     it('includes help text on character limit approaching', () => {
       const text = 'a'.repeat(7500);
       const result = lintBBCode(text, 'announcements');
-      const warning = result.warnings.find(w => w.message.includes('Approaching'));
+      const warning = result.warnings.find(w => w.message.includes('Getting close'));
       expect(warning?.help).toBeDefined();
     });
 
@@ -342,7 +342,7 @@ describe('lintBBCode', () => {
       const result = lintBBCode('[url=example.com]link[/url]', 'announcements');
       const warning = result.warnings.find(w => w.message.includes('https://'));
       expect(warning?.help).toBeDefined();
-      expect(warning?.help).toContain('protocol');
+      expect(warning?.help).toContain('https://');
     });
 
     it('help field is optional - valid BBCode has no help', () => {

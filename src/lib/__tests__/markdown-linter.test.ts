@@ -101,12 +101,12 @@ describe('lintMarkdown', () => {
 
     it('warns about empty link text', () => {
       const result = lintMarkdown('Check [](https://example.com)');
-      expect(result.warnings.some(w => w.message.includes('empty text'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('no display text'))).toBe(true);
     });
 
     it('warns about empty link URL', () => {
       const result = lintMarkdown('Check [link text]()');
-      expect(result.warnings.some(w => w.message.includes('empty URL'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('missing a URL'))).toBe(true);
     });
 
     it('passes valid links', () => {
@@ -118,12 +118,12 @@ describe('lintMarkdown', () => {
   describe('Confluence syntax', () => {
     it('warns about Confluence macros', () => {
       const result = lintMarkdown('Here is {code}some code{code}');
-      expect(result.warnings.some(w => w.message.includes('Confluence macro'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Confluence element'))).toBe(true);
     });
 
     it('warns about Confluence user mentions', () => {
       const result = lintMarkdown('Ask [~username] about this');
-      expect(result.warnings.some(w => w.message.includes('Confluence user mention'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Confluence @mention'))).toBe(true);
     });
   });
 
@@ -142,24 +142,24 @@ describe('lintMarkdown', () => {
 
     it('warns about extra whitespace after list marker', () => {
       const result = lintMarkdown('-  Item with extra space');
-      expect(result.warnings.some(w => w.message.includes('Extra whitespace after list marker'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Extra spaces after list marker'))).toBe(true);
     });
 
     it('warns about multiple extra spaces after list marker', () => {
       const result = lintMarkdown('-   Item with more spaces');
-      expect(result.warnings.some(w => w.message.includes('Extra whitespace after list marker'))).toBe(true);
+      expect(result.warnings.some(w => w.message.includes('Extra spaces after list marker'))).toBe(true);
     });
 
     it('does not warn about normal list items', () => {
       const result = lintMarkdown('- Normal item');
-      expect(result.warnings.filter(w => w.message.includes('Extra whitespace'))).toHaveLength(0);
+      expect(result.warnings.filter(w => w.message.includes('Extra spaces'))).toHaveLength(0);
     });
   });
 
   describe('tables', () => {
     it('notes tables may need adjustment', () => {
       const result = lintMarkdown('| A | B |\n|---|---|\n| 1 | 2 |');
-      expect(result.info.some(i => i.message.includes('table'))).toBe(true);
+      expect(result.info.some(i => i.message.includes('Table found'))).toBe(true);
     });
   });
 
@@ -173,17 +173,17 @@ describe('lintMarkdown', () => {
   describe('invalid bracket patterns', () => {
     it('reports [-] as invalid pattern', () => {
       const result = lintMarkdown('text [-] more text');
-      expect(result.errors.some(e => e.message.includes('Invalid pattern [-]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[-]") && e.message.includes("isn't a valid tag"))).toBe(true);
     });
 
     it('reports [+] as invalid pattern', () => {
       const result = lintMarkdown('vote [+] here');
-      expect(result.errors.some(e => e.message.includes('Invalid pattern [+]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[+]") && e.message.includes("isn't a valid tag"))).toBe(true);
     });
 
     it('reports [.] as invalid pattern', () => {
       const result = lintMarkdown('text [.] text');
-      expect(result.errors.some(e => e.message.includes('Invalid pattern [.]'))).toBe(true);
+      expect(result.errors.some(e => e.message.includes("[.]") && e.message.includes("isn't a valid tag"))).toBe(true);
     });
 
     it('reports empty brackets []', () => {
@@ -201,7 +201,7 @@ describe('lintMarkdown', () => {
 
     it('does not flag brackets inside code blocks', () => {
       const result = lintMarkdown('```\n[-] in code\n```');
-      expect(result.errors.filter(e => e.message.includes('Invalid pattern'))).toHaveLength(0);
+      expect(result.errors.filter(e => e.message.includes("isn't a valid tag"))).toHaveLength(0);
     });
   });
 
@@ -220,7 +220,7 @@ describe('lintMarkdown', () => {
 
     it('includes help text on Confluence macro warnings', () => {
       const result = lintMarkdown('Here is {code}some code{code}');
-      const warning = result.warnings.find(w => w.message.includes('Confluence macro'));
+      const warning = result.warnings.find(w => w.message.includes('Confluence element'));
       expect(warning?.help).toBeDefined();
       expect(warning?.help).toContain('Confluence');
       expect(warning?.help).toContain('View Storage Format');
@@ -228,9 +228,9 @@ describe('lintMarkdown', () => {
 
     it('includes help text on Confluence user mention warnings', () => {
       const result = lintMarkdown('Ask [~username] about this');
-      const warning = result.warnings.find(w => w.message.includes('Confluence user mention'));
+      const warning = result.warnings.find(w => w.message.includes('Confluence @mention'));
       expect(warning?.help).toBeDefined();
-      expect(warning?.help).toContain('display name');
+      expect(warning?.help).toContain('name');
     });
 
     it('includes help text on inline code info', () => {
@@ -249,13 +249,13 @@ describe('lintMarkdown', () => {
 
     it('includes help text on invalid bracket patterns', () => {
       const result = lintMarkdown('text [-] more text');
-      const error = result.errors.find(e => e.message.includes('Invalid pattern'));
+      const error = result.errors.find(e => e.message.includes("isn't a valid tag"));
       expect(error?.help).toBeDefined();
     });
 
     it('includes help text on table info', () => {
       const result = lintMarkdown('| A | B |\n|---|---|\n| 1 | 2 |');
-      const info = result.info.find(i => i.message.includes('table'));
+      const info = result.info.find(i => i.message.includes('Table found'));
       expect(info?.help).toBeDefined();
     });
 
