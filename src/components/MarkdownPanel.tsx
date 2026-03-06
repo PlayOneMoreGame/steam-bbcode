@@ -4,12 +4,11 @@ import { lintMarkdown } from '@/lib/markdown-linter';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS } from '@/lib/contexts';
 import type { RecentFile } from '@/hooks/useRecentFiles';
+import { trackEvent } from '@/lib/analytics';
 
 interface MarkdownPanelProps {
   value: string;
   onChange: (value: string) => void;
-  onFocus: () => void;
-  isActive: boolean;
   fileName: string | null;
   onOpen: () => void;
   onOpenRecent?: (path: string) => void;
@@ -18,11 +17,9 @@ interface MarkdownPanelProps {
   isDesktop?: boolean;
 }
 
-export function MarkdownPanel({ 
-  value, 
-  onChange, 
-  onFocus, 
-  isActive,
+export function MarkdownPanel({
+  value,
+  onChange,
   fileName,
   onOpen,
   onOpenRecent,
@@ -62,6 +59,7 @@ export function MarkdownPanel({
       await navigator.clipboard.writeText(value);
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
+      trackEvent('copy_clicked', { panel: 'markdown' });
     } catch {
       setCopyFeedback('Failed');
       setTimeout(() => setCopyFeedback(''), 2000);
@@ -70,7 +68,9 @@ export function MarkdownPanel({
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
-    
+
+    trackEvent('lint_error_clicked', { panel: 'markdown' });
+
     // Prefer start/end if available (direct character offsets)
     if (msg.start !== undefined && msg.end !== undefined) {
       editorRef.current.selectRange(msg.start, msg.end);
@@ -91,7 +91,7 @@ export function MarkdownPanel({
   // For now, we track if the value changed significantly
   
   return (
-    <section className={`panel ${isActive ? 'panel-active' : ''}`} onFocus={onFocus}>
+    <section className="panel">
       <div className="panel-header">
         <span className="panel-label">
           Markdown
@@ -159,8 +159,8 @@ export function MarkdownPanel({
           >
             Save As
           </button>
-          <button className="btn btn-primary" onClick={handleCopy}>
-            {copyFeedback || 'Copy'}
+          <button className="btn btn-secondary" onClick={handleCopy} title="Copy Markdown source">
+            {copyFeedback || 'Copy MD'}
           </button>
         </div>
       </div>
@@ -224,7 +224,12 @@ export function MarkdownPanel({
       <div className="panel-footer">
         <button 
           className={`btn btn-sm ${showDiscord ? 'btn-active' : 'btn-secondary'}`}
-          onClick={() => setShowDiscord(!showDiscord)}
+          onClick={() => {
+            if (!showDiscord) {
+              trackEvent('discord_split', { chunk_count: discordSections.length });
+            }
+            setShowDiscord(!showDiscord);
+          }}
           title="Split for Discord (2000 char limit)"
         >
           Discord ({discordSections.length})
@@ -273,6 +278,7 @@ function DiscordChunk({ index, total, content, charCount }: DiscordChunkProps) {
       await navigator.clipboard.writeText(content);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      trackEvent('copy_clicked', { panel: 'markdown', discord_chunk: true });
     } catch {
       // Silently fail
     }

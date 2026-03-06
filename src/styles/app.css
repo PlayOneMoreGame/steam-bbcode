@@ -1,6 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/@fontsource/monoid@5.0.18/index.min.css');
-
 /* ==========================================================================
    CSS Variables - One Dark Pro Inspired Theme
    ========================================================================== */
@@ -63,17 +60,6 @@
   --steam-text: #c6d4df;
   --steam-font: 'Motiva Sans', Arial, Helvetica, sans-serif;
   
-  /* Markdown preview - neutral black & white for clarity */
-  --md-preview-bg: #ffffff;
-  --md-preview-text: #24292e;
-  --md-preview-text-muted: #586069;
-  --md-preview-border: #e1e4e8;
-  --md-preview-code-bg: #f6f8fa;
-  --md-preview-code-text: #24292e;
-  --md-preview-link: #0366d6;
-  --md-preview-quote-border: #dfe2e5;
-  --md-preview-quote-text: #6a737d;
-  
   /* Background pattern colors */
   --pattern-glow: rgba(97, 175, 239, 0.03);
   --pattern-grid: rgba(44, 50, 60, 0.5);
@@ -94,8 +80,8 @@
   --syntax-purple: #c678dd;
   
   /* Typography - Monoid for readability */
-  --font-mono: 'Monoid', 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -128,7 +114,7 @@ html {
 }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
@@ -143,11 +129,7 @@ body {
 .app {
   min-height: 100vh;
   padding: var(--spacing-md);
-  background-image:
-    radial-gradient(circle at 50% 0%, var(--pattern-glow) 0%, transparent 50%),
-    linear-gradient(var(--pattern-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--pattern-grid) 1px, transparent 1px);
-  background-size: 100% 100%, 24px 24px, 24px 24px;
+  background-color: var(--bg-primary);
 }
 
 .app-content {
@@ -179,25 +161,10 @@ body {
   font-family: var(--font-sans);
   font-size: clamp(24px, 4vw, 32px);
   font-weight: 700;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-}
-
-.title-md {
-  color: var(--text-secondary);
-}
-
-.title-arrow {
-  color: var(--text-inverse);
-  font-size: 0.75em;
-}
-
-.title-bb {
-  background: linear-gradient(135deg, #66c0f4 0%, var(--accent-blue) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .title-badge {
@@ -255,7 +222,7 @@ body {
   border-radius: var(--radius-sm);
   padding: var(--spacing-sm) 12px;
   font-size: 13px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   cursor: pointer;
   outline: none;
   transition: border-color 0.15s;
@@ -265,7 +232,7 @@ body {
   border-color: var(--text-muted);
 }
 
-.control-select:focus {
+.control-select:focus-visible {
   border-color: var(--accent-blue);
 }
 
@@ -346,9 +313,9 @@ body {
   min-height: 0; /* Allow flex children to shrink */
 }
 
-/* Three-column layout for large screens */
-.main-grid.three-panel {
-  grid-template-columns: 1fr 1fr 1fr;
+/* Two-column layout */
+.main-grid.two-panel {
+  grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr;
 }
 
@@ -365,10 +332,6 @@ body {
   flex-direction: column;
   min-height: var(--panel-min-height);
   transition: border-color 0.15s;
-}
-
-.panel-active {
-  border-color: var(--accent-blue);
 }
 
 .panel-header {
@@ -394,24 +357,6 @@ body {
   gap: var(--spacing-sm);
 }
 
-.preview-subtitle {
-  font-size: 9px;
-  font-weight: 400;
-  color: var(--text-dim);
-  text-transform: lowercase;
-  letter-spacing: 0.5px;
-}
-
-.panel-badge {
-  font-size: 9px;
-  padding: 3px 8px;
-  background-color: var(--bg-elevated);
-  color: var(--text-dim);
-  border-radius: 3px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
 .panel-actions {
   display: flex;
   gap: var(--spacing-sm);
@@ -433,14 +378,6 @@ body {
    Preview Tabs
    ========================================================================== */
 
-.preview-tabs {
-  display: flex;
-  gap: 2px;
-  background-color: var(--bg-elevated);
-  padding: 2px;
-  border-radius: var(--radius-sm);
-}
-
 .preview-tab {
   padding: 4px 10px;
   font-size: 10px;
@@ -461,6 +398,41 @@ body {
 .preview-tab.active {
   background-color: var(--accent-blue);
   color: var(--text-on-accent);
+}
+
+/* ==========================================================================
+   Output Panel (Preview + BBCode tabs)
+   ========================================================================== */
+
+.output-tabs {
+  display: flex;
+  gap: 2px;
+  background-color: var(--bg-elevated);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.output-bbcode-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bbcode-readonly {
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  user-select: all;
+  cursor: text;
 }
 
 /* ==========================================================================
@@ -522,7 +494,7 @@ body {
   background-color: var(--bg-elevated);
 }
 
-.lint-message.clickable:focus {
+.lint-message.clickable:focus-visible {
   outline: 1px solid var(--accent-blue);
   outline-offset: 1px;
 }
@@ -559,7 +531,7 @@ body {
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 500;
   letter-spacing: 0.3px;
   transition: background-color 0.15s, opacity 0.15s;
@@ -942,127 +914,6 @@ body {
 }
 
 /* ==========================================================================
-   Markdown Preview Styles - Neutral B&W (not Steam output)
-   ========================================================================== */
-
-.preview.preview-markdown {
-  background-color: var(--md-preview-bg);
-  color: var(--md-preview-text);
-  font-family: var(--font-sans);
-}
-
-.preview-markdown .md-h1 {
-  font-size: 1.75em;
-  font-weight: 600;
-  color: var(--md-preview-text);
-  margin: 0 0 0.75em 0;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--md-preview-border);
-}
-
-.preview-markdown .md-h2 {
-  font-size: 1.4em;
-  font-weight: 600;
-  color: var(--md-preview-text);
-  margin: 1.25em 0 0.5em 0;
-  padding-bottom: 0.2em;
-  border-bottom: 1px solid var(--md-preview-border);
-}
-
-.preview-markdown .md-h3 {
-  font-size: 1.15em;
-  font-weight: 600;
-  color: var(--md-preview-text);
-  margin: 1em 0 0.4em 0;
-}
-
-.preview-markdown .md-hr {
-  border: none;
-  border-top: 1px solid var(--md-preview-border);
-  margin: 1.5em 0;
-}
-
-.preview-markdown .md-code {
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  background: var(--md-preview-code-bg);
-  color: var(--md-preview-code-text);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-}
-
-.preview-markdown .md-codeblock {
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  background: var(--md-preview-code-bg);
-  color: var(--md-preview-code-text);
-  padding: 1em;
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-  margin: 1em 0;
-  border: 1px solid var(--md-preview-border);
-}
-
-.preview-markdown .md-codeblock code {
-  background: none;
-  padding: 0;
-  color: inherit;
-}
-
-.preview-markdown .md-link {
-  color: var(--md-preview-link);
-  text-decoration: none;
-}
-
-.preview-markdown .md-link:hover {
-  text-decoration: underline;
-}
-
-.preview-markdown .md-img {
-  max-width: 100%;
-  border-radius: var(--radius-sm);
-  margin: 0.5em 0;
-  border: 1px solid var(--md-preview-border);
-}
-
-.preview-markdown .md-quote {
-  border-left: 4px solid var(--md-preview-quote-border);
-  margin: 1em 0;
-  padding: 0.5em 1em;
-  color: var(--md-preview-quote-text);
-}
-
-.preview-markdown .md-list,
-.preview-markdown .md-olist {
-  margin: 0.75em 0;
-  padding-left: 1.5em;
-  color: var(--md-preview-text);
-}
-
-.preview-markdown .md-list li,
-.preview-markdown .md-olist li {
-  margin: 0.3em 0;
-}
-
-.preview-markdown strong {
-  color: var(--md-preview-text);
-  font-weight: 700;
-}
-
-.preview-markdown em {
-  font-style: italic;
-}
-
-.preview-markdown del {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-.preview-markdown p {
-  margin: 0.75em 0;
-}
-
-/* ==========================================================================
    Preview Panel
    ========================================================================== */
 
@@ -1175,17 +1026,7 @@ body {
   :root {
     --panel-min-height: 350px;
   }
-  
-  .main-grid.three-panel {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-  }
-  
-  /* Preview takes full width on second row */
-  .main-grid.three-panel .preview-panel {
-    grid-column: 1 / -1;
-  }
-  
+
   .title {
     font-size: 24px;
   }
@@ -1205,13 +1046,9 @@ body {
     padding: var(--spacing-sm);
   }
   
-  .main-grid.three-panel {
+  .main-grid.two-panel {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-  }
-  
-  .main-grid.three-panel .preview-panel {
-    grid-column: auto;
+    grid-template-rows: auto auto;
   }
   
   .header-top {
@@ -1272,10 +1109,6 @@ body {
   
   .btn {
     padding: 4px 8px;
-  }
-  
-  .footer-note {
-    font-size: 10px;
   }
 }
 
@@ -1378,7 +1211,7 @@ body {
   background: var(--bg-hover);
 }
 
-.dropdown-item:focus {
+.dropdown-item:focus-visible {
   outline: none;
   background: var(--bg-hover);
 }
@@ -1431,4 +1264,17 @@ body {
   background: var(--bg-input);
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
+}
+
+/* ==========================================================================
+   Reduced Motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

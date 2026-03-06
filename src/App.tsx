@@ -1,14 +1,15 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { MarkdownPanel, BBCodePanel, PreviewPanel, TagReference } from '@/components';
-import type { PreviewMode } from '@/components/PreviewPanel';
+import { MarkdownPanel, TagReference } from '@/components';
+import { OutputPanel } from '@/components/OutputPanel';
 import { markdownToBBCode } from '@/lib/converter';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
-import { useFileService, MD_FILTERS, BBCODE_FILTERS } from '@/hooks/useFileService';
+import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
 import { useRecentFiles } from '@/hooks/useRecentFiles';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 import { WELCOME_MARKDOWN } from '@/lib/welcome';
+import { trackEvent } from '@/lib/analytics';
 
 import '@/styles/app.css';
 import '@/styles/steam-theme.css';
@@ -16,70 +17,35 @@ import '@/styles/steam-theme.css';
 export function App() {
   // File service
   const { openFile, openFilePath, saveFileAs, isDesktop, currentFile } = useFileService();
-  
+
   // Recent files (desktop only)
   const { recentFiles, addRecentFile } = useRecentFiles();
-  
+
   // File names - null means we're showing the welcome doc
   const [mdFileName, setMdFileName] = useState<string | null>(null);
-  
+
   // Markdown content - always starts with welcome doc on fresh load
-  // (useState, not useLocalStorage, so welcome doc shows every time)
   const [markdown, setMarkdown] = useState(WELCOME_MARKDOWN);
-  
+
   // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
   const [showTagRef, setShowTagRef] = useState(false);
 
-  // Auto-save draft for crash recovery (but we don't auto-restore it)
+  // Auto-save draft for crash recovery
   const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
 
-  // Active editor tracking
-  const [activeEditor, setActiveEditor] = useState<PreviewMode>('markdown');
-
-  // Convert Markdown to BBCode
-  const { bbcode: convertedBBCode, notes } = useMemo(
+  // Convert Markdown to BBCode (derived state, not editable)
+  const { bbcode, notes } = useMemo(
     () => markdownToBBCode(markdown, context),
     [markdown, context]
   );
-
-  // BBCode state - starts with converted value, can be edited independently
-  const [bbcode, setBBCode] = useState(convertedBBCode);
-
-  // Track if user has manually edited BBCode
-  const [bbcodeModified, setBBCodeModified] = useState(false);
-  
-  // Sync BBCode with conversion when markdown changes (unless user has manually edited)
-  useEffect(() => {
-    if (!bbcodeModified) {
-      setBBCode(convertedBBCode);
-    }
-  }, [convertedBBCode, bbcodeModified]);
-
-  // When context changes, always re-convert
-  useEffect(() => {
-    setBBCode(convertedBBCode);
-    setBBCodeModified(false);
-  }, [context]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Handle BBCode changes (track that user has edited)
-  const handleBBCodeChange = useCallback((newBBCode: string) => {
-    setBBCodeModified(true);
-    setBBCode(newBBCode);
-  }, []);
-
-  // Revert BBCode to auto-converted version
-  const handleBBCodeRevert = useCallback(() => {
-    setBBCode(convertedBBCode);
-    setBBCodeModified(false);
-  }, [convertedBBCode]);
 
   // File operations
   const handleOpenMarkdown = useCallback(async () => {
     const content = await openFile(MD_FILTERS);
     if (content !== null) {
       setMarkdown(content);
-      setBBCodeModified(false);
+      trackEvent('file_opened', { source: 'dialog' });
     }
   }, [openFile, setMarkdown]);
 
@@ -91,22 +57,25 @@ export function App() {
     }
   }, [currentFile, addRecentFile]);
 
+  // Update window title with document name (Tauri only)
+  useEffect(() => {
+    if (!isDesktop) return;
+    const title = mdFileName
+      ? `${mdFileName} - SteamBBEditor`
+      : 'SteamBBEditor';
+    import('@tauri-apps/api/window').then(({ appWindow }) => {
+      appWindow.setTitle(title);
+    }).catch(() => {});
+  }, [mdFileName, isDesktop]);
+
   // Open a recent file by path
   const handleOpenRecentFile = useCallback(async (path: string) => {
     const content = await openFilePath(path);
     if (content !== null) {
       setMarkdown(content);
-      setBBCodeModified(false);
+      trackEvent('file_opened', { source: 'recent' });
     }
   }, [openFilePath, setMarkdown]);
-
-  const handleOpenBBCode = useCallback(async () => {
-    const content = await openFile(BBCODE_FILTERS);
-    if (content !== null) {
-      setBBCode(content);
-      setBBCodeModified(true);
-    }
-  }, [openFile]);
 
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';
@@ -117,11 +86,15 @@ export function App() {
     }
   }, [saveFileAs, markdown, mdFileName]);
 
-  const handleSaveBBCodeAs = useCallback(async () => {
-    const baseName = mdFileName?.replace(/\.(md|markdown)$/i, '') || 'steam-post';
-    const defaultName = `${baseName}.txt`;
-    await saveFileAs(bbcode, defaultName, BBCODE_FILTERS);
-  }, [saveFileAs, bbcode, mdFileName]);
+  // Copy BBCode to clipboard (for keyboard shortcut)
+  const handleCopyBBCode = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(bbcode);
+      trackEvent('copy_clicked', { panel: 'bbcode', source: 'shortcut' });
+    } catch {
+      // Silently fail — OutputPanel has its own copy button with feedback
+    }
+  }, [bbcode]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -131,23 +104,24 @@ export function App() {
         e.preventDefault();
         handleOpenMarkdown();
       }
-      // Cmd+S or Ctrl+S - Save As (context-aware)
+      // Cmd+S or Ctrl+S - Save As
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        if (activeEditor === 'markdown') {
-          handleSaveMarkdownAs();
-        } else {
-          handleSaveBBCodeAs();
-        }
+        handleSaveMarkdownAs();
+      }
+      // Cmd+Shift+C or Ctrl+Shift+C - Copy BBCode
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        handleCopyBBCode();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleOpenMarkdown, handleSaveMarkdownAs, handleSaveBBCodeAs, activeEditor]);
+  }, [handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode]);
 
   // Warn before leaving with unsaved changes
-  const hasChanges = markdown !== WELCOME_MARKDOWN || bbcodeModified;
+  const hasChanges = markdown !== WELCOME_MARKDOWN;
 
   useEffect(() => {
     if (!hasChanges) return;
@@ -161,15 +135,6 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
 
-  // Determine preview content based on active editor
-  const previewContent = activeEditor === 'markdown' ? markdown : bbcode;
-  const previewLabel = activeEditor === 'markdown' 
-    ? 'Source Preview' 
-    : 'Steam Preview';
-  const previewSubtitle = activeEditor === 'markdown'
-    ? '(not final output)'
-    : '(as it will appear)';
-
   return (
     <div className="app">
       <div className="app-content">
@@ -177,9 +142,7 @@ export function App() {
         <header className="header">
           <div className="header-top">
             <h1 className="title">
-              <span className="title-md">MD</span>
-              <span className="title-arrow">→</span>
-              <span className="title-bb">BB</span>
+              SteamBBEditor
               {isDesktop && <span className="title-badge">Desktop</span>}
             </h1>
 
@@ -189,7 +152,11 @@ export function App() {
                 <select
                   className="control-select"
                   value={context}
-                  onChange={(e) => setContext(e.target.value as SteamContext)}
+                  onChange={(e) => {
+                    const newContext = e.target.value as SteamContext;
+                    setContext(newContext);
+                    trackEvent('context_changed', { context: newContext });
+                  }}
                 >
                   {Object.entries(CONTEXT_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -198,7 +165,7 @@ export function App() {
                   ))}
                 </select>
               </div>
-              <button 
+              <button
                 className={`btn btn-sm ${showTagRef ? 'btn-active' : 'btn-secondary'}`}
                 onClick={() => setShowTagRef(!showTagRef)}
                 title="BBCode tag reference"
@@ -223,13 +190,11 @@ export function App() {
           {showTagRef && <TagReference />}
         </header>
 
-        {/* Three-panel layout */}
-        <main className="main-grid three-panel">
+        {/* Two-panel layout */}
+        <main className="main-grid two-panel">
           <MarkdownPanel
             value={markdown}
             onChange={setMarkdown}
-            onFocus={() => setActiveEditor('markdown')}
-            isActive={activeEditor === 'markdown'}
             fileName={mdFileName}
             onOpen={handleOpenMarkdown}
             onOpenRecent={handleOpenRecentFile}
@@ -238,57 +203,26 @@ export function App() {
             isDesktop={isDesktop}
           />
 
-          <BBCodePanel
-            value={bbcode}
-            onChange={handleBBCodeChange}
+          <OutputPanel
+            bbcode={bbcode}
             context={context}
-            onFocus={() => setActiveEditor('bbcode')}
-            isActive={activeEditor === 'bbcode'}
-            onOpen={handleOpenBBCode}
-            onSaveAs={handleSaveBBCodeAs}
-            onRevert={handleBBCodeRevert}
-            isModified={bbcodeModified}
+            isDesktop={isDesktop}
           />
-
-          <section className="panel preview-panel">
-            <div className="panel-header">
-              <span className="panel-label">
-                {previewLabel}
-                <span className="preview-subtitle">{previewSubtitle}</span>
-              </span>
-              <div className="preview-tabs">
-                <button
-                  className={`preview-tab ${activeEditor === 'markdown' ? 'active' : ''}`}
-                  onClick={() => setActiveEditor('markdown')}
-                >
-                  MD
-                </button>
-                <button
-                  className={`preview-tab ${activeEditor === 'bbcode' ? 'active' : ''}`}
-                  onClick={() => setActiveEditor('bbcode')}
-                >
-                  BB
-                </button>
-              </div>
-            </div>
-            <PreviewPanel content={previewContent} mode={activeEditor} />
-          </section>
         </main>
 
         {/* Footer */}
         <footer className="footer">
           <div className="footer-left">
-            {isDesktop && (
-              <span className="keyboard-hints">
-                <kbd>⌘O</kbd> Open
-                <kbd>⌘S</kbd> Save
-              </span>
-            )}
-            <span className="footer-label">Markdown → Steam BBCode</span>
-            <a 
-              href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose" 
-              target="_blank" 
-              rel="noopener" 
+            <span className="keyboard-hints">
+              <kbd>⌘O</kbd> Open
+              <kbd>⌘S</kbd> Save
+              <kbd>⌘⇧C</kbd> Copy BBCode
+            </span>
+            <span className="footer-label">SteamBBEditor</span>
+            <a
+              href="https://github.com/PlayOneMoreGame/steam-bbcode/issues/new/choose"
+              target="_blank"
+              rel="noopener"
               className="feedback-link"
             >
               Feedback
