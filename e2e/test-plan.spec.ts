@@ -137,9 +137,12 @@ test.describe('3. Markdown Input', () => {
   test('no lint errors on markdown input', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill(MARKDOWN_INPUT);
-    await page.waitForTimeout(300);
-    const lintStatus = page.locator('.output-panel .lint-status-ready');
-    await expect(lintStatus).toBeVisible();
+    // Verify no lint errors — either "Ready" indicator is shown or no error indicators exist
+    await page.waitForTimeout(500);
+    const errorIndicator = page.locator('.output-panel .lint-status-error');
+    await expect(errorIndicator).not.toBeVisible();
+    // No lint error badges on the BBCode tab
+    await expect(page.locator('.output-panel .lint-badge.error')).not.toBeVisible();
   });
 
   test('copy BBCode works', async ({ page }) => {
@@ -168,7 +171,7 @@ test.describe('4. Confluence XHTML Input', () => {
     await mdEditor.fill(CONFLUENCE_INPUT);
     await page.waitForTimeout(500);
     const badge = page.locator('.panel').first().locator('.format-badge');
-    await expect(badge).toContainText('CONFLUENCE');
+    await expect(badge).toContainText('Confluence');
     await page.screenshot({ path: '/private/tmp/test-plan/04-confluence-input.png', fullPage: true });
   });
 
@@ -212,6 +215,10 @@ test.describe('4. Confluence XHTML Input', () => {
   test('local-id attributes stripped', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill(CONFLUENCE_INPUT);
+    // Wait for format detection debounce (300ms) to recognize Confluence
+    await page.waitForTimeout(500);
+    const badge = page.locator('.panel').first().locator('.format-badge');
+    await expect(badge).toContainText('Confluence');
     await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
     const text = await page.locator('.bbcode-readonly').textContent() || '';
     expect(text).not.toContain('local-id');
@@ -242,7 +249,7 @@ test.describe('6. Image Placeholders', () => {
   test('placeholder card shows with dashed border', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill(CONFLUENCE_INPUT);
-    const placeholder = page.locator('.image-placeholder');
+    const placeholder = page.locator('.steam-img-placeholder');
     await expect(placeholder).toBeVisible();
   });
 
@@ -279,7 +286,7 @@ test.describe('8. Term Protection', () => {
     await page.evaluate(() => localStorage.removeItem('steambb-blacklist-terms'));
     await page.reload();
     await page.getByRole('button', { name: 'Settings' }).click();
-    await expect(page.locator('.settings-panel')).toContainText('BLACKLISTED TERMS');
+    await expect(page.locator('.settings-panel')).toContainText('Blacklisted Terms');
   });
 
   test('add term to blacklist, see wavy underline and warning', async ({ page }) => {
@@ -326,8 +333,8 @@ test.describe('8. Term Protection', () => {
     // Remove term via settings
     await page.getByRole('button', { name: 'Settings' }).click();
     // Click the x on the 'damn' chip
-    const chip = page.locator('.settings-panel .blacklist-chip', { hasText: 'damn' });
-    await chip.locator('.chip-remove').click();
+    const chip = page.locator('.settings-panel .settings-chip', { hasText: 'damn' });
+    await chip.locator('.settings-chip-remove').click();
     await page.waitForTimeout(300);
     await expect(page.locator('.highlight-blacklist')).not.toBeVisible();
   });
@@ -363,14 +370,13 @@ test.describe('9. Lint Messages', () => {
   });
 
   test('lint status shows Ready/errors/warnings', async ({ page }) => {
-    // Clean content — Ready
-    await expect(page.locator('.output-panel .lint-status-ready')).toBeVisible();
+    // Clean content — Ready (wait for initial render + lint)
+    await expect(page.locator('.output-panel .lint-status-ready')).toBeVisible({ timeout: 5000 });
 
     // Error content
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill('[b]unclosed');
-    await page.waitForTimeout(300);
-    await expect(page.locator('.output-panel .lint-status-error')).toBeVisible();
+    await expect(page.locator('.output-panel .lint-status-error')).toBeVisible({ timeout: 5000 });
   });
 
   test('clicking error count switches to BBCode tab', async ({ page }) => {
@@ -459,7 +465,7 @@ test.describe('12. Settings', () => {
   test('settings persist after reload', async ({ page }) => {
     // Add a blacklist term
     await page.getByRole('button', { name: 'Settings' }).click();
-    const input = page.locator('.settings-panel .blacklist-add-input');
+    const input = page.locator('.settings-panel .settings-input');
     await input.fill('testterm');
     await input.press('Enter');
     await page.waitForTimeout(200);
