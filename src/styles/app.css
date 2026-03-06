@@ -571,6 +571,67 @@ body {
   margin-left: 0;
 }
 
+/* Lint status indicator (header-level, visible on all tabs) */
+.lint-status {
+  font-size: 11px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.lint-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 50%;
+}
+
+.lint-status-error {
+  color: var(--accent-red);
+  background-color: var(--bg-red-subtle);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.lint-status-error:hover {
+  background-color: rgba(224, 108, 117, 0.25);
+}
+
+.lint-status-error:focus-visible {
+  outline: 1px solid var(--accent-red);
+  outline-offset: 1px;
+}
+
+.lint-status-error .lint-status-icon {
+  background-color: var(--accent-red);
+  color: var(--text-on-accent);
+}
+
+.lint-status-warning {
+  color: var(--accent-orange);
+  background-color: var(--bg-orange-subtle);
+}
+
+.lint-status-warning .lint-status-icon {
+  background-color: var(--accent-orange);
+  color: var(--text-inverse);
+}
+
+.lint-status-ready {
+  color: var(--accent-green);
+  background-color: var(--bg-green-subtle);
+}
+
 .lint-badge {
   display: inline-flex;
   align-items: center;
@@ -1336,6 +1397,141 @@ body {
   background: var(--bg-input);
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
+}
+
+/* ==========================================================================
+   Images Panel (Confluence image placeholder resolution)
+   ========================================================================== */
+
+.images-panel {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-primary);
+  background-color: var(--bg-tertiary);
+}
+
+.images-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-sm) 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.images-panel-header:hover {
+  background-color: var(--bg-elevated);
+}
+
+.images-panel-header:focus-visible {
+  outline: 1px solid var(--accent-blue);
+  outline-offset: -1px;
+}
+
+.images-panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.images-panel-status {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.images-panel-status.resolved {
+  color: var(--accent-green);
+}
+
+.images-panel-status.pending {
+  color: var(--text-muted);
+}
+
+.images-panel-toggle {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.images-panel-body {
+  padding: var(--spacing-sm) 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.images-panel-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: var(--spacing-xs) 0;
+}
+
+.images-panel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
+}
+
+.images-panel-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.images-panel-filename {
+  flex-shrink: 0;
+  max-width: 180px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.images-panel-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.images-panel-input:focus-visible {
+  border-color: var(--accent-blue);
+}
+
+.images-panel-input::placeholder {
+  color: var(--text-dim);
+}
+
+.images-panel-row-status {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.images-panel-row-status.resolved {
+  color: var(--accent-green);
+}
+
+.images-panel-row-status.pending {
+  color: var(--text-dim);
 }
 
 /* ==========================================================================

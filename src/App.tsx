@@ -4,6 +4,7 @@ import { OutputPanel } from '@/components/OutputPanel';
 import { markdownToBBCode } from '@/lib/converter';
 import { confluenceToBBCode } from '@/lib/confluence-converter';
 import { detectFormat, type InputFormat } from '@/lib/format-detector';
+import { extractPlaceholderImages, resolvePlaceholders, type ImageUrlMap } from '@/lib/image-placeholders';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
@@ -18,10 +19,10 @@ import '@/styles/steam-theme.css';
 
 export function App() {
   // File service
-  const { openFile, openFilePath, saveFileAs, isDesktop, currentFile } = useFileService();
+  const { openFile, saveFileAs, isDesktop, currentFile } = useFileService();
 
   // Recent files (desktop only)
-  const { recentFiles, addRecentFile } = useRecentFiles();
+  const { addRecentFile } = useRecentFiles();
 
   // File names - null means we're showing the welcome doc
   const [mdFileName, setMdFileName] = useState<string | null>(null);
@@ -65,6 +66,49 @@ export function App() {
     [markdown, context, detectedFormat]
   );
 
+  // Image placeholder state — maps filename to Steam URL
+  const [imageUrls, setImageUrls] = useState<ImageUrlMap>({});
+
+  // Extract placeholder filenames from BBCode
+  const placeholderImages = useMemo(
+    () => extractPlaceholderImages(bbcode),
+    [bbcode]
+  );
+
+  // Resolve placeholders in BBCode using user-provided URLs
+  const resolvedBBCode = useMemo(
+    () => resolvePlaceholders(bbcode, imageUrls),
+    [bbcode, imageUrls]
+  );
+
+  // Handle image URL changes from the Images panel
+  const handleImageUrlChange = useCallback((filename: string, url: string) => {
+    setImageUrls(prev => ({ ...prev, [filename]: url }));
+  }, []);
+
+  // Clear image URLs when content changes significantly (new file opened)
+  const prevPlaceholdersRef = useRef<string[]>([]);
+  useEffect(() => {
+    const prev = prevPlaceholdersRef.current;
+    const curr = placeholderImages;
+    // If the set of filenames changed completely, reset the URL map
+    // but preserve URLs for filenames that still exist
+    if (prev.length > 0 && curr.length > 0) {
+      const currSet = new Set(curr);
+      const removed = prev.filter(f => !currSet.has(f));
+      if (removed.length > 0) {
+        setImageUrls(prevUrls => {
+          const next = { ...prevUrls };
+          for (const f of removed) {
+            delete next[f];
+          }
+          return next;
+        });
+      }
+    }
+    prevPlaceholdersRef.current = curr;
+  }, [placeholderImages]);
+
   // File operations
   const handleOpenMarkdown = useCallback(async () => {
     const content = await openFile(MD_FILTERS);
@@ -93,15 +137,6 @@ export function App() {
     }).catch(() => {});
   }, [mdFileName, isDesktop]);
 
-  // Open a recent file by path
-  const handleOpenRecentFile = useCallback(async (path: string) => {
-    const content = await openFilePath(path);
-    if (content !== null) {
-      setMarkdown(content);
-      trackEvent('file_opened', { source: 'recent' });
-    }
-  }, [openFilePath, setMarkdown]);
-
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';
     const savedPath = await saveFileAs(markdown, defaultName, MD_FILTERS);
@@ -114,12 +149,12 @@ export function App() {
   // Copy BBCode to clipboard (for keyboard shortcut)
   const handleCopyBBCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(bbcode);
+      await navigator.clipboard.writeText(resolvedBBCode);
       trackEvent('copy_clicked', { panel: 'bbcode', source: 'shortcut' });
     } catch {
       // Silently fail — OutputPanel has its own copy button with feedback
     }
-  }, [bbcode]);
+  }, [resolvedBBCode]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -222,18 +257,18 @@ export function App() {
             onChange={setMarkdown}
             fileName={mdFileName}
             onOpen={handleOpenMarkdown}
-            onOpenRecent={handleOpenRecentFile}
             onSaveAs={handleSaveMarkdownAs}
-            recentFiles={recentFiles}
-            isDesktop={isDesktop}
             detectedFormat={detectedFormat}
             context={context}
           />
 
           <OutputPanel
-            bbcode={bbcode}
+            bbcode={resolvedBBCode}
             context={context}
             isDesktop={isDesktop}
+            placeholderImages={placeholderImages}
+            imageUrls={imageUrls}
+            onImageUrlChange={handleImageUrlChange}
           />
         </main>
 

@@ -35,8 +35,18 @@ export function bbcodeToHTML(bbcode: string): string {
   html = html.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, '<a href="$1" class="steam-link" target="_blank" rel="noopener">$2</a>');
   html = html.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, '<a href="$1" class="steam-link" target="_blank" rel="noopener">$1</a>');
 
-  // Images
-  html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, '<img src="$1" class="steam-img" alt="" loading="lazy" />');
+  // Images — placeholder cards for Confluence attachments, normal img for URLs
+  html = html.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, (_match, src: string) => {
+    const placeholderMatch = src.match(/^\{placeholder:(.+)\}$/);
+    if (placeholderMatch) {
+      const filename = placeholderMatch[1]
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<div class="steam-img-placeholder"><div class="steam-img-placeholder-icon">&#x1F5BC;</div><div class="steam-img-placeholder-filename">${filename}</div><div class="steam-img-placeholder-hint">Enter Steam URL in Images panel</div></div>`;
+    }
+    return `<img src="${src}" class="steam-img" alt="" loading="lazy" />`;
+  });
 
   // YouTube videos (previewyoutube tag)
   html = html.replace(

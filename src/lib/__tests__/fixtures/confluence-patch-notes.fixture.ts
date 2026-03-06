@@ -111,7 +111,7 @@ export const SWAPMEAT_019_PATCH_NOTES = `<h2 local-id="8c8c629dc341"><strong><u>
 export const SWAPMEAT_019_EXPECTED_BBCODE = `[h2]Shrines[/h2]
 Shrines are large monuments found around planets that players can interact with to gain a global Boon (buff), and sometimes are paired with a Curse (debuff), that lasts for a period of time, for the duration of the planet, or for the duration of a run.
 
-[img]Shrine_InGame_FirstPass_PatchEmbed.gif[/img]
+[img]{placeholder:Shrine_InGame_FirstPass_PatchEmbed.gif}[/img]
 
 Players will be able to see a Shrine icon on the compass when they are within range. When a player finds the Shrine, it will be in a deactivated state. A player holds F to interact with the Shrine to begin the powering up process.
 
@@ -137,18 +137,18 @@ Modifications can be added to enemies and players based on these outcomes. If yo
 [list]
 [*]It shoots slow moving lasers out of its mouth, runs away if you get too close, and splits in two on death (twice). Squish them Meat Pug Pups!
 [*]We\u2019re mulling over whether splitting twice is too much or dumb fun. Would love feedback on that.
-[*][img]MeatPugs_01.gif[/img]
-[*][img]MeatPugs_02.gif[/img]
+[*][img]{placeholder:MeatPugs_01.gif}[/img]
+[*][img]{placeholder:MeatPugs_02.gif}[/img]
 [/list]
 [/list]
 
 [h2]Animation[/h2]
-[img]squatsstaggers.gif[/img]
-[img]MusclemManstagGif.gif[/img]
+[img]{placeholder:squatsstaggers.gif}[/img]
+[img]{placeholder:MusclemManstagGif.gif}[/img]
 
 New stagger animations for Squat Daddy, Dirtbag, Buster, Looger, Buzzle and Pestie. Here are a couple examples
 
-[img]LittleAlienAttackGif.gif[/img]
+[img]{placeholder:LittleAlienAttackGif.gif}[/img]
 
 New animations for Little Alien across the board so he can show off his personality.
 
@@ -156,13 +156,13 @@ New animations for Little Alien across the board so he can show off his personal
 [list]
 [*]New Flair Terminal UI
 Same functionality, new graphics! Players can still unlock and upgrade flair at the terminal. Stay tuned for more updates to come!
-[img]image-20260303-004331.png[/img]
+[img]{placeholder:image-20260303-004331.png}[/img]
 [*]Exposed more detailed graphics options in the options menu. Vsync, target framerate, Anistropic Filtering, Anti-aliasing, texture and particle detail levels and more. You can still adjust the overall quality level of the graphics, but now you can also tweak individual settings to taste.
 [*]The Employee Handbook\u2019s FAQ tab now has an entry detailing Elements.
-[img]Screenshot 2026-03-04 at 1.09.26 PM.png[/img]
+[img]{placeholder:Screenshot 2026-03-04 at 1.09.26 PM.png}[/img]
 [*]Font updates are rolling out so you may notice some issues as we change things around.
 [*]Damage numbers have been tweaked to make it easier to read, they no longer add up and damage numbers are shown individually.
-[img]DamageNumbers.gif[/img]
+[img]{placeholder:DamageNumbers.gif}[/img]
 [/list]
 
 [h2]Art[/h2]
@@ -171,16 +171,16 @@ Same functionality, new graphics! Players can still unlock and upgrade flair at 
 [*]Added sub regions/biomes to Barbecuria to help with navigation and give the map more character
 [/list]
 
-[img]BarbecuriaRework01.png[/img]
+[img]{placeholder:BarbecuriaRework01.png}[/img]
 Fungal Forest
 
-[img]Barbecuria02.png[/img]
+[img]{placeholder:Barbecuria02.png}[/img]
 Sand Worm Desert
 
-[img]Barbecuria03.png[/img]
+[img]{placeholder:Barbecuria03.png}[/img]
 Payload Exit in the Fungal Forest
 
-[img]Barbecuria04.png[/img]
+[img]{placeholder:Barbecuria04.png}[/img]
 The Crag Pools
 
 [list]
@@ -219,7 +219,7 @@ The Crag Pools
 
 // Notes on conversion decisions:
 // 1. <h2><strong><u>Text</u></strong></h2> → [h2]Text[/h2] (strip redundant bold/underline inside headings)
-// 2. <ac:image><ri:attachment ri:filename="X" /> → [img]X[/img] (filename only — needs URL resolution for Steam)
+// 2. <ac:image><ri:attachment ri:filename="X" /> → [img]{placeholder:X}[/img] (placeholder — needs URL resolution in Images panel)
 // 3. <ac:caption><p>Text</p></ac:caption> → Text on line after image (no BBCode caption tag)
 // 4. <p> inside <li> → strip the <p> wrapper, just use the text content
 // 5. Nested <ul> inside <li> → nested [list] (Steam supports this in Announcements)

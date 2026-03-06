@@ -222,6 +222,51 @@ describe('lintBBCode', () => {
     });
   });
 
+  describe('image placeholders', () => {
+    it('warns about unresolved placeholder images', () => {
+      const bbcode = '[img]{placeholder:screenshot.png}[/img]';
+      const result = lintBBCode(bbcode, 'announcements');
+      expect(result.warnings.some(w =>
+        w.message.includes("Image 'screenshot.png'") && w.message.includes('upload to Steam')
+      )).toBe(true);
+    });
+
+    it('warns about each unresolved placeholder', () => {
+      const bbcode = '[img]{placeholder:a.png}[/img]\n[img]{placeholder:b.png}[/img]';
+      const result = lintBBCode(bbcode, 'announcements');
+      const placeholderWarnings = result.warnings.filter(w => w.message.includes('upload to Steam'));
+      expect(placeholderWarnings).toHaveLength(2);
+      expect(placeholderWarnings[0].message).toContain("'a.png'");
+      expect(placeholderWarnings[1].message).toContain("'b.png'");
+    });
+
+    it('includes correct line number for placeholder warning', () => {
+      const bbcode = 'Some text\n[img]{placeholder:test.png}[/img]';
+      const result = lintBBCode(bbcode, 'announcements');
+      const warning = result.warnings.find(w => w.message.includes("'test.png'"));
+      expect(warning?.line).toBe(2);
+    });
+
+    it('includes help text for placeholder warning', () => {
+      const bbcode = '[img]{placeholder:test.png}[/img]';
+      const result = lintBBCode(bbcode, 'announcements');
+      const warning = result.warnings.find(w => w.message.includes("'test.png'"));
+      expect(warning?.help).toContain('Images panel');
+    });
+
+    it('does not warn about resolved (non-placeholder) images', () => {
+      const bbcode = '[img]https://cdn.steam.com/img.png[/img]';
+      const result = lintBBCode(bbcode, 'announcements');
+      expect(result.warnings.filter(w => w.message.includes('upload to Steam'))).toHaveLength(0);
+    });
+
+    it('marks placeholder warning lines', () => {
+      const bbcode = '[img]{placeholder:test.png}[/img]';
+      const result = lintBBCode(bbcode, 'announcements');
+      expect(result.warningLines.has(1)).toBe(true);
+    });
+  });
+
   describe('character limits', () => {
     it('reports error when exceeding limit', () => {
       const longText = '[b]' + 'a'.repeat(10000) + '[/b]';

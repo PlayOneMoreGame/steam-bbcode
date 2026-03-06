@@ -149,20 +149,20 @@ describe('confluenceToBBCode', () => {
   });
 
   describe('images', () => {
-    it('converts ac:image with ri:attachment to [img]', () => {
+    it('converts ac:image with ri:attachment to placeholder [img]', () => {
       const result = confluenceToBBCode(
         '<ac:image><ri:attachment ri:filename="test.png" /></ac:image>',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]test.png[/img]');
+      expect(result.bbcode).toContain('[img]{placeholder:test.png}[/img]');
     });
 
-    it('preserves filenames with spaces', () => {
+    it('preserves filenames with spaces in placeholder', () => {
       const result = confluenceToBBCode(
         '<ac:image><ri:attachment ri:filename="Screenshot 2026-03-04 at 1.09.26 PM.png" /></ac:image>',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]Screenshot 2026-03-04 at 1.09.26 PM.png[/img]');
+      expect(result.bbcode).toContain('[img]{placeholder:Screenshot 2026-03-04 at 1.09.26 PM.png}[/img]');
     });
 
     it('extracts caption text after image', () => {
@@ -170,7 +170,7 @@ describe('confluenceToBBCode', () => {
         '<ac:image><ri:attachment ri:filename="map.png" /><ac:caption><p>The World Map</p></ac:caption></ac:image>',
         'announcements'
       );
-      expect(result.bbcode).toContain('[img]map.png[/img]');
+      expect(result.bbcode).toContain('[img]{placeholder:map.png}[/img]');
       expect(result.bbcode).toContain('The World Map');
     });
 

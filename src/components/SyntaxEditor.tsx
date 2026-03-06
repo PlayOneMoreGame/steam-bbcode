@@ -141,34 +141,18 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const textarea = e.currentTarget;
-    
-    // Tab key - insert spaces instead of changing focus
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      
-      // Insert 2 spaces
-      const newValue = value.substring(0, start) + '  ' + value.substring(end);
-      onChange(newValue);
-      
-      // Move cursor after the inserted spaces
-      requestAnimationFrame(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-      });
-    }
-    
+
     // Ctrl+S / Cmd+S - Save
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       onSave?.();
     }
-    
+
     // Escape - Blur editor
     if (e.key === 'Escape') {
       textarea.blur();
     }
-  }, [value, onChange, onSave]);
+  }, [onSave]);
 
   return (
     <div className="syntax-editor">

@@ -62,7 +62,7 @@ describe('converter routing', () => {
     expect(result.bbcode).not.toContain('<ac:');
     // Should contain BBCode
     expect(result.bbcode).toContain('[b]world[/b]');
-    expect(result.bbcode).toContain('[img]screenshot.png[/img]');
+    expect(result.bbcode).toContain('[img]{placeholder:screenshot.png}[/img]');
   });
 
   it('respects Steam context for both converters', () => {

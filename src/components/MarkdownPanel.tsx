@@ -5,7 +5,6 @@ import { lintConfluence } from '@/lib/confluence-linter';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { InputFormat } from '@/lib/format-detector';
-import type { RecentFile } from '@/hooks/useRecentFiles';
 import { trackEvent } from '@/lib/analytics';
 
 /** Labels shown in the format badge */
@@ -29,10 +28,7 @@ interface MarkdownPanelProps {
   onChange: (value: string) => void;
   fileName: string | null;
   onOpen: () => void;
-  onOpenRecent?: (path: string) => void;
   onSaveAs: () => void;
-  recentFiles?: RecentFile[];
-  isDesktop?: boolean;
   detectedFormat?: InputFormat;
   context?: SteamContext;
 }
@@ -42,17 +38,11 @@ export function MarkdownPanel({
   onChange,
   fileName,
   onOpen,
-  onOpenRecent,
   onSaveAs,
-  recentFiles = [],
-  isDesktop = false,
   detectedFormat = 'markdown',
   context = 'announcements',
 }: MarkdownPanelProps) {
-  const [copyFeedback, setCopyFeedback] = useState('');
   const [showDiscord, setShowDiscord] = useState(false);
-  const [showRecentFiles, setShowRecentFiles] = useState(false);
-  const [savedValue, setSavedValue] = useState(value);
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
   const editorRef = useRef<SyntaxEditorHandle>(null);
 
@@ -90,43 +80,33 @@ export function MarkdownPanel({
     [value]
   );
 
-  const hasIssues = lintResult.errors.length > 0 || 
-                    lintResult.warnings.length > 0 || 
+  const hasIssues = lintResult.errors.length > 0 ||
+                    lintResult.warnings.length > 0 ||
                     lintResult.info.length > 0;
 
-  const isDirty = value !== savedValue;
-
-  const handleSaveAs = useCallback(() => {
-    onSaveAs();
-    setSavedValue(value);
-  }, [onSaveAs, value]);
-
-  const handleRevert = useCallback(() => {
-    onChange(savedValue);
-  }, [onChange, savedValue]);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopyFeedback('Copied!');
-      setTimeout(() => setCopyFeedback(''), 2000);
-      trackEvent('copy_clicked', { panel: 'markdown' });
-    } catch {
-      setCopyFeedback('Failed');
-      setTimeout(() => setCopyFeedback(''), 2000);
-    }
-  }, [value]);
-
   // Handle paste: intercept clipboard HTML to detect Confluence content
+  // If the editor has content and a cursor position, insert at cursor instead of replacing
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData('text/html');
     if (html && isConfluenceHtml(html)) {
       e.preventDefault();
-      onChange(html);
+      const textarea = e.currentTarget;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const hasExistingContent = value.trim().length > 0;
+
+      if (hasExistingContent) {
+        // Insert at cursor position instead of replacing everything
+        const newValue = value.substring(0, start) + html + value.substring(end);
+        onChange(newValue);
+      } else {
+        // Empty editor — replace entirely
+        onChange(html);
+      }
       trackEvent('paste_confluence', { source: 'clipboard_html' });
     }
     // Otherwise, let the default paste (plain text) happen naturally
-  }, [onChange]);
+  }, [onChange, value]);
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
@@ -141,17 +121,6 @@ export function MarkdownPanel({
       editorRef.current.scrollToLine(msg.line, msg.column, msg.length);
     }
   }, []);
-
-  // Update saved value when file is opened
-  const handleOpen = useCallback(() => {
-    onOpen();
-    // Note: savedValue will be updated after content changes
-  }, [onOpen]);
-
-  // When value changes from file open, update saved state
-  // This is a bit hacky - ideally we'd have a callback after open completes
-  // For now, we track if the value changed significantly
-  
   return (
     <section className="panel">
       <div className="panel-header">
@@ -161,71 +130,20 @@ export function MarkdownPanel({
             {FORMAT_LABELS[detectedFormat]}
           </span>
           {fileName && <span className="file-name" title={fileName}>{fileName}</span>}
-          {isDirty && <span className="modified-indicator" title="Unsaved changes">●</span>}
+        </span>
+        <div className="panel-actions">
           {lintResult.errors.length > 0 && (
             <span className="lint-badge error">{lintResult.errors.length}</span>
           )}
           {lintResult.warnings.length > 0 && (
             <span className="lint-badge warning">{lintResult.warnings.length}</span>
           )}
-        </span>
-        <div className="panel-actions">
-          <div className="btn-group">
-            <button 
-              className="btn btn-secondary" 
-              onClick={handleOpen}
-              title="Open file (Cmd+O)"
-            >
-              Open
-            </button>
-            {isDesktop && recentFiles.length > 0 && (
-              <>
-                <button
-                  className="btn btn-secondary btn-dropdown"
-                  onClick={() => setShowRecentFiles(!showRecentFiles)}
-                  title="Recent files"
-                >
-                  ▾
-                </button>
-                {showRecentFiles && (
-                  <div className="dropdown-menu">
-                    <div className="dropdown-header">Recent Files</div>
-                    {recentFiles.map((file) => (
-                      <button
-                        key={file.path}
-                        className="dropdown-item"
-                        onClick={() => {
-                          onOpenRecent?.(file.path);
-                          setShowRecentFiles(false);
-                        }}
-                        title={file.path}
-                      >
-                        {file.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          {isDirty && (
-            <button 
-              className="btn btn-secondary" 
-              onClick={handleRevert}
-              title="Revert to last saved state"
-            >
-              Revert
-            </button>
-          )}
-          <button 
-            className="btn btn-secondary" 
-            onClick={handleSaveAs}
-            title="Save As (Cmd+S)"
+          <button
+            className="btn btn-secondary"
+            onClick={onOpen}
+            title="Open file (Cmd+O)"
           >
-            Save As
-          </button>
-          <button className="btn btn-secondary" onClick={handleCopy} title="Copy Markdown source">
-            {copyFeedback || 'Copy MD'}
+            Open
           </button>
         </div>
       </div>
@@ -244,7 +162,7 @@ export function MarkdownPanel({
                   tabIndex={0}
                 >
                   <span className="lint-icon">✗</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  {msg.line && <span className="lint-line">Line {msg.line}</span>}
                   <span className="lint-text">{msg.message}</span>
                   {msg.help && (
                     <button
@@ -273,7 +191,7 @@ export function MarkdownPanel({
                   tabIndex={0}
                 >
                   <span className="lint-icon">⚠</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  {msg.line && <span className="lint-line">Line {msg.line}</span>}
                   <span className="lint-text">{msg.message}</span>
                   {msg.help && (
                     <button
@@ -302,7 +220,7 @@ export function MarkdownPanel({
                   tabIndex={0}
                 >
                   <span className="lint-icon">ℹ</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
+                  {msg.line && <span className="lint-line">Line {msg.line}</span>}
                   <span className="lint-text">{msg.message}</span>
                   {msg.help && (
                     <button
@@ -331,7 +249,7 @@ export function MarkdownPanel({
         placeholder="Paste your Markdown here, or click Open to load a file..."
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
-        onSave={handleSaveAs}
+        onSave={onSaveAs}
         onPaste={handlePaste}
       />
 

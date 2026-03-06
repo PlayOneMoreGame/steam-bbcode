@@ -65,6 +65,29 @@ describe('bbcodeToHTML', () => {
       expect(html).toContain('src="https://example.com/img.png"');
       expect(html).toContain('loading="lazy"');
     });
+
+    it('renders placeholder card for Confluence image attachments', () => {
+      const html = bbcodeToHTML('[img]{placeholder:screenshot.png}[/img]');
+      expect(html).toContain('steam-img-placeholder');
+      expect(html).toContain('screenshot.png');
+      expect(html).toContain('Enter Steam URL in Images panel');
+      expect(html).not.toContain('<img');
+    });
+
+    it('escapes HTML in placeholder filenames', () => {
+      // The renderer escapes < and > globally before processing [img] tags,
+      // so angle brackets in filenames are already escaped when the placeholder
+      // handler runs. Verify no raw <script> tags appear.
+      const html = bbcodeToHTML('[img]{placeholder:<script>alert(1)</script>.png}[/img]');
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('steam-img-placeholder');
+    });
+
+    it('renders normal img for non-placeholder URLs', () => {
+      const html = bbcodeToHTML('[img]https://cdn.steam.com/real.png[/img]');
+      expect(html).toContain('<img src="https://cdn.steam.com/real.png"');
+      expect(html).not.toContain('steam-img-placeholder');
+    });
   });
 
   describe('youtube', () => {
