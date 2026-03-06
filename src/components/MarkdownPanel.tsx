@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useRef, type MouseEvent } from 'react';
 import { SyntaxEditor, type SyntaxEditorHandle } from './SyntaxEditor';
 import { lintMarkdown } from '@/lib/markdown-linter';
-import { lintConfluence } from '@/lib/confluence-linter';
+import { confluenceToMarkdown } from '@/lib/confluence-converter';
+import { plaintextToMarkdown } from '@/lib/plaintext-normalizer';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { InputFormat } from '@/lib/format-detector';
@@ -63,22 +64,11 @@ export function MarkdownPanel({
     });
   }, []);
 
-  // Use the appropriate linter based on detected format
-  const lintResult = useMemo(() => {
-    if (detectedFormat === 'confluence') {
-      // Confluence linter returns LintResult (errors, warnings, errorLines, warningLines)
-      // but MarkdownLintResult also has `info`. Normalize the shape.
-      const result = lintConfluence(value, context);
-      return {
-        errors: result.errors,
-        warnings: result.warnings,
-        info: [] as { type: 'info'; message: string; line?: number; help?: string }[],
-        errorLines: result.errorLines,
-        warningLines: result.warningLines,
-      };
-    }
-    return lintMarkdown(value, { blacklist });
-  }, [value, detectedFormat, context, blacklist]);
+  // Lint the editor content (always markdown)
+  const lintResult = useMemo(
+    () => lintMarkdown(value, { blacklist }),
+    [value, blacklist]
+  );
   const discordSections = useMemo(
     () => splitForDiscord(value, CHAR_LIMITS.discord),
     [value]
@@ -88,17 +78,31 @@ export function MarkdownPanel({
                     lintResult.warnings.length > 0 ||
                     lintResult.info.length > 0;
 
-  // Handle paste: intercept clipboard HTML to detect Confluence content
-  // Always replaces entire editor — Confluence paste is a "load document" action, not an insert
+  // Handle paste: normalize input to markdown regardless of source
+  // Confluence HTML → confluenceToMarkdown, plain text → plaintextToMarkdown
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData('text/html');
     if (html && isConfluenceHtml(html)) {
       e.preventDefault();
-      onChange(html);
+      const { markdown } = confluenceToMarkdown(html, context);
+      onChange(markdown);
       trackEvent('paste_confluence', { source: 'clipboard_html' });
+      return;
     }
-    // Otherwise, let the default paste (plain text) happen naturally
-  }, [onChange]);
+
+    // Plain text paste — apply light markdown formatting if structured
+    const plain = e.clipboardData.getData('text/plain');
+    if (plain && !html) {
+      const normalized = plaintextToMarkdown(plain);
+      if (normalized !== plain) {
+        e.preventDefault();
+        onChange(normalized);
+        trackEvent('paste_plaintext', { source: 'clipboard_plain', normalized: true });
+        return;
+      }
+    }
+    // Unstructured text — let default paste behavior handle it
+  }, [onChange, context]);
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;

@@ -4,7 +4,6 @@ import { OutputPanel, type TranslationState } from '@/components/OutputPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm } from '@/lib/blacklist-store';
 import { markdownToBBCode } from '@/lib/converter';
-import { confluenceToBBCode } from '@/lib/confluence-converter';
 import { detectFormat, type InputFormat } from '@/lib/format-detector';
 import { extractPlaceholderImages } from '@/lib/image-placeholders';
 import { translateBBCode, hashString } from '@/lib/translation-service';
@@ -76,15 +75,10 @@ export function App() {
   // Auto-save draft for crash recovery
   const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
 
-  // Convert to BBCode using the appropriate converter based on detected format
+  // Convert editor markdown to BBCode — one pipeline, no exceptions
   const { bbcode, notes } = useMemo(
-    () => {
-      if (detectedFormat === 'confluence') {
-        return confluenceToBBCode(markdown, context);
-      }
-      return markdownToBBCode(markdown, context);
-    },
-    [markdown, context, detectedFormat]
+    () => markdownToBBCode(markdown, context),
+    [markdown, context]
   );
 
   // In-memory image store for drag-and-drop / pasted images

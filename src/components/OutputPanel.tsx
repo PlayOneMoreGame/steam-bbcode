@@ -315,7 +315,6 @@ export function OutputPanel({
             </div>
           )}
 
-          {/* Read-only BBCode display */}
           <pre className="bbcode-readonly">{bbcode}</pre>
         </div>
       ) : (
@@ -481,3 +480,4 @@ function TranslationTabContent({
     </div>
   );
 }
+

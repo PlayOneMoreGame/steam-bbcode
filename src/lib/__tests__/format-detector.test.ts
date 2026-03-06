@@ -96,6 +96,11 @@ describe('detectFormat', () => {
       expect(detectFormat(mixed)).toBe('confluence');
     });
 
+    it('prioritizes confluence over bbcode when both present', () => {
+      const mixed = '<ac:image><ri:attachment ri:filename="test.png" /></ac:image>\n[h1]Title[/h1]\n[list]\n[*]Item\n[/list]';
+      expect(detectFormat(mixed)).toBe('confluence');
+    });
+
     it('handles single markdown marker as plaintext (low confidence)', () => {
       // A single asterisk in normal text should not trigger markdown
       expect(detectFormat('I rated it 5 * out of 5')).toBe('plaintext');

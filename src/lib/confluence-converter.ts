@@ -1,42 +1,43 @@
-// Confluence XHTML storage format to Steam BBCode converter
-// Pure functions, uses browser-native DOMParser
+// Confluence XHTML → Markdown converter
+// Normalizes Confluence HTML (both storage format and rendered clipboard)
+// into clean Markdown for the editor. Pure functions, browser-native DOMParser.
 
 import type { SteamContext } from './contexts';
-import type { ConversionResult } from './converter';
+
+// Output format for the DOM walker (markdown is the only public path;
+// bbcode kept internally for the walker's format-aware branches)
+type OutputFormat = 'bbcode' | 'markdown';
 
 /**
- * Convert Confluence XHTML storage format to Steam BBCode.
+ * Convert Confluence XHTML to clean Markdown for the editor.
  *
  * Uses DOMParser to parse the XHTML into a DOM tree, then walks it
- * recursively to produce BBCode output. This runs in the browser
- * (both web build and Tauri webview) where DOMParser is always available.
+ * recursively to produce readable Markdown. The markdownToBBCode converter
+ * then generates BBCode from this for the output panel.
+ *
+ * Handles both Confluence storage format (ac:/ri: namespaced tags) and
+ * rendered clipboard HTML (data-renderer-start-pos, blob: URLs, etc.).
  */
-export function confluenceToBBCode(xhtml: string, context: SteamContext): ConversionResult {
+export function confluenceToMarkdown(xhtml: string, context: SteamContext): { markdown: string; notes: string[] } {
   const notes: string[] = [];
   const parser = new DOMParser();
 
-  // Wrap in a root element to ensure valid HTML for the parser
   const doc = parser.parseFromString(`<div>${xhtml}</div>`, 'text/html');
   const root = doc.body.firstElementChild!;
 
-  const bbcode = processNode(root, notes, context).trim();
+  const markdown = processNode(root, notes, context, 'markdown').trim();
 
   // Post-processing cleanup
-  let cleaned = bbcode;
+  let cleaned = markdown;
   // Collapse 3+ newlines to 2 (blank line)
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-  // Remove blank line between heading and following content (heading → single newline → content)
-  cleaned = cleaned.replace(/(\[\/h[123]\])\n\n/g, '$1\n');
   // Consecutive image drop markers should have single newline between them
-  cleaned = cleaned.replace(/(<<<\[\/b\])\n\n(\[b\]>>>)/g, '$1\n$2');
-  // Ensure blank line before [list] when preceded by plain text (captions, paragraphs)
-  // but NOT after headings or other list closings
-  cleaned = cleaned.replace(/([^\n\]])\n(\[(?:list|olist)\])/g, '$1\n\n$2');
+  cleaned = cleaned.replace(/(<<<\*\*)\n\n(\*\*>>>)/g, '$1\n$2');
 
-  return { bbcode: cleaned.trim(), notes };
+  return { markdown: cleaned.trim(), notes };
 }
 
-function processNode(node: Node, notes: string[], context: SteamContext): string {
+function processNode(node: Node, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent || '';
   }
@@ -51,17 +52,17 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
   // Handle Confluence-specific namespaced elements
   // DOMParser lowercases tag names and strips namespace colons in text/html mode
   if (tag === 'ac:image' || tag === 'ac-image') {
-    return processConfluenceImage(el, notes);
+    return processConfluenceImage(el, notes, fmt);
   }
   if (tag === 'ac:link' || tag === 'ac-link') {
-    return processConfluenceLink(el, notes);
+    return processConfluenceLink(el, notes, fmt);
   }
   if (tag === 'ac:structured-macro' || tag === 'ac-structured-macro') {
-    return processConfluenceMacro(el, notes, context);
+    return processConfluenceMacro(el, notes, context, fmt);
   }
   if (tag === 'ac:caption' || tag === 'ac-caption') {
     // Caption text follows the image on the next line
-    return processChildren(el, notes, context).trim();
+    return processChildren(el, notes, context, fmt).trim();
   }
 
   // Skip namespace-internal elements that shouldn't produce output directly
@@ -70,16 +71,15 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
   }
   if (tag.startsWith('ac:') || tag.startsWith('ac-')) {
     // For unhandled ac: elements, just process children
-    return processChildren(el, notes, context);
+    return processChildren(el, notes, context, fmt);
   }
 
   // Rendered clipboard: media wrapper div with data-file-name
-  // Structure: <div data-node-type="mediaSingle"><div data-file-name="x.gif"><img src="blob:..."></div><div data-media-caption="true">caption</div></div>
   if (tag === 'div') {
     const nodeType = el.getAttribute('data-node-type');
 
     if (nodeType === 'mediaSingle') {
-      return processRenderedMedia(el, notes);
+      return processRenderedMedia(el, notes, fmt);
     }
 
     // Skip media inner divs — handled by processRenderedMedia
@@ -92,20 +92,26 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
       return '';
     }
 
-    return processChildren(el, notes, context);
+    return processChildren(el, notes, context, fmt);
   }
 
-  // Standard HTML elements
+  // Standard HTML elements — output depends on format
+  const isMd = fmt === 'markdown';
+
   switch (tag) {
     case 'h1':
     case 'h2':
     case 'h3': {
-      const text = stripRedundantFormatting(getInlineText(el, notes, context));
+      const text = stripRedundantFormatting(getInlineText(el, notes, context, fmt), fmt);
+      if (isMd) {
+        const level = tag === 'h1' ? '#' : tag === 'h2' ? '##' : '###';
+        return `\n\n${level} ${text.trim()}\n`;
+      }
       return `\n\n[${tag}]${text.trim()}[/${tag}]\n`;
     }
 
     case 'p': {
-      const text = processChildren(el, notes, context).trim();
+      const text = processChildren(el, notes, context, fmt).trim();
       if (!text) return '';
       return `\n${text}\n`;
     }
@@ -114,55 +120,71 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
       return '\n';
 
     case 'strong':
-    case 'b':
-      return `[b]${processChildren(el, notes, context)}[/b]`;
+    case 'b': {
+      const inner = processChildren(el, notes, context, fmt);
+      return isMd ? `**${inner}**` : `[b]${inner}[/b]`;
+    }
 
     case 'em':
-    case 'i':
-      return `[i]${processChildren(el, notes, context)}[/i]`;
+    case 'i': {
+      const inner = processChildren(el, notes, context, fmt);
+      return isMd ? `*${inner}*` : `[i]${inner}[/i]`;
+    }
 
     case 'u':
-      return `[u]${processChildren(el, notes, context)}[/u]`;
+      // Markdown has no underline — just pass through text
+      return isMd ? processChildren(el, notes, context, fmt) : `[u]${processChildren(el, notes, context, fmt)}[/u]`;
 
     case 'del':
-    case 's':
-      return `[strike]${processChildren(el, notes, context)}[/strike]`;
+    case 's': {
+      const inner = processChildren(el, notes, context, fmt);
+      return isMd ? `~~${inner}~~` : `[strike]${inner}[/strike]`;
+    }
 
     case 'a': {
       const href = el.getAttribute('href') || '';
-      const text = processChildren(el, notes, context);
-      return `[url=${href}]${text}[/url]`;
+      const text = processChildren(el, notes, context, fmt);
+      return isMd ? `[${text}](${href})` : `[url=${href}]${text}[/url]`;
     }
 
     case 'ul':
-      return processUnorderedList(el, notes, context);
+      return processUnorderedList(el, notes, context, fmt);
 
     case 'ol':
-      return processOrderedList(el, notes, context);
+      return processOrderedList(el, notes, context, fmt);
 
     case 'li':
-      return processListItem(el, notes, context);
+      return processListItem(el, notes, context, fmt);
 
     case 'table':
-      return processTable(el, notes, context);
+      return processTable(el, notes, context, fmt);
 
     case 'tr':
-      return `[tr]${processChildren(el, notes, context)}[/tr]\n`;
+      return isMd
+        ? `| ${processChildren(el, notes, context, fmt)} |\n`
+        : `[tr]${processChildren(el, notes, context, fmt)}[/tr]\n`;
 
     case 'td':
-      return `[td]${processChildren(el, notes, context).trim()}[/td]`;
-
-    case 'th':
-      return `[th]${processChildren(el, notes, context).trim()}[/th]`;
+    case 'th': {
+      const cell = processChildren(el, notes, context, fmt).trim();
+      return isMd ? `${cell} | ` : `[${tag}]${cell}[/${tag}]`;
+    }
 
     case 'code':
-      return `[code]${el.textContent || ''}[/code]`;
+      return isMd ? `\`${el.textContent || ''}\`` : `[code]${el.textContent || ''}[/code]`;
 
-    case 'pre':
-      return `[code]${el.textContent || ''}[/code]`;
+    case 'pre': {
+      const code = el.textContent || '';
+      return isMd ? `\n\`\`\`\n${code}\n\`\`\`\n` : `[code]${code}[/code]`;
+    }
 
-    case 'blockquote':
-      return `[quote]${processChildren(el, notes, context).trim()}[/quote]`;
+    case 'blockquote': {
+      if (isMd) {
+        const inner = processChildren(el, notes, context, fmt).trim();
+        return '\n' + inner.split('\n').map(line => `> ${line}`).join('\n') + '\n';
+      }
+      return `[quote]${processChildren(el, notes, context, fmt).trim()}[/quote]`;
+    }
 
     case 'img': {
       // Inside a mediaSingle wrapper, the img is handled by processRenderedMedia
@@ -179,21 +201,21 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
       if (src.startsWith('blob:')) {
         const filename = alt || 'image.png';
         addImageNote(notes);
-        return `\n${imageDropMarker(filename)}\n`;
+        return `\n${imageDropMarker(filename, fmt)}\n`;
       }
 
       if (isConfluenceUrl(src)) {
         const filename = extractFilenameFromUrl(src) || alt || 'image.png';
         addImageNote(notes);
-        return `\n${imageDropMarker(filename)}\n`;
+        return `\n${imageDropMarker(filename, fmt)}\n`;
       }
       // Non-Confluence URL — pass through
-      if (src) return `\n[img]${src}[/img]\n`;
+      if (src) return isMd ? `\n![](${src})\n` : `\n[img]${src}[/img]\n`;
       return '';
     }
 
     case 'hr':
-      return '\n[hr][/hr]\n';
+      return isMd ? '\n---\n' : '\n[hr][/hr]\n';
 
     // Container elements — just process children
     case 'meta':
@@ -203,17 +225,17 @@ function processNode(node: Node, notes: string[], context: SteamContext): string
     case 'body':
     case 'html':
     case 'head':
-      return processChildren(el, notes, context);
+      return processChildren(el, notes, context, fmt);
 
     default:
-      return processChildren(el, notes, context);
+      return processChildren(el, notes, context, fmt);
   }
 }
 
-function processChildren(el: Element, notes: string[], context: SteamContext): string {
+function processChildren(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
   let result = '';
   for (const child of Array.from(el.childNodes)) {
-    result += processNode(child, notes, context);
+    result += processNode(child, notes, context, fmt);
   }
   return result;
 }
@@ -222,7 +244,7 @@ function processChildren(el: Element, notes: string[], context: SteamContext): s
  * Get inline text content, processing inline formatting but stripping block elements.
  * Used for headings where we want to keep b/i/u but strip the text from any p wrappers.
  */
-function getInlineText(el: Element, notes: string[], context: SteamContext): string {
+function getInlineText(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
   let result = '';
   for (const child of Array.from(el.childNodes)) {
     if (child.nodeType === Node.TEXT_NODE) {
@@ -230,12 +252,10 @@ function getInlineText(el: Element, notes: string[], context: SteamContext): str
     } else if (child.nodeType === Node.ELEMENT_NODE) {
       const childEl = child as Element;
       const childTag = childEl.tagName.toLowerCase();
-      // For headings, process inline formatting normally
       if (['strong', 'b', 'em', 'i', 'u', 'del', 's', 'a', 'span'].includes(childTag)) {
-        result += processNode(child, notes, context);
+        result += processNode(child, notes, context, fmt);
       } else {
-        // For block elements inside headings, just get their text
-        result += getInlineText(childEl, notes, context);
+        result += getInlineText(childEl, notes, context, fmt);
       }
     }
   }
@@ -247,14 +267,20 @@ function getInlineText(el: Element, notes: string[], context: SteamContext): str
  * Confluence often wraps heading content in <strong><u>...</u></strong>.
  * Since headings are already visually prominent, strip these wrappers.
  */
-function stripRedundantFormatting(text: string): string {
+function stripRedundantFormatting(text: string, fmt: OutputFormat = 'bbcode'): string {
   let result = text;
-  // Strip [b]...[/b] wrapper if it wraps the entire text
-  const boldMatch = result.match(/^\[b\]([\s\S]*)\[\/b\]$/);
-  if (boldMatch) result = boldMatch[1];
-  // Strip [u]...[/u] wrapper if it wraps the entire text
-  const underlineMatch = result.match(/^\[u\]([\s\S]*)\[\/u\]$/);
-  if (underlineMatch) result = underlineMatch[1];
+  if (fmt === 'markdown') {
+    // Strip **...** wrapper
+    const boldMatch = result.match(/^\*\*([\s\S]*)\*\*$/);
+    if (boldMatch) result = boldMatch[1];
+  } else {
+    // Strip [b]...[/b] wrapper if it wraps the entire text
+    const boldMatch = result.match(/^\[b\]([\s\S]*)\[\/b\]$/);
+    if (boldMatch) result = boldMatch[1];
+    // Strip [u]...[/u] wrapper if it wraps the entire text
+    const underlineMatch = result.match(/^\[u\]([\s\S]*)\[\/u\]$/);
+    if (underlineMatch) result = underlineMatch[1];
+  }
   return result;
 }
 
@@ -267,7 +293,10 @@ function findByTagName(el: Element, ...names: string[]): Element | null {
 }
 
 /** Format an image drop marker — visible, searchable, harmless if left in Steam */
-function imageDropMarker(filename: string): string {
+function imageDropMarker(filename: string, fmt: OutputFormat = 'bbcode'): string {
+  if (fmt === 'markdown') {
+    return `**>>> Drop image: ${filename} <<<**`;
+  }
   return `[b]>>> Drop image: ${filename} <<<[/b]`;
 }
 
@@ -284,14 +313,14 @@ function addImageNote(notes: string[]): void {
  *              <div data-media-caption="true">Caption text</div>
  *            </div>
  */
-function processRenderedMedia(el: Element, notes: string[]): string {
+function processRenderedMedia(el: Element, notes: string[], fmt: OutputFormat = 'bbcode'): string {
   const mediaDiv = el.querySelector('[data-file-name]');
   if (!mediaDiv) return '';
 
   const filename = mediaDiv.getAttribute('data-file-name') || mediaDiv.getAttribute('data-alt') || 'image.png';
   addImageNote(notes);
 
-  let result = `\n${imageDropMarker(filename)}`;
+  let result = `\n${imageDropMarker(filename, fmt)}`;
 
   // Check for caption
   const captionDiv = el.querySelector('[data-media-caption]');
@@ -305,19 +334,17 @@ function processRenderedMedia(el: Element, notes: string[]): string {
   return result + '\n';
 }
 
-function processConfluenceImage(el: Element, notes: string[]): string {
-  // Find ri:attachment child for the filename
+function processConfluenceImage(el: Element, notes: string[], fmt: OutputFormat = 'bbcode'): string {
   const attachment = findByTagName(el, 'ri:attachment', 'ri-attachment');
   if (attachment) {
     const filename = attachment.getAttribute('ri:filename') || attachment.getAttribute('filename') || '';
     if (filename) {
-      // Check for caption sibling
       const caption = findByTagName(el, 'ac:caption', 'ac-caption');
       const captionText = caption ? caption.textContent?.trim() || '' : '';
 
       addImageNote(notes);
 
-      let result = `\n${imageDropMarker(filename)}`;
+      let result = `\n${imageDropMarker(filename, fmt)}`;
       if (captionText) {
         result += `\n${captionText}`;
       }
@@ -325,53 +352,51 @@ function processConfluenceImage(el: Element, notes: string[]): string {
     }
   }
 
-  // Fallback: try ri:url
   const urlEl = findByTagName(el, 'ri:url', 'ri-url');
   if (urlEl) {
     const url = urlEl.getAttribute('ri:value') || urlEl.getAttribute('value') || '';
     if (url) {
-      // Check if this is a Confluence-internal URL that won't work externally
       if (isConfluenceUrl(url)) {
         const filename = extractFilenameFromUrl(url) || 'image.png';
         addImageNote(notes);
-        return `\n${imageDropMarker(filename)}\n`;
+        return `\n${imageDropMarker(filename, fmt)}\n`;
       }
-      return `\n[img]${url}[/img]\n`;
+      return fmt === 'markdown' ? `\n![](${url})\n` : `\n[img]${url}[/img]\n`;
     }
   }
 
   return '';
 }
 
-function processConfluenceLink(el: Element, notes: string[]): string {
-  // ri:page for internal Confluence links
+function processConfluenceLink(el: Element, notes: string[], fmt: OutputFormat = 'bbcode'): string {
   const page = findByTagName(el, 'ri:page', 'ri-page');
   if (page) {
     const title = page.getAttribute('ri:content-title') || page.getAttribute('content-title') || '';
     const linkText = el.textContent?.trim() || title || 'link';
     notes.push(`Internal Confluence link to "${title}" — replace with Steam URL`);
-    return `[url=]${linkText}[/url]`;
+    return fmt === 'markdown' ? `[${linkText}]()` : `[url=]${linkText}[/url]`;
   }
 
-  // ri:url for external links
   const urlEl = findByTagName(el, 'ri:url', 'ri-url');
   if (urlEl) {
     const url = urlEl.getAttribute('ri:value') || urlEl.getAttribute('value') || '';
     const linkText = el.textContent?.trim() || url;
-    return `[url=${url}]${linkText}[/url]`;
+    return fmt === 'markdown' ? `[${linkText}](${url})` : `[url=${url}]${linkText}[/url]`;
   }
 
   return el.textContent || '';
 }
 
-function processConfluenceMacro(el: Element, notes: string[], context: SteamContext): string {
+function processConfluenceMacro(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
   const macroName = el.getAttribute('ac:name') || el.getAttribute('name') || '';
 
   switch (macroName) {
     case 'code': {
-      // Find the plain-text-body
       const body = findByTagName(el, 'ac:plain-text-body', 'ac-plain-text-body');
       const code = body?.textContent || el.textContent || '';
+      if (fmt === 'markdown') {
+        return `\n\`\`\`\n${code.trim()}\n\`\`\`\n`;
+      }
       return `[code]${code.trim()}[/code]`;
     }
 
@@ -383,7 +408,7 @@ function processConfluenceMacro(el: Element, notes: string[], context: SteamCont
         notes.push(`Confluence panel macros (${macroName}) have no BBCode equivalent — converted to plain text`);
       }
       const body = findByTagName(el, 'ac:rich-text-body', 'ac-rich-text-body');
-      return body ? processChildren(body, notes, context) : processChildren(el, notes, context);
+      return body ? processChildren(body, notes, context, fmt) : processChildren(el, notes, context, fmt);
     }
 
     case 'toc':
@@ -394,26 +419,48 @@ function processConfluenceMacro(el: Element, notes: string[], context: SteamCont
       if (!notes.some(n => n.includes(macroName))) {
         notes.push(`Unsupported Confluence macro "${macroName}" — content preserved as plain text`);
       }
-      return processChildren(el, notes, context);
+      return processChildren(el, notes, context, fmt);
   }
 }
 
-function processUnorderedList(el: Element, notes: string[], context: SteamContext): string {
+function processUnorderedList(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
+  if (fmt === 'markdown') {
+    const items: string[] = [];
+    for (const child of Array.from(el.children)) {
+      if (child.tagName.toLowerCase() === 'li') {
+        items.push(processListItem(child, notes, context, fmt));
+      }
+    }
+    return '\n' + items.join('\n') + '\n';
+  }
   const items: string[] = ['[list]'];
   for (const child of Array.from(el.children)) {
     if (child.tagName.toLowerCase() === 'li') {
-      items.push(processListItem(child, notes, context));
+      items.push(processListItem(child, notes, context, fmt));
     }
   }
   items.push('[/list]');
   return items.join('\n') + '\n';
 }
 
-function processOrderedList(el: Element, notes: string[], context: SteamContext): string {
+function processOrderedList(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
+  if (fmt === 'markdown') {
+    const items: string[] = [];
+    let num = 1;
+    for (const child of Array.from(el.children)) {
+      if (child.tagName.toLowerCase() === 'li') {
+        const text = processListItem(child, notes, context, fmt);
+        // Replace the leading `- ` with `N. `
+        items.push(text.replace(/^- /, `${num}. `));
+        num++;
+      }
+    }
+    return '\n' + items.join('\n') + '\n';
+  }
   const items: string[] = ['[olist]'];
   for (const child of Array.from(el.children)) {
     if (child.tagName.toLowerCase() === 'li') {
-      items.push(processListItem(child, notes, context));
+      items.push(processListItem(child, notes, context, fmt));
     }
   }
   items.push('[/olist]');
@@ -424,11 +471,11 @@ function processOrderedList(el: Element, notes: string[], context: SteamContext)
  * Collect flat [*] items from a nested list, without [list]/[/list] wrappers.
  * Used to flatten nested lists in rendered clipboard output.
  */
-function collectFlatListItems(el: Element, notes: string[], context: SteamContext): string[] {
+function collectFlatListItems(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string[] {
   const items: string[] = [];
   for (const child of Array.from(el.children)) {
     if (child.tagName.toLowerCase() === 'li') {
-      items.push(...collectListItemParts(child, notes, context));
+      items.push(...collectListItemParts(child, notes, context, fmt));
     }
   }
   return items;
@@ -438,10 +485,11 @@ function collectFlatListItems(el: Element, notes: string[], context: SteamContex
  * Collect parts from a single list item, flattening any nested lists.
  * Returns an array of lines (each starting with [*]).
  */
-function collectListItemParts(li: Element, notes: string[], context: SteamContext): string[] {
+function collectListItemParts(li: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string[] {
+  const isMd = fmt === 'markdown';
+  const prefix = isMd ? '- ' : '[*]';
   const lines: string[] = [];
   const textParts: string[] = [];
-  let hasMedia = false;
 
   for (const child of Array.from(li.childNodes)) {
     if (child.nodeType === Node.TEXT_NODE) {
@@ -455,39 +503,27 @@ function collectListItemParts(li: Element, notes: string[], context: SteamContex
     const childTag = childEl.tagName.toLowerCase();
 
     if (childTag === 'ul' || childTag === 'ol') {
-      // Flatten: emit current text as a [*] line, then collect nested items
+      // Flatten: emit current text as a line, then collect nested items
       if (textParts.length > 0) {
-        lines.push(`[*]${textParts.join('\n')}`);
+        lines.push(`${prefix}${textParts.join('\n')}`);
         textParts.length = 0;
       }
-      lines.push(...collectFlatListItems(childEl, notes, context));
+      lines.push(...collectFlatListItems(childEl, notes, context, fmt));
     } else if (childTag === 'div' && childEl.getAttribute('data-node-type') === 'mediaSingle') {
-      hasMedia = true;
-      const mediaText = processRenderedMedia(childEl, notes).trim();
+      const mediaText = processRenderedMedia(childEl, notes, fmt).trim();
       textParts.push(mediaText);
     } else if (childTag === 'p') {
-      const pText = processChildren(childEl, notes, context).trim();
+      const pText = processChildren(childEl, notes, context, fmt).trim();
       if (pText) textParts.push(pText);
     } else {
-      const nodeText = processNode(child, notes, context);
+      const nodeText = processNode(child, notes, context, fmt);
       if (nodeText.trim()) textParts.push(nodeText.trim());
     }
   }
 
   // Emit any remaining text
   if (textParts.length > 0) {
-    if (lines.length === 0) {
-      // First line gets the [*] prefix
-      if (hasMedia) {
-        // Multiple parts with media — join with newlines
-        lines.push(`[*]${textParts.join('\n')}`);
-      } else {
-        lines.push(`[*]${textParts.join('\n')}`);
-      }
-    } else {
-      // Additional text after nested items
-      lines.push(`[*]${textParts.join('\n')}`);
-    }
+    lines.push(`${prefix}${textParts.join('\n')}`);
   }
 
   return lines;
@@ -498,18 +534,33 @@ function collectListItemParts(li: Element, notes: string[], context: SteamContex
  * which we strip. Nested lists are flattened (Steam doesn't render nested lists well).
  * Rendered clipboard may include mediaSingle divs (images) inside list items.
  */
-function processListItem(li: Element, notes: string[], context: SteamContext): string {
-  const parts = collectListItemParts(li, notes, context);
+function processListItem(li: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
+  const parts = collectListItemParts(li, notes, context, fmt);
   return parts.join('\n');
 }
 
-function processTable(el: Element, notes: string[], context: SteamContext): string {
-  let result = '\n[table]\n';
+function processTable(el: Element, notes: string[], context: SteamContext, fmt: OutputFormat = 'bbcode'): string {
+  const isMd = fmt === 'markdown';
   const tbody = el.querySelector('tbody') || el;
-  for (const child of Array.from(tbody.children)) {
-    if (child.tagName.toLowerCase() === 'tr') {
-      result += processNode(child, notes, context);
-    }
+  const rows = Array.from(tbody.children).filter(c => c.tagName.toLowerCase() === 'tr');
+
+  if (isMd) {
+    // Markdown table
+    let result = '\n';
+    rows.forEach((row, i) => {
+      result += processNode(row, notes, context, fmt);
+      // Add separator after header row
+      if (i === 0) {
+        const cols = row.children.length;
+        result += '| ' + Array.from({ length: cols }, () => '---').join(' | ') + ' |\n';
+      }
+    });
+    return result;
+  }
+
+  let result = '\n[table]\n';
+  for (const row of rows) {
+    result += processNode(row, notes, context, fmt);
   }
   result += '[/table]\n';
   return result;
