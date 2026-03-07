@@ -116,17 +116,13 @@ function findLastMatch(text: string, pattern: RegExp): number {
   return lastIndex;
 }
 
-/**
- * Format sections for display with section numbers
- */
+/** Format a section header with index/total for multi-part Discord messages. */
 export function formatSectionHeader(index: number, total: number): string {
   if (total === 1) return '';
   return `[${index + 1}/${total}]\n`;
 }
 
-/**
- * Check if splitting is needed
- */
+/** Check if the content exceeds the character limit and needs splitting. */
 export function needsSplitting(bbcode: string, maxLength: number = CHAR_LIMITS.discord): boolean {
   return bbcode.length > maxLength;
 }

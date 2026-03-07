@@ -1,10 +1,12 @@
 import posthog from 'posthog-js';
 
+/** Track a named event with optional properties via PostHog. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function trackEvent(event: string, properties?: Record<string, any>): void {
   posthog.capture(event, properties);
 }
 
+/** Track a page view event via PostHog. */
 export function trackPageView(): void {
   posthog.capture('$pageview');
 }
@@ -22,6 +24,7 @@ export interface WorkflowProperties {
   edited_after_paste: boolean;
 }
 
+/** Build structured properties for a workflow_completed analytics event. */
 export function buildWorkflowProperties(opts: {
   inputMethod: InputMethod;
   bbcodeLength: number;

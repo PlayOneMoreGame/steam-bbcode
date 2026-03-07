@@ -1,6 +1,6 @@
 # Steam BBCode Editor - Technical Analysis & Roadmap
 
-## Current Status (v1.5.3)
+## Current Status (v1.6.0)
 
 ### Completed Features ✅
 
@@ -18,7 +18,7 @@
 - ✅ Modular CSS variables system
 
 **UX**
-- ✅ Three-panel responsive layout
+- ✅ Two-panel layout (Editor + Output with Preview/BBCode/Translation tabs)
 - ✅ Save As / Revert / Copy consistent actions
 - ✅ Open file dialog (Tauri native)
 - ✅ Active panel indication
@@ -60,10 +60,8 @@
 - ✅ Non-destructive file workflow
 
 **Testing**
-- ✅ Vitest unit tests (83 tests)
-- ✅ Converter tests (39 tests)
-- ✅ Linter tests (44 tests)
-- ✅ Playwright E2E setup
+- ✅ Vitest unit tests (551 tests across 21 files)
+- ✅ Playwright E2E tests (110 tests across 7 files)
 
 **DevOps**
 - ✅ GitHub Actions CI/CD (multi-platform builds)

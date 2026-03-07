@@ -143,6 +143,7 @@ export interface MediaItem {
   id?: string;
 }
 
+/** Extract image and YouTube video URLs from Markdown image syntax. */
 export function extractMedia(markdown: string): MediaItem[] {
   const media: MediaItem[] = [];
 

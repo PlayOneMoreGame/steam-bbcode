@@ -4,56 +4,87 @@ This file provides context for AI-assisted development with Claude Code or Claud
 
 ## Project Purpose
 
-SteamBBEditor is a translator. Teams write content in whatever tool they prefer — Confluence, Word, markdown editors, Google Docs — then use this app to convert it into Steam's non-standard BBCode format. The goal: users never need to learn Steam BBCode. They import their content (paste, open file, drag and drop), fix anything that needs fixing, verify it looks right in the Steam preview, and copy the output to post on Steam. Import → Edit → Preview → Copy → Post.
+SteamBBEditor is a translator. Teams write content in whatever tool they prefer -- Confluence, Word, markdown editors, Google Docs -- then use this app to convert it into Steam's non-standard BBCode format. The goal: users never need to learn Steam BBCode. They import their content (paste, open file, drag and drop), fix anything that needs fixing, verify it looks right in the Steam preview, and copy the output to post on Steam. Import -> Edit -> Preview -> Copy -> Post.
 
-**This is NOT a general-purpose text editor.** It's a focused conversion tool for the Confluence → Steam pipeline.
+**This is NOT a general-purpose text editor.** It's a focused conversion tool for the Confluence -> Steam pipeline.
 
 ## Architecture
 
 ```
 src/
-├── App.tsx              # Main app, state management, keyboard shortcuts
+├── App.tsx                  # Main app, state management, keyboard shortcuts
+├── main.tsx                 # React entry point
+├── vite-env.d.ts            # Vite type declarations
 ├── components/
-│   ├── MarkdownPanel    # Left panel - input, markdown linting
-│   ├── OutputPanel      # Right panel - Steam Preview tab + BBCode tab, copy button
-│   ├── PreviewPanel     # BBCode → HTML rendered preview
-│   └── SyntaxEditor     # Shared editor component with line numbers
+│   ├── index.ts             # Component barrel exports
+│   ├── MarkdownPanel.tsx    # Left panel - input, markdown linting, format detection
+│   ├── OutputPanel.tsx      # Right panel - tabbed output (Preview / BBCode / Translation)
+│   ├── PreviewPanel.tsx     # BBCode -> HTML rendered preview (used inside OutputPanel)
+│   ├── SyntaxEditor.tsx     # Shared editor component with line numbers
+│   ├── TagReference.tsx     # Floating popover with tag reference
+│   ├── SettingsPanel.tsx    # Blacklist terms, DNT glossary management
+│   ├── ImagesPanel.tsx      # Image placeholder URL resolution
+│   └── ApiKeyDialog.tsx     # Claude API key input dialog
 ├── hooks/
-│   ├── useFileService   # Tauri file dialogs (Open, Save As)
-│   ├── useLocalStorage  # Browser storage
-│   ├── useAutoSave      # Draft persistence
-│   └── useRecentFiles   # Recent files list
+│   ├── useFileService.ts    # Tauri file dialogs (Open, Save As)
+│   ├── useLocalStorage.ts   # Browser storage
+│   ├── useAutoSave.ts       # Draft persistence
+│   ├── useRecentFiles.ts    # Recent files list
+│   └── useImageStore.ts     # Image data URL management
 ├── lib/
-│   ├── converter.ts     # Markdown → BBCode conversion (pure functions)
-│   ├── linter.ts        # BBCode validation
-│   ├── markdown-linter.ts # Markdown validation  
-│   ├── highlighter.ts   # Syntax highlighting tokens
-│   ├── renderer.ts      # BBCode → HTML for preview
-│   ├── markdown-renderer.ts # Markdown → HTML for preview
-│   ├── contexts.ts      # Steam context types (announcements, guides, etc.)
-│   ├── welcome.ts       # Default welcome document
-│   └── __tests__/       # Vitest unit tests
+│   ├── converter.ts         # Markdown -> BBCode conversion (pure functions)
+│   ├── confluence-converter.ts  # Confluence XHTML -> BBCode conversion
+│   ├── format-detector.ts   # Auto-detect input format (MD / Confluence / plain text)
+│   ├── linter.ts            # BBCode validation (context-aware)
+│   ├── markdown-linter.ts   # Markdown validation
+│   ├── confluence-linter.ts # Confluence-specific validation
+│   ├── highlighter.ts       # Syntax highlighting tokens
+│   ├── renderer.ts          # BBCode -> HTML for preview
+│   ├── markdown-renderer.ts # Markdown -> HTML for preview
+│   ├── image-placeholders.ts # {placeholder:filename} extraction and resolution
+│   ├── translation-service.ts # Claude API translation (pt-BR, es-LATAM)
+│   ├── glossary.ts          # DNT glossary for translation
+│   ├── dnt-store.ts         # Do Not Translate term persistence
+│   ├── api-key-store.ts     # Claude API key persistence
+│   ├── blacklist-detector.ts # Blocked term detection with word boundaries
+│   ├── blacklist-store.ts   # Blocked term persistence
+│   ├── blocked-words-default.ts # Default blocked terms list
+│   ├── Terms-to-Block.csv   # Source CSV for blocked terms
+│   ├── splitter.ts          # Discord 2000-char message splitter
+│   ├── plaintext-normalizer.ts # Plain text cleanup
+│   ├── analytics.ts         # Usage analytics
+│   ├── utils.ts             # Shared utilities
+│   ├── contexts.ts          # Steam context types (announcements, guides, etc.)
+│   ├── welcome.ts           # Default welcome document
+│   └── __tests__/           # Vitest unit tests (551 tests across 21 files)
 └── styles/
-    ├── app.css          # Main styles with CSS variables
-    └── steam-theme.css  # Steam-accurate preview styling
+    ├── app.css              # Main styles with CSS variables
+    └── steam-theme.css      # Steam-accurate preview styling
 ```
 
 ## Key Files to Know
 
-- **`src/lib/converter.ts`** - The heart of the app. All Markdown→BBCode conversion logic.
+- **`src/lib/converter.ts`** - Markdown -> BBCode conversion logic (pure functions).
+- **`src/lib/confluence-converter.ts`** - Confluence XHTML -> BBCode conversion.
+- **`src/lib/format-detector.ts`** - Detects whether input is Markdown, Confluence XHTML, or plain text.
 - **`src/lib/linter.ts`** - BBCode validation rules. Context-aware (announcements vs guides vs forums).
 - **`src/lib/markdown-linter.ts`** - Markdown validation. Catches Confluence artifacts.
-- **`src/App.tsx`** - Main component. Large file but well-organized with regions.
+- **`src/lib/translation-service.ts`** - Claude API translation with DNT glossary support.
+- **`src/lib/blacklist-detector.ts`** - Blocked term detection with word-boundary matching.
+- **`src/lib/image-placeholders.ts`** - Extracts and resolves `{placeholder:filename}` in BBCode.
+- **`src/App.tsx`** - Main component. State management, keyboard shortcuts, panel coordination.
+- **`src/components/OutputPanel.tsx`** - Tabbed output panel (Preview / BBCode / Translation tabs).
 - **`scripts/bump-version.sh`** - Release script. Run with `npm run release`.
 
 ## Testing
 
 ```bash
-npm run test:run    # Run all tests once
+npm run test:run    # Run all 551 unit tests once
 npm run test        # Watch mode
+npx playwright test # Run 110 E2E tests (7 spec files)
 ```
 
-Tests are in `src/lib/__tests__/`. Currently 123 tests covering converter and linters.
+Unit tests are in `src/lib/__tests__/`. E2E tests are in `e2e/`.
 
 ## Development
 

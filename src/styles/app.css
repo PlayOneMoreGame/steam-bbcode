@@ -657,7 +657,7 @@ body {
 }
 
 .collapsible-lint {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .lint-badge {
@@ -1006,7 +1006,7 @@ body {
 }
 
 .editor-drop-zone-text {
-  font-family: var(--font-system);
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
   color: var(--accent-blue);

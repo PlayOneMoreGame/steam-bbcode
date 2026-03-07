@@ -33,9 +33,6 @@ export function detectBlacklistTerms(text: string, blacklist: string[]): Blackli
     const escaped = escapeRegex(trimmed);
     const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
 
-    // Track character offset per line for efficient line/column lookup
-    let lineStartOffset = 0;
-
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       regex.lastIndex = 0;
@@ -49,8 +46,6 @@ export function detectBlacklistTerms(text: string, blacklist: string[]): Blackli
           length: match[0].length,
         });
       }
-
-      lineStartOffset += line.length + 1; // +1 for newline
     }
   }
 

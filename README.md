@@ -1,8 +1,8 @@
-# Steam BBCode Editor
+# SteamBBEditor
 
-Convert Markdown to Steam BBCode with live preview, linting, and Discord export.
+Convert content to Steam BBCode with live preview, linting, and translation.
 
-Built for the OMG marketing team to streamline patch notes and announcements.
+Built for One More Game's marketing, community, and dev teams to streamline patch notes and announcements. Import from Confluence, Markdown, or plain text -- edit, preview, copy, and post to Steam.
 
 ## Installation (Team Members)
 
@@ -12,12 +12,12 @@ Built for the OMG marketing team to streamline patch notes and announcements.
 4. Double-click to run
 
 **First launch:** If you see "can't be opened because Apple cannot check it for malicious software":
-- Right-click the app → **Open** → Click **Open** in the dialog
+- Right-click the app > **Open** > Click **Open** in the dialog
 
 ## Getting Started
 
 The app opens with an **interactive welcome document** that shows:
-- How the three-panel workflow works
+- How the two-panel workflow works
 - Formatting examples (bold, lists, links, code)
 - Steam BBCode quirks to watch out for
 - A sample error you can click to see the "jump to error" feature
@@ -27,15 +27,19 @@ The welcome doc resets on each launch. Open a file or paste your content to get 
 ## Workflow
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│    MARKDOWN     │───▶│   STEAM BBCODE  │───▶│  STEAM PREVIEW  │
-│                 │    │                 │    │                 │
-│ • Open .md file │    │ • Auto-converted│    │ • Live render   │
-│ • Paste content │    │ • Editable      │    │ • Steam styling │
-│ • Syntax colored│    │ • Save As .txt  │    │                 │
-│ • Linting       │    │ • Copy for Steam│    │                 │
-│ • Save As .md   │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
++-------------------+    +-----------------------------------+
+|      EDITOR       |    |             OUTPUT                |
+|                   |    |                                   |
+| - Open .md file   |--->|  Preview | BBCode | Translation   |
+| - Paste content   |    |                                   |
+| - Drag & drop     |    |  - Steam-accurate preview         |
+| - Auto-detect     |    |  - BBCode source view             |
+|   format (MD /    |    |  - Translation (pt-BR, es-LATAM)  |
+|   Confluence /    |    |  - Copy to clipboard              |
+|   plain text)     |    |  - Character count + lint status  |
+| - Syntax colored  |    |                                   |
+| - Linting         |    |                                   |
++-------------------+    +-----------------------------------+
 ```
 
 ### Non-Destructive Editing
@@ -45,38 +49,43 @@ The app uses a **"Save As"** workflow to protect your source files:
 - **Open** loads a file but doesn't lock it
 - **Save As** always prompts for a new filename/location
 - Original files are never overwritten
-- Each panel (Markdown/BBCode) saves independently
 
 ### Typical Flow
 
 1. **Open** your patch notes `.md` file (or paste from Confluence)
-2. Review the auto-converted BBCode
-3. Make any Steam-specific tweaks in the BBCode panel
+2. Review the Steam preview in the right panel
+3. Make any edits in the editor
 4. **Copy** the BBCode and paste into Steam
-5. Optionally **Save As** to keep the BBCode for next time
+5. Optionally **Save As** to keep the source for next time
 
 ## Features
 
-### Markdown Panel (Left)
+### Editor Panel (Left)
 - **Open** - Load `.md` files from disk
 - **Save As** - Save to new `.md` file
-- **Copy** - Copy to clipboard
-- **Discord** - Auto-split into 2000-char chunks
-- **Linting** - Catches formatting errors (click to jump & select)
-- **Syntax highlighting**
+- **Format detection** - Auto-detects Markdown, Confluence XHTML, or plain text
+- **Linting** - Catches formatting errors (click to jump and select)
+- **Syntax highlighting** - One Dark Pro theme
+- **Image drag-and-drop** - Drop images to insert placeholders
+- **Blacklist detection** - Wavy underlines on configurable blocked terms
+- **Auto-save** - Draft persistence to browser storage
 
-### BBCode Panel (Middle)
-- **Auto-converted** from Markdown in real-time
-- **Editable** - Make Steam-specific tweaks
-- **Save As** - Save to `.txt` file
-- **Copy** - Copy for pasting into Steam
-- **Revert** - Undo edits, re-sync with Markdown
-- **Context-aware linting** - Warns about unsupported tags (click to jump & select)
+### Output Panel (Right)
+Tabbed output with three views:
 
-### Preview Panel (Right)
-- **Live render** approximating Steam's styling
-- **Toggle** between Markdown and BBCode preview
-- Updates as you type
+- **Preview** - Live Steam-accurate rendered preview
+- **BBCode** - Raw BBCode source for inspection
+- **Translation** - Claude API translation (pt-BR, es-LATAM) with DNT glossary
+
+All tabs show character count and lint status. Copy button copies the active tab content.
+
+### Additional Features
+- **Image placeholders** - `{placeholder:filename}` resolved via Images panel with Steam URLs
+- **Tag reference** - Floating popover with Markdown-to-BBCode mapping
+- **Settings panel** - Blacklist term management, DNT glossary
+- **Recent files** - Quick access to last opened files (desktop only)
+- **Discord splitter** - Auto-split into 2000-char chunks
+- **Context-aware linting** - Validates against Steam context rules (Announcements, Guides, Forums, Reviews)
 
 ### Keyboard Shortcuts
 
@@ -84,7 +93,7 @@ The app uses a **"Save As"** workflow to protect your source files:
 |----------|--------|
 | `Cmd+O` | Open file |
 | `Cmd+S` | Save As |
-| `Cmd+Shift+C` | Copy to clipboard |
+| `Cmd+Shift+C` | Copy BBCode to clipboard |
 | `Tab` | Insert 2 spaces |
 | `Esc` | Blur editor |
 
@@ -92,7 +101,7 @@ The app uses a **"Save As"** workflow to protect your source files:
 
 ## Building the App (Developers Only)
 
-Team members don't need this—just use the pre-built `.dmg`.
+Team members don't need this -- just use the pre-built `.dmg`.
 
 ### Prerequisites
 
@@ -133,6 +142,14 @@ npm run tauri:dev    # Desktop app with hot reload
 npm run dev          # Web-only (no Tauri)
 ```
 
+### Testing
+
+```bash
+npm run test:run     # Run all 551 unit tests once
+npm run test         # Watch mode
+npx playwright test  # Run 110 E2E tests
+```
+
 ### Releasing a New Version
 
 ```bash
@@ -152,18 +169,21 @@ This interactive script will:
 ```
 steam-bbcode/
 ├── src/                    # React frontend
-│   ├── components/         # UI panels
-│   ├── lib/                # Conversion, linting, highlighting
-│   ├── hooks/              # React hooks
-│   └── styles/             # CSS
+│   ├── components/         # UI panels (Editor, Output, Preview, Settings, Images)
+│   ├── lib/                # Conversion, linting, translation, format detection
+│   ├── hooks/              # React hooks (file service, auto-save, image store)
+│   └── styles/             # CSS (app theme + Steam preview styling)
 ├── src-tauri/              # Rust/Tauri backend
 │   ├── tauri.conf.json     # App config
 │   ├── Cargo.toml          # Rust dependencies
 │   └── src/main.rs         # Rust entry point
+├── e2e/                    # Playwright E2E tests
 ├── scripts/                # Build & release scripts
+├── terraform/              # Infrastructure as code
 ├── CLAUDE.md               # AI assistant context
 ├── BUILD.md                # Detailed build instructions
-└── ROADMAP.md              # Future improvements
+├── WEBAPP.md               # Web deployment guide
+└── ROADMAP.md              # Feature tracking
 ```
 
 ## Steam BBCode Reference
@@ -172,18 +192,18 @@ steam-bbcode/
 
 | Tag | Announcements | Guides | Forums | Reviews |
 |-----|:-------------:|:------:|:------:|:-------:|
-| `[h1]` `[h2]` `[h3]` | ✓ | ✓ | ✓ | ✓ |
-| `[b]` `[i]` `[u]` `[strike]` | ✓ | ✓ | ✓ | ✓ |
-| `[list]` `[olist]` `[*]` | ✓ | ✓ | ✓ | ✓ |
-| `[url]` | ✓ | ✓ | ✓ | ✓ |
-| `[img]` | ✓ | ⚠️ | ✓ | ✗ |
-| `[code]` | ✓ | ✓ | ✓ | ✓ |
-| `[quote]` | ✓ | ✓ | ✓ | ✓ |
-| `[spoiler]` | ✓ | ✓ | ✓ | ✗ |
-| `[table]` | ✓ | ✓ | ✓ | ✗ |
-| `[hr]` | ✓ | ✓ | ✓ | ✓ |
+| `[h1]` `[h2]` `[h3]` | Yes | Yes | Yes | Yes |
+| `[b]` `[i]` `[u]` `[strike]` | Yes | Yes | Yes | Yes |
+| `[list]` `[olist]` `[*]` | Yes | Yes | Yes | Yes |
+| `[url]` | Yes | Yes | Yes | Yes |
+| `[img]` | Yes | Limited | Yes | No |
+| `[code]` | Yes | Yes | Yes | Yes |
+| `[quote]` | Yes | Yes | Yes | Yes |
+| `[spoiler]` | Yes | Yes | Yes | No |
+| `[table]` | Yes | Yes | Yes | No |
+| `[hr]` | Yes | Yes | Yes | Yes |
 
-⚠️ Guides require uploaded images with `[previewimg]` tags.
+Limited: Guides require uploaded images with `[previewimg]` tags.
 
 ### Character Limits
 
@@ -199,4 +219,4 @@ steam-bbcode/
 
 ## License
 
-MIT — One More Game
+MIT -- One More Game

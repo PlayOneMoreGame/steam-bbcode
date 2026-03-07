@@ -390,3 +390,4 @@ npm-debug.log*
 # TypeScript cache
 *.tsbuildinfo
 *.dmg
+test-results/

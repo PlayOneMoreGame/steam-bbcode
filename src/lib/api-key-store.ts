@@ -5,6 +5,7 @@
 
 const STORAGE_KEY = 'steambb-anthropic-api-key';
 
+/** Retrieve the stored Anthropic API key, or null if not set. */
 export function getApiKey(): string | null {
   try {
     return localStorage.getItem(STORAGE_KEY);
@@ -13,10 +14,12 @@ export function getApiKey(): string | null {
   }
 }
 
+/** Store the Anthropic API key in localStorage. */
 export function setApiKey(key: string): void {
   localStorage.setItem(STORAGE_KEY, key);
 }
 
+/** Remove the stored Anthropic API key from localStorage. */
 export function clearApiKey(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
