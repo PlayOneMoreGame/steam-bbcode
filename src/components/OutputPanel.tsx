@@ -380,6 +380,8 @@ function TranslationTabContent({
   expandedHelp: Set<string>;
   toggleHelp: (key: string, e: MouseEvent) => void;
 }) {
+  const [subTab, setSubTab] = useState<'preview' | 'bbcode'>('preview');
+
   if (!translation) {
     return (
       <div className="translation-tab-empty">
@@ -414,7 +416,7 @@ function TranslationTabContent({
   const hasLintWarnings = lintResult.warnings.length > 0;
 
   return (
-    <div className="output-bbcode-tab">
+    <div className="translation-tab-content">
       {/* Stale indicator */}
       {translation.stale && (
         <div className="translation-stale-banner">
@@ -425,6 +427,24 @@ function TranslationTabContent({
           </button>
         </div>
       )}
+
+      {/* Preview / BBCode sub-tab toggle */}
+      <div className="translation-sub-tabs" data-testid="translation-sub-tabs">
+        <button
+          className={`translation-sub-tab ${subTab === 'preview' ? 'active' : ''}`}
+          onClick={() => setSubTab('preview')}
+          data-testid="translation-preview-tab"
+        >
+          Steam Preview
+        </button>
+        <button
+          className={`translation-sub-tab ${subTab === 'bbcode' ? 'active' : ''}`}
+          onClick={() => setSubTab('bbcode')}
+          data-testid="translation-bbcode-tab"
+        >
+          BBCode
+        </button>
+      </div>
 
       {/* Lint messages for translated content */}
       {(hasLintErrors || hasLintWarnings) && (
@@ -480,7 +500,13 @@ function TranslationTabContent({
         </div>
       )}
 
-      <pre className="bbcode-readonly">{translation.bbcode}</pre>
+      {subTab === 'preview' ? (
+        <PreviewPanel content={translation.bbcode} />
+      ) : (
+        <div className="output-bbcode-tab">
+          <pre className="bbcode-readonly">{translation.bbcode}</pre>
+        </div>
+      )}
     </div>
   );
 }

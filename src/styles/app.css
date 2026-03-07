@@ -1760,6 +1760,49 @@ body {
   font-size: 13px;
 }
 
+.translation-tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.translation-sub-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.translation-sub-tab {
+  padding: 3px 8px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.translation-sub-tab:hover {
+  color: var(--text-secondary);
+}
+
+.translation-sub-tab.active {
+  background-color: var(--accent-blue);
+  color: var(--text-on-accent);
+}
+
+.translation-sub-tab:focus-visible {
+  outline: 1px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
 /* ==========================================================================
    API Key Dialog
    ========================================================================== */

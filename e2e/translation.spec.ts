@@ -110,8 +110,58 @@ test('translation tab appears after successful translation', async ({ page }) =>
   const translationTab = page.locator('.preview-tab', { hasText: 'ES-LATAM' });
   await expect(translationTab).toBeVisible({ timeout: 5000 });
 
-  // The translated content should be visible
-  await expect(page.locator('.bbcode-readonly')).toContainText('Notas del parche');
+  // Translation tab defaults to Steam Preview (rendered HTML, not raw BBCode)
+  const preview = page.locator('.translation-tab-content .preview');
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Notas del parche');
+
+  // Sub-tab toggle should be visible with Preview active
+  const subTabs = page.locator('[data-testid="translation-sub-tabs"]');
+  await expect(subTabs).toBeVisible();
+
+  // Switch to BBCode sub-tab to see raw BBCode
+  await page.locator('[data-testid="translation-bbcode-tab"]').click();
+  await expect(page.locator('.bbcode-readonly')).toContainText('[h1]Notas del parche[/h1]');
+});
+
+test('translation tab defaults to Steam Preview, not raw BBCode', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+  });
+
+  await page.route('https://api.anthropic.com/v1/messages', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'msg_test',
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'text', text: '[h2]Santuarios[/h2]\n[list]\n[*] Templo del Sol\n[/list]' }],
+        model: 'claude-haiku-4-5-20251001',
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 100, output_tokens: 50 },
+      }),
+    });
+  });
+
+  const mdEditor = page.locator('.panel').first().locator('textarea');
+  await mdEditor.fill('## Sanctuaries\n- Temple of the Sun');
+
+  await page.locator('.translate-trigger').click();
+  await page.locator('.dropdown-item', { hasText: 'Latin American Spanish' }).click();
+
+  const translationTab = page.locator('.preview-tab', { hasText: 'ES-LATAM' });
+  await expect(translationTab).toBeVisible({ timeout: 5000 });
+
+  // Default view is rendered preview — no raw BBCode visible
+  const preview = page.locator('.translation-tab-content .preview');
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Santuarios');
+  await expect(preview).toContainText('Templo del Sol');
+
+  // Raw BBCode should NOT be visible by default
+  await expect(page.locator('.bbcode-readonly')).not.toBeVisible();
 });
 
 // ---------------------------------------------------------------------------
