@@ -6,17 +6,25 @@ test.beforeEach(async ({ page, context }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Translate dropdown is visible
+// Two-row header: View mode + Language selector
 // ---------------------------------------------------------------------------
 
-test('translate dropdown button is visible in the output panel', async ({ page }) => {
-  const translateBtn = page.locator('.translate-trigger');
-  await expect(translateBtn).toBeVisible();
-  await expect(translateBtn).toContainText('Translate');
+test('output panel has view mode tabs and language bar', async ({ page }) => {
+  // Row 1: View mode tabs
+  const viewTabs = page.locator('[data-testid="view-mode-tabs"]');
+  await expect(viewTabs).toBeVisible();
+  await expect(viewTabs).toContainText('Steam Preview');
+  await expect(viewTabs).toContainText('BBCode');
+
+  // Row 2: Language bar with English and + Translate
+  const langBar = page.locator('[data-testid="lang-bar"]');
+  await expect(langBar).toBeVisible();
+  await expect(page.locator('[data-testid="lang-english"]')).toBeVisible();
+  await expect(page.locator('[data-testid="translate-add"]')).toBeVisible();
 });
 
-test('clicking translate dropdown shows language options', async ({ page }) => {
-  await page.locator('.translate-trigger').click();
+test('clicking + Translate shows language options', async ({ page }) => {
+  await page.locator('[data-testid="translate-add"]').click();
   const menu = page.locator('.translate-dropdown-menu');
   await expect(menu).toBeVisible();
   await expect(menu).toContainText('Brazilian Portuguese');
@@ -28,14 +36,11 @@ test('clicking translate dropdown shows language options', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 test('selecting a language without API key shows the API key dialog', async ({ page }) => {
-  // Clear any stored API key
   await page.evaluate(() => localStorage.removeItem('steambb-anthropic-api-key'));
 
-  // Click translate and select a language
-  await page.locator('.translate-trigger').click();
+  await page.locator('[data-testid="translate-add"]').click();
   await page.locator('.dropdown-item', { hasText: 'Brazilian Portuguese' }).click();
 
-  // API key dialog should appear
   const dialog = page.locator('.api-key-dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Anthropic API Key');
@@ -45,7 +50,7 @@ test('selecting a language without API key shows the API key dialog', async ({ p
 test('API key dialog closes on Escape', async ({ page }) => {
   await page.evaluate(() => localStorage.removeItem('steambb-anthropic-api-key'));
 
-  await page.locator('.translate-trigger').click();
+  await page.locator('[data-testid="translate-add"]').click();
   await page.locator('.dropdown-item', { hasText: 'Brazilian Portuguese' }).click();
 
   const dialog = page.locator('.api-key-dialog');
@@ -58,14 +63,12 @@ test('API key dialog closes on Escape', async ({ page }) => {
 test('API key dialog validates input', async ({ page }) => {
   await page.evaluate(() => localStorage.removeItem('steambb-anthropic-api-key'));
 
-  await page.locator('.translate-trigger').click();
+  await page.locator('[data-testid="translate-add"]').click();
   await page.locator('.dropdown-item', { hasText: 'Brazilian Portuguese' }).click();
 
-  // Try saving empty
   await page.locator('.api-key-dialog .btn-primary').click();
   await expect(page.locator('.api-key-dialog-error')).toContainText('Please enter');
 
-  // Try saving non-sk key
   await page.locator('.api-key-dialog-input').fill('not-a-valid-key');
   await page.locator('.api-key-dialog .btn-primary').click();
   await expect(page.locator('.api-key-dialog-error')).toContainText('sk-');
@@ -75,13 +78,11 @@ test('API key dialog validates input', async ({ page }) => {
 // Translation with mocked API
 // ---------------------------------------------------------------------------
 
-test('translation tab appears after successful translation', async ({ page }) => {
-  // Set API key
+test('translation language pill appears after successful translation', async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
   });
 
-  // Intercept the Anthropic API call
   await page.route('https://api.anthropic.com/v1/messages', async route => {
     await route.fulfill({
       status: 200,
@@ -98,33 +99,31 @@ test('translation tab appears after successful translation', async ({ page }) =>
     });
   });
 
-  // Type some content
   const mdEditor = page.locator('.panel').first().locator('textarea');
   await mdEditor.fill('# Patch Notes');
 
-  // Trigger translation
-  await page.locator('.translate-trigger').click();
+  await page.locator('[data-testid="translate-add"]').click();
   await page.locator('.dropdown-item', { hasText: 'Latin American Spanish' }).click();
 
-  // Wait for the translation tab to appear
-  const translationTab = page.locator('.preview-tab', { hasText: 'ES-LATAM' });
-  await expect(translationTab).toBeVisible({ timeout: 5000 });
+  // Language pill appears in the lang bar
+  const langPill = page.locator('[data-testid="lang-es-LATAM"]');
+  await expect(langPill).toBeVisible({ timeout: 5000 });
 
-  // Translation tab defaults to Steam Preview (rendered HTML, not raw BBCode)
-  const preview = page.locator('.translation-tab-content .preview');
-  await expect(preview).toBeVisible();
+  // Default view mode is Steam Preview — rendered content visible
+  const preview = page.locator('.preview');
   await expect(preview).toContainText('Notas del parche');
 
-  // Sub-tab toggle should be visible with Preview active
-  const subTabs = page.locator('[data-testid="translation-sub-tabs"]');
-  await expect(subTabs).toBeVisible();
-
-  // Switch to BBCode sub-tab to see raw BBCode
-  await page.locator('[data-testid="translation-bbcode-tab"]').click();
+  // Switch view mode to BBCode to see raw BBCode
+  await page.locator('[data-testid="view-mode-tabs"] button', { hasText: 'BBCode' }).click();
   await expect(page.locator('.bbcode-readonly')).toContainText('[h1]Notas del parche[/h1]');
+
+  // Switch back to English
+  await page.locator('[data-testid="lang-english"]').click();
+  await page.locator('[data-testid="view-mode-tabs"] button', { hasText: 'Steam Preview' }).click();
+  await expect(page.locator('.preview')).toContainText('Patch Notes');
 });
 
-test('translation tab defaults to Steam Preview, not raw BBCode', async ({ page }) => {
+test('view mode and language are independent dimensions', async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
   });
@@ -137,7 +136,7 @@ test('translation tab defaults to Steam Preview, not raw BBCode', async ({ page 
         id: 'msg_test',
         type: 'message',
         role: 'assistant',
-        content: [{ type: 'text', text: '[h2]Santuarios[/h2]\n[list]\n[*] Templo del Sol\n[/list]' }],
+        content: [{ type: 'text', text: '[h2]Santuarios[/h2]' }],
         model: 'claude-haiku-4-5-20251001',
         stop_reason: 'end_turn',
         usage: { input_tokens: 100, output_tokens: 50 },
@@ -146,22 +145,26 @@ test('translation tab defaults to Steam Preview, not raw BBCode', async ({ page 
   });
 
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill('## Sanctuaries\n- Temple of the Sun');
+  await mdEditor.fill('## Sanctuaries');
 
-  await page.locator('.translate-trigger').click();
+  // Translate
+  await page.locator('[data-testid="translate-add"]').click();
   await page.locator('.dropdown-item', { hasText: 'Latin American Spanish' }).click();
+  await expect(page.locator('[data-testid="lang-es-LATAM"]')).toBeVisible({ timeout: 5000 });
 
-  const translationTab = page.locator('.preview-tab', { hasText: 'ES-LATAM' });
-  await expect(translationTab).toBeVisible({ timeout: 5000 });
+  // Set view mode to BBCode
+  await page.locator('[data-testid="view-mode-tabs"] button', { hasText: 'BBCode' }).click();
 
-  // Default view is rendered preview — no raw BBCode visible
-  const preview = page.locator('.translation-tab-content .preview');
-  await expect(preview).toBeVisible();
-  await expect(preview).toContainText('Santuarios');
-  await expect(preview).toContainText('Templo del Sol');
+  // Switch between languages — view mode stays BBCode
+  await page.locator('[data-testid="lang-english"]').click();
+  await expect(page.locator('.bbcode-readonly')).toContainText('[h2]Sanctuaries[/h2]');
 
-  // Raw BBCode should NOT be visible by default
-  await expect(page.locator('.bbcode-readonly')).not.toBeVisible();
+  await page.locator('[data-testid="lang-es-LATAM"]').click();
+  await expect(page.locator('.bbcode-readonly')).toContainText('[h2]Santuarios[/h2]');
+
+  // Switch view mode to Preview — stays on es-LATAM
+  await page.locator('[data-testid="view-mode-tabs"] button', { hasText: 'Steam Preview' }).click();
+  await expect(page.locator('.preview')).toContainText('Santuarios');
 });
 
 // ---------------------------------------------------------------------------
@@ -169,12 +172,10 @@ test('translation tab defaults to Steam Preview, not raw BBCode', async ({ page 
 // ---------------------------------------------------------------------------
 
 test('stale indicator appears when source changes after translation', async ({ page }) => {
-  // Set API key
   await page.evaluate(() => {
     localStorage.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
   });
 
-  // Mock API
   await page.route('https://api.anthropic.com/v1/messages', async route => {
     await route.fulfill({
       status: 200,
@@ -191,24 +192,19 @@ test('stale indicator appears when source changes after translation', async ({ p
     });
   });
 
-  // Set initial content
   const mdEditor = page.locator('.panel').first().locator('textarea');
   await mdEditor.fill('# Hello');
 
-  // Translate
-  await page.locator('.translate-trigger').click();
+  await page.locator('[data-testid="translate-add"]').click();
   await page.locator('.dropdown-item', { hasText: 'Brazilian Portuguese' }).click();
 
-  // Wait for translation to complete
-  const translationTab = page.locator('.preview-tab', { hasText: 'PT-BR' });
-  await expect(translationTab).toBeVisible({ timeout: 5000 });
-
-  // Check for the done badge
+  const langPill = page.locator('[data-testid="lang-pt-BR"]');
+  await expect(langPill).toBeVisible({ timeout: 5000 });
   await expect(page.locator('.translation-badge.done')).toBeVisible();
 
-  // Change the source content
+  // Change source content
   await mdEditor.fill('# Goodbye');
 
-  // The stale badge should appear
+  // Stale badge should appear on the language pill
   await expect(page.locator('.translation-badge.stale')).toBeVisible({ timeout: 3000 });
 });

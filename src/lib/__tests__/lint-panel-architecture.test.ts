@@ -105,7 +105,7 @@ describe('lint panel architecture', () => {
     });
   });
 
-  describe('translation tabs render preview and raw BBCode', () => {
+  describe('translation content renders as preview and raw BBCode', () => {
     it('translated BBCode renders to HTML for Steam Preview', () => {
       const translatedBBCode = '[h2]Santuarios[/h2]\n[list]\n[*] Templo del Sol\n[*] Cueva Oscura\n[/list]';
       const html = bbcodeToHTML(translatedBBCode);

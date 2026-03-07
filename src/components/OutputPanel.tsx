@@ -48,7 +48,10 @@ export function OutputPanel({
   onApiKeySaved,
   onWorkflowComplete,
 }: OutputPanelProps) {
-  const [activeTab, setActiveTab] = useState<OutputTab>('preview');
+  // Two independent dimensions
+  const [viewMode, setViewMode] = useState<'preview' | 'bbcode'>('preview');
+  const [activeLang, setActiveLang] = useState<string>('en');
+
   const [copyFeedback, setCopyFeedback] = useState('');
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
   const [lintExpanded, setLintExpanded] = useState(false);
@@ -98,131 +101,89 @@ export function OutputPanel({
   const errorCount = bbcodeLint.errors.length;
   const warningCount = bbcodeLint.warnings.length;
 
-  // Determine what content to copy based on active tab
-  const activeCopyContent = useMemo(() => {
-    if (activeTab === 'preview' || activeTab === 'bbcode') {
-      return bbcode;
-    }
-    // Translation tab
-    const t = translations[activeTab];
-    if (t && t.status === 'done') {
-      return t.bbcode;
-    }
-    return bbcode;
-  }, [activeTab, bbcode, translations]);
+  // Resolve the active translation (if any)
+  const activeTranslation = activeLang !== 'en' ? translations[activeLang] : undefined;
 
-  const activeCopyLabel = useMemo(() => {
-    if (activeTab === 'preview' || activeTab === 'bbcode') {
-      return 'Copy BBCode';
-    }
-    return `Copy ${activeTab.toUpperCase()}`;
-  }, [activeTab]);
+  // The BBCode content for the active language
+  const activeBBCode = useMemo(() => {
+    if (activeLang === 'en') return bbcode;
+    const t = translations[activeLang];
+    if (t && t.status === 'done') return t.bbcode;
+    return '';
+  }, [activeLang, bbcode, translations]);
+
+  // Lint for the active language
+  const activeLint = useMemo(() => {
+    if (activeLang === 'en') return bbcodeLint;
+    if (!activeBBCode) return { errors: [], warnings: [], errorLines: new Set<number>(), warningLines: new Set<number>() };
+    return lintBBCode(activeBBCode, context, { blacklist });
+  }, [activeLang, activeBBCode, bbcodeLint, context, blacklist]);
+
+  // Copy content is always the raw BBCode for the active language
+  const activeCopyContent = activeBBCode;
+
+  const activeCopyLabel = activeLang === 'en'
+    ? 'Copy BBCode'
+    : `Copy ${activeLang.toUpperCase()}`;
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(activeCopyContent);
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
-      trackEvent('copy_clicked', { panel: activeTab === 'preview' || activeTab === 'bbcode' ? 'bbcode' : 'translation', lang: activeTab });
-      if (activeTab === 'preview' || activeTab === 'bbcode') {
+      trackEvent('copy_clicked', { panel: activeLang === 'en' ? 'bbcode' : 'translation', lang: activeLang });
+      if (activeLang === 'en') {
         onWorkflowComplete?.();
       }
     } catch {
       setCopyFeedback('Failed');
       setTimeout(() => setCopyFeedback(''), 2000);
     }
-  }, [activeCopyContent, activeTab, onWorkflowComplete]);
+  }, [activeCopyContent, activeLang, onWorkflowComplete]);
 
   const handleTranslateSelect = useCallback((lang: string) => {
     setTranslateMenuOpen(false);
     onTranslate(lang);
-    setActiveTab(lang);
+    setActiveLang(lang);
   }, [onTranslate]);
 
-  // Build the copy button title/tooltip
-  const copyTitle = hasErrors && (activeTab === 'preview' || activeTab === 'bbcode')
+  // Copy button state
+  const isEnglish = activeLang === 'en';
+  const copyDisabled = isEnglish && hasErrors;
+  const copyTitle = copyDisabled
     ? 'Fix errors before copying'
-    : isDesktop && (activeTab === 'preview' || activeTab === 'bbcode')
+    : isDesktop && isEnglish
       ? 'Copy BBCode (\u2318\u21e7C)'
       : activeCopyLabel;
 
-  const copyDisabled = hasErrors && (activeTab === 'preview' || activeTab === 'bbcode');
-
-  // Get active translation tabs (languages that have been requested)
-  const activeTranslationTabs = Object.entries(translations).filter(
+  // Get active translation languages (requested at least once)
+  const activeTranslationLangs = Object.entries(translations).filter(
     ([, t]) => t.status !== 'idle' || t.bbcode !== ''
   );
 
+  // Whether the active language has content to display
+  const hasContent = activeLang === 'en' || (activeTranslation?.status === 'done' && activeBBCode);
+
   return (
     <section className="panel output-panel">
+      {/* Row 1: View mode — Steam Preview | BBCode */}
       <div className="panel-header">
-        <div className="output-tabs">
+        <div className="output-tabs" data-testid="view-mode-tabs">
           <button
-            className={`preview-tab ${activeTab === 'preview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('preview')}
+            className={`preview-tab ${viewMode === 'preview' ? 'active' : ''}`}
+            onClick={() => setViewMode('preview')}
           >
             Steam Preview
           </button>
           <button
-            className={`preview-tab ${activeTab === 'bbcode' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bbcode')}
+            className={`preview-tab ${viewMode === 'bbcode' ? 'active' : ''}`}
+            onClick={() => setViewMode('bbcode')}
           >
             BBCode
           </button>
-
-          {/* Translation tabs */}
-          {activeTranslationTabs.map(([lang, t]) => (
-            <button
-              key={lang}
-              className={`preview-tab ${activeTab === lang ? 'active' : ''}`}
-              onClick={() => setActiveTab(lang)}
-            >
-              {lang.toUpperCase()}
-              {t.status === 'translating' && (
-                <span className="translation-badge translating" title="Translating...">...</span>
-              )}
-              {t.status === 'done' && !t.stale && (
-                <span className="translation-badge done" title="Translation complete">&#x2713;</span>
-              )}
-              {t.stale && t.status === 'done' && (
-                <span
-                  className="translation-badge stale"
-                  title="Source content has changed -- click Re-translate to update"
-                >&#x25CF;</span>
-              )}
-              {t.status === 'error' && (
-                <span className="translation-badge error-badge" title={t.error || 'Translation error'}>!</span>
-              )}
-            </button>
-          ))}
-
-          {/* Translate dropdown */}
-          <div className="translate-dropdown-wrapper" ref={translateMenuRef}>
-            <button
-              className="preview-tab translate-trigger"
-              onClick={() => setTranslateMenuOpen(!translateMenuOpen)}
-              title="Translate BBCode to another language"
-            >
-              Translate &#x25BE;
-            </button>
-            {translateMenuOpen && (
-              <div className="translate-dropdown-menu">
-                <div className="dropdown-header">Target Language</div>
-                {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
-                  <button
-                    key={code}
-                    className="dropdown-item"
-                    onClick={() => handleTranslateSelect(code)}
-                  >
-                    {name} ({code})
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
         <div className="panel-actions">
-          {/* Lint status indicator -- clickable to expand/collapse issue list */}
+          {/* Lint status indicator */}
           {hasErrors ? (
             <button
               className="lint-status lint-status-error"
@@ -250,7 +211,7 @@ export function OutputPanel({
           <button
             className="btn btn-primary"
             onClick={handleCopy}
-            disabled={copyDisabled}
+            disabled={copyDisabled || !activeBBCode}
             title={copyTitle}
           >
             {copyFeedback || activeCopyLabel}
@@ -258,10 +219,75 @@ export function OutputPanel({
         </div>
       </div>
 
-      {/* Collapsible lint message list */}
-      {lintExpanded && (hasErrors || hasWarnings) && (
+      {/* Row 2: Language selector — English | translations | + Translate */}
+      <div className="lang-bar" data-testid="lang-bar">
+        <div className="lang-pills">
+          <button
+            className={`lang-pill ${activeLang === 'en' ? 'active' : ''}`}
+            onClick={() => setActiveLang('en')}
+            data-testid="lang-english"
+          >
+            English
+          </button>
+
+          {activeTranslationLangs.map(([lang, t]) => (
+            <button
+              key={lang}
+              className={`lang-pill ${activeLang === lang ? 'active' : ''} ${t.stale ? 'stale' : ''}`}
+              onClick={() => setActiveLang(lang)}
+              data-testid={`lang-${lang}`}
+            >
+              {lang.toUpperCase()}
+              {t.status === 'translating' && (
+                <span className="translation-badge translating" title="Translating...">...</span>
+              )}
+              {t.status === 'done' && !t.stale && (
+                <span className="translation-badge done" title="Translation complete">&#x2713;</span>
+              )}
+              {t.stale && t.status === 'done' && (
+                <span
+                  className="translation-badge stale"
+                  title="Source content has changed"
+                >&#x25CF;</span>
+              )}
+              {t.status === 'error' && (
+                <span className="translation-badge error-badge" title={t.error || 'Translation error'}>!</span>
+              )}
+            </button>
+          ))}
+
+          {/* + Translate action button */}
+          <div className="translate-dropdown-wrapper" ref={translateMenuRef}>
+            <button
+              className="lang-pill translate-action"
+              onClick={() => setTranslateMenuOpen(!translateMenuOpen)}
+              title="Translate BBCode to another language"
+              data-testid="translate-add"
+            >
+              + Translate
+            </button>
+            {translateMenuOpen && (
+              <div className="translate-dropdown-menu">
+                <div className="dropdown-header">Target Language</div>
+                {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
+                  <button
+                    key={code}
+                    className="dropdown-item"
+                    onClick={() => handleTranslateSelect(code)}
+                  >
+                    {name} ({code})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Collapsible lint message list (for active language) */}
+      {lintExpanded && (activeLint.errors.length > 0 || activeLint.warnings.length > 0) && (
         <div className="panel-lint collapsible-lint">
-          {bbcodeLint.errors.map((msg, i) => {
+          {activeLint.errors.map((msg, i) => {
             const key = `e${i}`;
             return (
               <div key={key} className="lint-message-group">
@@ -285,7 +311,7 @@ export function OutputPanel({
               </div>
             );
           })}
-          {bbcodeLint.warnings.map((msg, i) => {
+          {activeLint.warnings.map((msg, i) => {
             const key = `w${i}`;
             return (
               <div key={key} className="lint-message-group">
@@ -312,26 +338,47 @@ export function OutputPanel({
         </div>
       )}
 
-      {activeTab === 'preview' ? (
-        <PreviewPanel content={bbcode} imageDataUrls={imageDataUrls} />
-      ) : activeTab === 'bbcode' ? (
-        <div className="output-bbcode-tab">
-          <pre className="bbcode-readonly">{bbcode}</pre>
-        </div>
-      ) : (
-        /* Translation tab */
-        <TranslationTabContent
-          lang={activeTab}
-          translation={translations[activeTab]}
-          context={context}
-          blacklist={blacklist}
-          onRetranslate={() => onTranslate(activeTab)}
-          expandedHelp={expandedHelp}
-          toggleHelp={toggleHelp}
-        />
+      {/* Translation status overlays (loading, error, stale) */}
+      {activeLang !== 'en' && activeTranslation && (
+        <>
+          {activeTranslation.stale && activeTranslation.status === 'done' && (
+            <div className="translation-stale-banner">
+              <span className="translation-stale-dot" />
+              <span>Source content has changed</span>
+              <button className="btn btn-sm btn-secondary" onClick={() => onTranslate(activeLang)}>
+                Re-translate
+              </button>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Images panel -- upload checklist for Confluence image placeholders */}
+      {/* Content area */}
+      {activeLang !== 'en' && activeTranslation?.status === 'translating' ? (
+        <div className="translation-tab-loading">
+          <div className="translation-spinner" />
+          <p>Translating to {SUPPORTED_LANGUAGES[activeLang] || activeLang}...</p>
+        </div>
+      ) : activeLang !== 'en' && activeTranslation?.status === 'error' ? (
+        <div className="translation-tab-error">
+          <p className="translation-error-message">{activeTranslation.error}</p>
+          <button className="btn btn-secondary" onClick={() => onTranslate(activeLang)}>
+            Retry
+          </button>
+        </div>
+      ) : activeLang !== 'en' && !hasContent ? (
+        <div className="translation-tab-empty">
+          <p>No translation available for {activeLang.toUpperCase()}.</p>
+        </div>
+      ) : viewMode === 'preview' ? (
+        <PreviewPanel content={activeBBCode} imageDataUrls={activeLang === 'en' ? imageDataUrls : undefined} />
+      ) : (
+        <div className="output-bbcode-tab">
+          <pre className="bbcode-readonly">{activeBBCode}</pre>
+        </div>
+      )}
+
+      {/* Images panel — upload checklist for Confluence image placeholders */}
       {placeholderImages.length > 0 && (
         <ImagesPanel
           filenames={placeholderImages}
@@ -339,7 +386,7 @@ export function OutputPanel({
         />
       )}
 
-      {/* Character count footer -- always visible regardless of active tab */}
+      {/* Character count footer */}
       <div className="panel-footer">
         <div className="char-bar-inline">
           <div
@@ -361,153 +408,3 @@ export function OutputPanel({
     </section>
   );
 }
-
-/** Inner component for translation tab content */
-function TranslationTabContent({
-  lang,
-  translation,
-  context,
-  blacklist,
-  onRetranslate,
-  expandedHelp,
-  toggleHelp,
-}: {
-  lang: string;
-  translation: TranslationState | undefined;
-  context: SteamContext;
-  blacklist: string[];
-  onRetranslate: () => void;
-  expandedHelp: Set<string>;
-  toggleHelp: (key: string, e: MouseEvent) => void;
-}) {
-  const [subTab, setSubTab] = useState<'preview' | 'bbcode'>('preview');
-
-  if (!translation) {
-    return (
-      <div className="translation-tab-empty">
-        <p>No translation available for {lang.toUpperCase()}.</p>
-      </div>
-    );
-  }
-
-  if (translation.status === 'translating') {
-    return (
-      <div className="translation-tab-loading">
-        <div className="translation-spinner" />
-        <p>Translating to {SUPPORTED_LANGUAGES[lang] || lang}...</p>
-      </div>
-    );
-  }
-
-  if (translation.status === 'error') {
-    return (
-      <div className="translation-tab-error">
-        <p className="translation-error-message">{translation.error}</p>
-        <button className="btn btn-secondary" onClick={onRetranslate}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  // status === 'done'
-  const lintResult = lintBBCode(translation.bbcode, context, { blacklist });
-  const hasLintErrors = lintResult.errors.length > 0;
-  const hasLintWarnings = lintResult.warnings.length > 0;
-
-  return (
-    <div className="translation-tab-content">
-      {/* Stale indicator */}
-      {translation.stale && (
-        <div className="translation-stale-banner">
-          <span className="translation-stale-dot" />
-          <span>Source content has changed</span>
-          <button className="btn btn-sm btn-secondary" onClick={onRetranslate}>
-            Re-translate
-          </button>
-        </div>
-      )}
-
-      {/* Preview / BBCode sub-tab toggle */}
-      <div className="translation-sub-tabs" data-testid="translation-sub-tabs">
-        <button
-          className={`translation-sub-tab ${subTab === 'preview' ? 'active' : ''}`}
-          onClick={() => setSubTab('preview')}
-          data-testid="translation-preview-tab"
-        >
-          Steam Preview
-        </button>
-        <button
-          className={`translation-sub-tab ${subTab === 'bbcode' ? 'active' : ''}`}
-          onClick={() => setSubTab('bbcode')}
-          data-testid="translation-bbcode-tab"
-        >
-          BBCode
-        </button>
-      </div>
-
-      {/* Lint messages for translated content */}
-      {(hasLintErrors || hasLintWarnings) && (
-        <div className="panel-lint">
-          {lintResult.errors.map((msg, i) => {
-            const key = `te${i}`;
-            return (
-              <div key={key} className="lint-message-group">
-                <div className="lint-message error">
-                  <span className="lint-icon">&#x2717;</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
-                  <span className="lint-text">{msg.message}</span>
-                  {msg.help && (
-                    <button
-                      className="lint-help-toggle"
-                      onClick={(e) => toggleHelp(key, e)}
-                      aria-expanded={expandedHelp.has(key)}
-                    >
-                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
-                    </button>
-                  )}
-                </div>
-                {msg.help && expandedHelp.has(key) && (
-                  <div className="lint-help-text">{msg.help}</div>
-                )}
-              </div>
-            );
-          })}
-          {lintResult.warnings.map((msg, i) => {
-            const key = `tw${i}`;
-            return (
-              <div key={key} className="lint-message-group">
-                <div className="lint-message warning">
-                  <span className="lint-icon">&#x26a0;</span>
-                  {msg.line && <span className="lint-line">L{msg.line}</span>}
-                  <span className="lint-text">{msg.message}</span>
-                  {msg.help && (
-                    <button
-                      className="lint-help-toggle"
-                      onClick={(e) => toggleHelp(key, e)}
-                      aria-expanded={expandedHelp.has(key)}
-                    >
-                      {expandedHelp.has(key) ? 'Hide' : 'Why?'}
-                    </button>
-                  )}
-                </div>
-                {msg.help && expandedHelp.has(key) && (
-                  <div className="lint-help-text">{msg.help}</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {subTab === 'preview' ? (
-        <PreviewPanel content={translation.bbcode} />
-      ) : (
-        <div className="output-bbcode-tab">
-          <pre className="bbcode-readonly">{translation.bbcode}</pre>
-        </div>
-      )}
-    </div>
-  );
-}
-
