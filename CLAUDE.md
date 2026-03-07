@@ -18,7 +18,7 @@ src/
 ├── components/
 │   ├── index.ts             # Component barrel exports
 │   ├── MarkdownPanel.tsx    # Left panel - input, markdown linting, format detection
-│   ├── OutputPanel.tsx      # Right panel - tabbed output (Preview / BBCode / Translation)
+│   ├── OutputPanel.tsx      # Right panel - two-row header (view mode × language), preview, copy
 │   ├── PreviewPanel.tsx     # BBCode -> HTML rendered preview (used inside OutputPanel)
 │   ├── SyntaxEditor.tsx     # Shared editor component with line numbers
 │   ├── TagReference.tsx     # Floating popover with tag reference
@@ -56,7 +56,7 @@ src/
 │   ├── utils.ts             # Shared utilities
 │   ├── contexts.ts          # Steam context types (announcements, guides, etc.)
 │   ├── welcome.ts           # Default welcome document
-│   └── __tests__/           # Vitest unit tests (551 tests across 21 files)
+│   └── __tests__/           # Vitest unit tests (556 tests across 21 files)
 └── styles/
     ├── app.css              # Main styles with CSS variables
     └── steam-theme.css      # Steam-accurate preview styling
@@ -79,9 +79,9 @@ src/
 ## Testing
 
 ```bash
-npm run test:run    # Run all 551 unit tests once
+npm run test:run    # Run all 556 unit tests once
 npm run test        # Watch mode
-npx playwright test # Run 110 E2E tests (7 spec files)
+npx playwright test # Run 55 E2E tests (7 spec files)
 ```
 
 Unit tests are in `src/lib/__tests__/`. E2E tests are in `e2e/`.
@@ -147,6 +147,23 @@ Edit `src/lib/welcome.ts`. Keep it lint-error-free in both panels!
 - **Terraform** - Infrastructure as code (`terraform/`)
 - **Nix** - Reproducible dev environment (`shell.nix`)
 
+## Jira
+
+Project key: **SMD**. Config: `~/.config/omg/jira-config.json`. Use the `standup-to-jira` skill (`~/OneMoreGame/standup-to-jira/SKILL.md`) for batch ticket creation. Use `requests` or `curl` for direct API access — the `jira` Python library fails in the Nix shell. Always use REST API v3 (`/rest/api/3/search/jql`), not v2.
+
+## Agent Definitions
+
+Six specialized agents in `.claude/agents/`:
+
+| Agent | File | Use For |
+|-------|------|---------|
+| `engineering-manager` | `.claude/agents/engineering-manager.md` | Scoping, prioritization, architecture, Jira integration |
+| `frontend-engineer` | `.claude/agents/frontend-engineer.md` | React/TypeScript/CSS implementation |
+| `ux-designer` | `.claude/agents/ux-designer.md` | UX evaluation, interaction design, workflow analysis |
+| `tauri-engineer` | `.claude/agents/tauri-engineer.md` | Tauri config, Rust, desktop builds, IPC |
+| `qa-engineer` | `.claude/agents/qa-engineer.md` | Test plans, E2E tests, verification, coverage |
+| `macos-developer` | `.claude/agents/macos-developer.md` | Native macOS APIs, SwiftUI/AppKit |
+
 ## Related Docs
 
 - [README.md](README.md) - User guide
@@ -154,3 +171,4 @@ Edit `src/lib/welcome.ts`. Keep it lint-error-free in both panels!
 - [CHANGELOG.md](CHANGELOG.md) - Version history
 - [BUILD.md](BUILD.md) - Desktop build instructions
 - [WEBAPP.md](WEBAPP.md) - Web deployment
+- [docs/test-plan.md](docs/test-plan.md) - QA test plan

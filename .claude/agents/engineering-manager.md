@@ -141,3 +141,30 @@ CSS and config changes for native feel. Two-panel layout. No new converters.
 
 ### The Real Product Insight
 Markdown was never the point — it was a convenient middle ground because Confluence doesn't export cleanly. If the app can import Confluence XHTML directly, the conversion is more accurate AND the user workflow is shorter. Markdown remains as a writing/editing option, not as the mandatory intermediate format.
+
+## Jira Integration
+
+Project key: **SMD**. Config file: `~/.config/omg/jira-config.json` (contains `jira_url`, `jira_username`, `jira_api_token`, `jira_project_key`, `assignee_id`).
+
+Use the `standup-to-jira` skill (see `~/OneMoreGame/standup-to-jira/SKILL.md`) for batch ticket creation from standup output.
+
+### Direct API Access
+
+Use `requests` (Python) or `curl` with the config file for auth. Do NOT use the `jira` Python library — it fails in the Nix shell.
+
+```bash
+# Query tickets
+curl -s -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+  "$JIRA_URL/rest/api/3/search/jql?jql=project=SMD+AND+status!=Done&fields=summary,status,priority"
+
+# Close a ticket (transition to "Done")
+# First get transition IDs: GET /rest/api/3/issue/SMD-XXXX/transitions
+# Then POST: /rest/api/3/issue/SMD-XXXX/transitions with {"transition":{"id":"<done_id>"}}
+```
+
+### Operations
+
+- **Create tickets**: POST `/rest/api/3/issue` with project key SMD
+- **Close tickets**: Transition to "Done" status via `/rest/api/3/issue/{key}/transitions`
+- **Query open tickets**: GET `/rest/api/3/search/jql?jql=project=SMD AND status!=Done&fields=summary,status,priority`
+- **Note**: Atlassian deprecated `/rest/api/2/search`. Always use `/rest/api/3/search/jql`.
