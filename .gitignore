@@ -391,3 +391,4 @@ npm-debug.log*
 *.tsbuildinfo
 *.dmg
 test-results/
+.claude/worktrees/

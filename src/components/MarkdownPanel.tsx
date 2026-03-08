@@ -87,7 +87,10 @@ export function MarkdownPanel({
     if (html && isConfluenceHtml(html)) {
       e.preventDefault();
       const { markdown } = confluenceToMarkdown(html, context);
-      onChange(markdown);
+      const textarea = e.currentTarget;
+      const before = value.substring(0, textarea.selectionStart);
+      const after = value.substring(textarea.selectionEnd);
+      onChange(before + markdown + after);
       onInputMethodChange?.('confluence_paste', markdown);
       trackEvent('paste_confluence', { source: 'clipboard_html' });
       return;
@@ -99,7 +102,10 @@ export function MarkdownPanel({
       const normalized = plaintextToMarkdown(plain);
       if (normalized !== plain) {
         e.preventDefault();
-        onChange(normalized);
+        const textarea = e.currentTarget;
+        const before = value.substring(0, textarea.selectionStart);
+        const after = value.substring(textarea.selectionEnd);
+        onChange(before + normalized + after);
         onInputMethodChange?.('plaintext_paste', normalized);
         trackEvent('paste_plaintext', { source: 'clipboard_plain', normalized: true });
         return;
