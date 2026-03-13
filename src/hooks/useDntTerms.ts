@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { getDntTerms, addDntTerm, removeDntTerm, resetDntTerms as resetDntTermsStore } from '@/lib/dnt-store';
+import { getDntTerms, addDntTerm, removeDntTerm, resetDntTerms as resetDntTermsStore, isWorkspaceTerm } from '@/lib/dnt-store';
 import { trackEvent } from '@/lib/analytics';
 
 export interface UseDntTermsReturn {
@@ -7,6 +7,7 @@ export interface UseDntTermsReturn {
   addTerm: (term: string) => void;
   removeTerm: (term: string) => void;
   resetTerms: () => void;
+  isWorkspaceTerm: (term: string) => boolean;
 }
 
 export function useDntTerms(): UseDntTermsReturn {
@@ -30,5 +31,5 @@ export function useDntTerms(): UseDntTermsReturn {
     trackEvent('dnt_terms_reset');
   }, []);
 
-  return { dntTerms, addTerm, removeTerm, resetTerms };
+  return { dntTerms, addTerm, removeTerm, resetTerms, isWorkspaceTerm };
 }

@@ -3,55 +3,13 @@
  * Used by the translation feature (SMD-4370) to instruct the LLM
  * to preserve these terms exactly as written.
  *
- * Includes: game title, character names, enemy names, difficulty modes,
- * game-specific proper nouns, and patterns like @mentions.
+ * Workspace defaults are loaded from src/workspace/dnt-defaults.json,
+ * which can be swapped per-game at build time.
  */
 
-export const DO_NOT_TRANSLATE: string[] = [
-  // Game title
-  'SWAPMEAT',
+import dntDefaults from '@/workspace/dnt-defaults.json';
 
-  // Characters / Skins
-  'Tangus',
-  'Jangus',
-  'Smart Meat',
-  'Gobble Gazer',
-  'Paper Bobby',
-  'Boombot',
-  'BoxFace',
-  'Rocketbot',
-  'Rangus',
-  'Franken Meat',
-  'Franken Beans',
-  'Squat Daddy',
-  'Coach Dan',
-  'Dingus',
-  'Micro Jackson',
-  'Highbeam',
-  'Zorpjet',
-
-  // Enemies / NPCs
-  'Pestie',
-  'Peeperoni',
-  'Bean Minion',
-  'Wheelie',
-  'Creeper',
-  'Katana',
-  'Clobberbot',
-
-  // Items / Mechanics
-  'Plasma',
-  'Slime',
-
-  // Difficulty modes
-  'Hard',
-  'Standard',
-  'Casual',
-  'Nightmare',
-
-  // Game modes / Map names
-  'Random Solar System',
-];
+export const DO_NOT_TRANSLATE: string[] = dntDefaults;
 
 /**
  * Regex patterns for terms that should not be translated.
