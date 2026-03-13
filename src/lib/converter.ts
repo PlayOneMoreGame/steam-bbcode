@@ -16,6 +16,15 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
   let result = markdown;
   const notes: string[] = [];
 
+  // Extract fenced code blocks FIRST to protect their contents from
+  // header/list/inline conversions (fixes SMD-4384)
+  const codeBlocks: string[] = [];
+  result = result.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
+    const index = codeBlocks.length;
+    codeBlocks.push((code as string).trim());
+    return `\x00CODEBLOCK${index}\x00`;
+  });
+
   // Headers (must be done before other inline processing)
   result = result.replace(/^### (.+)$/gm, '[h3]$1[/h3]');
   result = result.replace(/^## (.+)$/gm, '[h2]$1[/h2]');
@@ -26,11 +35,6 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
 
   // Lists - process EARLY before italic conversion to avoid * conflicts
   result = processLists(result);
-
-  // Code blocks (fenced) - these become block [code]
-  result = result.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
-    return `[code]${(code as string).trim()}[/code]`;
-  });
 
   // Inline code → [b] (Steam has no inline code!)
   const inlineCodeMatches = result.match(/`[^`\n]+`/g) || [];
@@ -62,6 +66,11 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
 
   // Merge consecutive quotes
   result = result.replace(/\[\/quote\]\n\[quote\]/g, '\n');
+
+  // Reinsert code blocks
+  result = result.replace(/\x00CODEBLOCK(\d+)\x00/g, (_match, index) => {
+    return `[code]${codeBlocks[parseInt(index, 10)]}[/code]`;
+  });
 
   return { bbcode: result, notes };
 }

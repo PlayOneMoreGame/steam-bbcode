@@ -92,10 +92,6 @@ export function OutputPanel({
     });
   }, []);
 
-  const charLimit = CHAR_LIMITS[context];
-  const charCount = bbcode.length;
-  const charPercent = Math.min(100, Math.round((charCount / charLimit) * 100));
-
   const hasErrors = bbcodeLint.errors.length > 0;
   const hasWarnings = bbcodeLint.warnings.length > 0;
   const errorCount = bbcodeLint.errors.length;
@@ -118,6 +114,11 @@ export function OutputPanel({
     if (!activeBBCode) return { errors: [], warnings: [], errorLines: new Set<number>(), warningLines: new Set<number>() };
     return lintBBCode(activeBBCode, context, { blacklist });
   }, [activeLang, activeBBCode, bbcodeLint, context, blacklist]);
+
+  // Character count for the active language (not always English)
+  const charLimit = CHAR_LIMITS[context];
+  const charCount = activeBBCode.length;
+  const charPercent = Math.min(100, Math.round((charCount / charLimit) * 100));
 
   // Copy content is always the raw BBCode for the active language
   const activeCopyContent = activeBBCode;

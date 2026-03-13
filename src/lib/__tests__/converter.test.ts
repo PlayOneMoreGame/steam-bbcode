@@ -80,6 +80,29 @@ describe('markdownToBBCode', () => {
       const result = markdownToBBCode('Run `cmd1` and `cmd2`', 'announcements');
       expect(result.notes).toContain('Converted 2 inline code span(s) to [b] (Steam has no inline code)');
     });
+
+    it('does not convert headers inside fenced code blocks (SMD-4384)', () => {
+      const md = '# Real Header\n\n```python\n# This is a comment\nprint("hello")\n```';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toContain('[h1]Real Header[/h1]');
+      expect(result.bbcode).toContain('[code]# This is a comment\nprint("hello")[/code]');
+      expect(result.bbcode).not.toContain('[h1]This is a comment');
+    });
+
+    it('does not convert markdown syntax inside fenced code blocks', () => {
+      const md = '```\n## Header\n**bold**\n- list item\n> quote\n```';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toBe('[code]## Header\n**bold**\n- list item\n> quote[/code]');
+    });
+
+    it('handles multiple code blocks with protected content', () => {
+      const md = '# Title\n\n```\n# comment 1\n```\n\nSome text\n\n```\n# comment 2\n```';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toContain('[h1]Title[/h1]');
+      expect(result.bbcode).toContain('[code]# comment 1[/code]');
+      expect(result.bbcode).toContain('[code]# comment 2[/code]');
+      expect(result.bbcode).not.toContain('[h1]comment');
+    });
   });
 
   describe('links', () => {
