@@ -67,6 +67,15 @@ Native menu bar, window title, context menus. May require Tauri v2 migration.
 **Phase 3 — Feature Additions (ongoing):**
 Image handling, resizable panels, find/replace, auto-update. Scoped individually.
 
+## Architecture Principles (Enforce These)
+
+The codebase follows a functional pipeline architecture. These properties are working well and must be protected:
+
+- **Pure domain logic.** Converters, linters, and renderers are pure functions — no I/O, no side effects, no state. This makes them trivially testable and safe to refactor. Any PR that adds side effects to `src/lib/` should be challenged.
+- **Anti-corruption boundary.** The format detector (`format-detector.ts`) and paste handler isolate messy external input from clean internal processing. Changes to input handling should preserve this boundary.
+- **Ubiquitous language.** "converter", "linter", "renderer", "context", "format" — these terms are consistent across code, tests, and agent communication. Enforce consistency in new code and ticket descriptions.
+- **Pipeline, not domain model.** This is a text transformation pipeline (detect → convert → validate → render), not an OO domain model. Proposals that introduce entities, aggregates, event buses, or repository abstractions should be rejected — they add ceremony without enabling anything new at this scale (~4,100 lines of lib code).
+
 ## When Reviewing Plans
 
 1. Does this change make the app feel MORE native? How much?
@@ -75,6 +84,7 @@ Image handling, resizable panels, find/replace, auto-update. Scoped individually
 4. Does this break existing tests? Are new tests needed?
 5. Is this the right phase? Don't mix quick wins with architecture changes.
 6. Who owns this? Is the boundary between agents clear?
+7. Does this preserve the pure-function pipeline architecture?
 
 ## When Breaking Down Work
 

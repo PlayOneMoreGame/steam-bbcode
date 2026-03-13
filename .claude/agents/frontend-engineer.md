@@ -68,12 +68,21 @@ The UX designer will specify what needs to change. Your job is implementing it i
 
 **Transitions**: Respect `prefers-reduced-motion`. No gratuitous animations. Mac apps feel snappy, not animated.
 
+## Architecture Principles
+
+These patterns are working well — maintain them:
+
+- **Pure functions for domain logic.** Converters, linters, and renderers are pure functions with no I/O or side effects. Keep them that way. This is the single most valuable architectural property of the codebase — it makes testing trivial and reasoning easy.
+- **Format detector as an anti-corruption layer.** `format-detector.ts` sits at the boundary between messy external input (Confluence XHTML, pasted HTML, plain text) and clean internal processing (markdown). Protect this boundary.
+- **Ubiquitous language.** The codebase uses consistent terms: "converter" (format transform), "linter" (validation), "renderer" (BBCode→HTML), "context" (Steam posting type), "format" (input type). Use these terms in code, comments, and test names.
+- **Pipeline over domain model.** This is a text transformation pipeline (detect → convert → validate → render), not an object-oriented domain model. Prefer function composition over class hierarchies. No entities, no aggregates, no event buses.
+
 ## When Implementing
 
 - Keep the dual-target constraint: changes must work in both Tauri and web mode
 - Use `window.__TAURI__` checks for Tauri-specific features
 - Don't introduce new dependencies without justification — the bundle is currently lean
-- Maintain the 123 existing tests. Add tests for new UI behavior.
+- Maintain the existing tests (556 unit + 119 E2E). Add tests for new behavior.
 - CSS changes should use the existing CSS variables system, not inline styles
 - The converter and linter are pure functions with good test coverage — don't touch them unless explicitly needed
 

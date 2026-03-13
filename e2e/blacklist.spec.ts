@@ -26,25 +26,30 @@ test('add and remove blacklist terms in settings', async ({ page }) => {
   await expect(page.getByTestId('settings-panel')).toBeVisible();
 
   // Add a term
-  const input = page.getByTestId('blacklist-input');
+  const input = page.getByTestId('blocked-input');
   await input.fill('badword');
-  await page.getByTestId('blacklist-add-btn').click();
+  await page.getByTestId('blocked-add-btn').click();
 
-  // Chip should appear
-  const chips = page.getByTestId('blacklist-chip');
+  // Chip should appear — search for the term to see it
+  await input.fill('badword');
+  const chips = page.getByTestId('blocked-chip');
   await expect(chips).toHaveCount(1);
   await expect(chips.first()).toContainText('badword');
-
-  // Input should be cleared
-  await expect(input).toHaveValue('');
 
   // Add another term via Enter key
   await input.fill('forbidden');
   await input.press('Enter');
-  await expect(chips).toHaveCount(2);
 
-  // Remove first term
+  // Search for both terms to see them as chips
+  await input.fill('bad');
+  await expect(chips).toHaveCount(1);
+  await expect(chips.first()).toContainText('badword');
+
+  // Remove the term
   await chips.first().locator('.settings-chip-remove').click();
+
+  // Search for remaining term
+  await input.fill('forbidden');
   await expect(chips).toHaveCount(1);
   await expect(chips.first()).toContainText('forbidden');
 });

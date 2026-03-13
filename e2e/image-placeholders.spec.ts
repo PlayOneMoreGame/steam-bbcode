@@ -2,6 +2,30 @@ import { test, expect } from '@playwright/test';
 
 const CONFLUENCE_WITH_IMAGES = '<h1>Patch Notes</h1><p>Here are changes:</p><ac:image><ri:attachment ri:filename="hero.png" /></ac:image><p>More text</p><ac:image><ri:attachment ri:filename="screenshot.gif" /></ac:image>';
 
+// Helper: simulate paste with Confluence HTML
+async function pasteConfluenceHtml(
+  textarea: import('@playwright/test').Locator,
+  html: string,
+  plainFallback: string
+) {
+  await textarea.evaluate(
+    (el, { html, plain }) => {
+      const ta = el as HTMLTextAreaElement;
+      ta.setSelectionRange(0, ta.value.length); // select all to replace
+      const dt = new DataTransfer();
+      dt.setData('text/plain', plain);
+      dt.setData('text/html', html);
+      const event = new ClipboardEvent('paste', {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(event);
+    },
+    { html, plain: plainFallback }
+  );
+}
+
 test.beforeEach(async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
@@ -13,13 +37,15 @@ test.beforeEach(async ({ page, context }) => {
 
 test('Confluence images render as bold drop markers in preview', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill(''); // clear welcome doc
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
-  // Preview should show drop markers as bold text, not broken images
-  const preview = page.locator('.steam-preview');
-  await expect(preview).toContainText('>>> Drop image: hero.png <<<');
-  await expect(preview).toContainText('>>> Drop image: screenshot.gif <<<');
+  // Preview should show drop markers as bold text
+  const preview = page.locator('.preview.preview-bbcode');
+  await expect(preview).toContainText('Drop image: hero.png');
+  await expect(preview).toContainText('Drop image: screenshot.gif');
 });
 
 // ---------------------------------------------------------------------------
@@ -28,7 +54,9 @@ test('Confluence images render as bold drop markers in preview', async ({ page }
 
 test('Images panel appears when Confluence content has images', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill('');
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
   // Images panel should be visible in output panel
@@ -62,7 +90,9 @@ test('Images panel not shown for markdown with URL images', async ({ page }) => 
 
 test('Images panel lists filenames for upload', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill('');
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
   const imagesPanel = page.locator('.images-panel');
@@ -82,14 +112,16 @@ test('Images panel lists filenames for upload', async ({ page }) => {
 
 test('BBCode output contains drop markers for Confluence images', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill('');
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
   // Switch to BBCode tab
   await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
   const bbcode = page.locator('.bbcode-readonly');
-  await expect(bbcode).toContainText('>>> Drop image: hero.png <<<');
-  await expect(bbcode).toContainText('>>> Drop image: screenshot.gif <<<');
+  await expect(bbcode).toContainText('Drop image: hero.png');
+  await expect(bbcode).toContainText('Drop image: screenshot.gif');
 });
 
 // ---------------------------------------------------------------------------
@@ -98,13 +130,12 @@ test('BBCode output contains drop markers for Confluence images', async ({ page 
 
 test('lint does not warn about drop marker images', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill('');
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
-  // Switch to BBCode tab
-  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
-
-  // Lint status should show Ready (no errors or warnings from drop markers)
+  // Lint status should show Ready (no errors from drop markers)
   await expect(page.locator('.lint-status-ready')).toBeVisible();
 });
 
@@ -114,7 +145,9 @@ test('lint does not warn about drop marker images', async ({ page }) => {
 
 test('Images panel can be collapsed and expanded', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill('');
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
   const header = page.locator('.images-panel-header');
@@ -138,7 +171,9 @@ test('Images panel can be collapsed and expanded', async ({ page }) => {
 
 test('copy BBCode includes drop markers', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
-  await mdEditor.fill(CONFLUENCE_WITH_IMAGES);
+  await mdEditor.fill('');
+  await mdEditor.focus();
+  await pasteConfluenceHtml(mdEditor, CONFLUENCE_WITH_IMAGES, 'Patch Notes');
   await page.waitForTimeout(500);
 
   // Copy BBCode
@@ -147,6 +182,6 @@ test('copy BBCode includes drop markers', async ({ page }) => {
 
   // Verify clipboard contains drop markers
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText).toContain('>>> Drop image: hero.png <<<');
-  expect(clipboardText).toContain('>>> Drop image: screenshot.gif <<<');
+  expect(clipboardText).toContain('Drop image: hero.png');
+  expect(clipboardText).toContain('Drop image: screenshot.gif');
 });

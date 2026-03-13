@@ -129,20 +129,19 @@ test('lint status shows error count on preview tab when errors exist', async ({ 
   await expect(errorIndicator).toContainText('error');
 });
 
-test('clicking lint error indicator switches to BBCode tab', async ({ page }) => {
+test('clicking lint error indicator expands lint detail panel', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
   await mdEditor.fill('[b]unclosed bold');
   await page.waitForTimeout(200);
 
-  // Click the error indicator
+  // Lint detail panel should NOT be visible initially
+  await expect(page.locator('.output-panel .panel-lint')).not.toBeVisible();
+
+  // Click the error indicator to expand
   const errorIndicator = page.locator('.output-panel .lint-status-error');
   await errorIndicator.click();
 
-  // BBCode tab should now be active
-  const bbcodeTab = page.locator('.output-panel .preview-tab', { hasText: 'BBCode' });
-  await expect(bbcodeTab).toHaveClass(/active/);
-
-  // Lint messages should be visible
+  // Lint messages should now be visible (collapsible panel expanded)
   await expect(page.locator('.output-panel .panel-lint')).toBeVisible();
 });
 
@@ -374,20 +373,22 @@ test('clicking Why? expands help text and clicking Hide collapses it', async ({ 
   await expect(whyButton).toHaveText('Why?');
 });
 
-test('bbcode tab lint messages show Why? link with expandable help', async ({ page }) => {
+test('output panel lint messages show Why? link with expandable help', async ({ page }) => {
   const mdEditor = page.locator('.panel').first().locator('textarea');
   // Input that produces BBCode with unclosed tags
   await mdEditor.fill('[b]unclosed bold tag');
+  await page.waitForTimeout(200);
 
-  // Switch to BBCode tab
-  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
+  // Click the error indicator to expand the lint detail panel
+  const errorIndicator = page.locator('.output-panel .lint-status-error');
+  await errorIndicator.click();
 
-  // Wait for lint messages
+  // Lint panel should now be visible
   const lintPanel = page.locator('.output-panel .panel-lint');
-  // The BBCode output will have markdown syntax warnings, check for any Why? button
-  const whyButtons = lintPanel.locator('.lint-help-toggle');
+  await expect(lintPanel).toBeVisible();
 
-  // There should be at least one Why? button
+  // Check for Why? button
+  const whyButtons = lintPanel.locator('.lint-help-toggle');
   const count = await whyButtons.count();
   expect(count).toBeGreaterThan(0);
 

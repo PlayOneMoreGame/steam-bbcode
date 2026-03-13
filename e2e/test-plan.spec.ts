@@ -1,5 +1,29 @@
 import { test, expect } from '@playwright/test';
 
+// Helper: simulate paste with Confluence HTML
+async function pasteConfluenceHtml(
+  textarea: import('@playwright/test').Locator,
+  html: string,
+  plainFallback: string
+) {
+  await textarea.evaluate(
+    (el, { html, plain }) => {
+      const ta = el as HTMLTextAreaElement;
+      ta.setSelectionRange(0, ta.value.length); // select all to replace
+      const dt = new DataTransfer();
+      dt.setData('text/plain', plain);
+      dt.setData('text/html', html);
+      const event = new ClipboardEvent('paste', {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(event);
+    },
+    { html, plain: plainFallback }
+  );
+}
+
 // ============================================================================
 // Test Plan Execution — steambb-test-plan.md
 // Tests against the local web build (not staging — no basic auth tests here)
@@ -191,16 +215,22 @@ test.describe('4. Confluence XHTML Input', () => {
     await page.screenshot({ path: '/private/tmp/test-plan/04-image-placeholder.png', fullPage: true });
   });
 
-  test('images panel appears with URL input', async ({ page }) => {
+  test('images panel appears with upload checklist', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
-    await mdEditor.fill(CONFLUENCE_INPUT);
+    await mdEditor.fill('');
+    await mdEditor.focus();
+    await pasteConfluenceHtml(mdEditor, CONFLUENCE_INPUT, 'Shrines');
+    await page.waitForTimeout(500);
     await expect(page.locator('.images-panel')).toBeVisible();
-    await expect(page.locator('.images-panel')).toContainText('needs Steam URL');
+    await expect(page.locator('.images-panel')).toContainText('Upload');
   });
 
   test('BBCode output has Steam tags not HTML', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
-    await mdEditor.fill(CONFLUENCE_INPUT);
+    await mdEditor.fill('');
+    await mdEditor.focus();
+    await pasteConfluenceHtml(mdEditor, CONFLUENCE_INPUT, 'Shrines');
+    await page.waitForTimeout(500);
     await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
     const bbcode = page.locator('.bbcode-readonly');
     await expect(bbcode).toContainText('[h2]');
@@ -214,11 +244,11 @@ test.describe('4. Confluence XHTML Input', () => {
 
   test('local-id attributes stripped', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
-    await mdEditor.fill(CONFLUENCE_INPUT);
-    // Wait for format detection debounce (300ms) to recognize Confluence
+    await mdEditor.fill('');
+    await mdEditor.focus();
+    await pasteConfluenceHtml(mdEditor, CONFLUENCE_INPUT, 'Shrines');
     await page.waitForTimeout(500);
-    const badge = page.locator('.panel').first().locator('.format-badge');
-    await expect(badge).toContainText('Rich Text');
+    // After paste, editor has markdown — BBCode output should not contain local-id
     await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
     const text = await page.locator('.bbcode-readonly').textContent() || '';
     expect(text).not.toContain('local-id');
@@ -246,24 +276,27 @@ test.describe('5. Plain Text / Copypasta', () => {
 // ============================================================================
 
 test.describe('6. Image Placeholders', () => {
-  test('placeholder card shows with dashed border', async ({ page }) => {
+  test('drop markers appear in preview for Confluence images', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
-    await mdEditor.fill(CONFLUENCE_INPUT);
-    const placeholder = page.locator('.steam-img-placeholder');
-    await expect(placeholder).toBeVisible();
+    await mdEditor.fill('');
+    await mdEditor.focus();
+    await pasteConfluenceHtml(mdEditor, CONFLUENCE_INPUT, 'Shrines');
+    await page.waitForTimeout(500);
+    // Drop markers render as bold text in preview
+    const preview = page.locator('.preview.preview-bbcode');
+    await expect(preview).toContainText('Drop image:');
   });
 
-  test('entering URL updates BBCode', async ({ page }) => {
+  test('images panel shows upload checklist for Confluence images', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
-    await mdEditor.fill(CONFLUENCE_INPUT);
-    // Enter a URL in the images panel
-    const urlInput = page.locator('.images-panel input[type="text"]').first();
-    await urlInput.fill('https://cdn.steam.com/test-image.png');
-    await page.waitForTimeout(300);
-    // Check BBCode tab
-    await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
-    const bbcode = await page.locator('.bbcode-readonly').textContent() || '';
-    expect(bbcode).toContain('https://cdn.steam.com/test-image.png');
+    await mdEditor.fill('');
+    await mdEditor.focus();
+    await pasteConfluenceHtml(mdEditor, CONFLUENCE_INPUT, 'Shrines');
+    await page.waitForTimeout(500);
+    // Images panel should be visible with filenames
+    const imagesPanel = page.locator('.images-panel');
+    await expect(imagesPanel).toBeVisible();
+    await expect(imagesPanel).toContainText('Shrine_InGame_FirstPass_PatchEmbed.gif');
     await page.screenshot({ path: '/private/tmp/test-plan/06-image-url-entered.png', fullPage: true });
   });
 });
@@ -281,12 +314,9 @@ test.describe('8. Term Protection', () => {
     await page.screenshot({ path: '/private/tmp/test-plan/08-dnt-glossary.png', fullPage: true });
   });
 
-  test('blacklist section visible and empty by default', async ({ page }) => {
-    // Clear any leftover blacklist
-    await page.evaluate(() => localStorage.removeItem('steambb-blacklist-terms'));
-    await page.reload();
+  test('blocked words section visible in settings', async ({ page }) => {
     await page.getByRole('button', { name: 'Settings' }).click();
-    await expect(page.locator('.settings-panel')).toContainText('Blacklisted Terms');
+    await expect(page.locator('.settings-panel')).toContainText('Blocked Words');
   });
 
   test('add term to blacklist, see wavy underline and warning', async ({ page }) => {
@@ -330,9 +360,11 @@ test.describe('8. Term Protection', () => {
     await mdEditor.fill('This is a damn good test');
     await page.waitForTimeout(300);
     await expect(page.locator('.highlight-blacklist')).toBeVisible();
-    // Remove term via settings
+    // Remove term via settings — search for it first (search-based UI)
     await page.getByRole('button', { name: 'Settings' }).click();
-    // Click the x on the 'damn' chip
+    const blockedInput = page.getByTestId('blocked-input');
+    await blockedInput.fill('damn');
+    // Click the x on the 'damn' chip in search results
     const chip = page.locator('.settings-panel .settings-chip', { hasText: 'damn' });
     await chip.locator('.settings-chip-remove').click();
     await page.waitForTimeout(300);
@@ -349,7 +381,10 @@ test.describe('9. Lint Messages', () => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill('[b]unclosed bold tag');
     await page.waitForTimeout(300);
-    await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
+    // Click error indicator to expand lint detail panel
+    const errorIndicator = page.locator('.output-panel .lint-status-error');
+    await expect(errorIndicator).toBeVisible();
+    await errorIndicator.click();
     const lintPanel = page.locator('.output-panel .panel-lint');
     await expect(lintPanel).toBeVisible();
     const text = await lintPanel.textContent() || '';
@@ -379,13 +414,16 @@ test.describe('9. Lint Messages', () => {
     await expect(page.locator('.output-panel .lint-status-error')).toBeVisible({ timeout: 5000 });
   });
 
-  test('clicking error count switches to BBCode tab', async ({ page }) => {
+  test('clicking error count expands lint detail panel', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill('[b]unclosed');
     await page.waitForTimeout(300);
+    // Lint detail panel should not be visible initially
+    await expect(page.locator('.output-panel .panel-lint')).not.toBeVisible();
+    // Click error indicator to expand
     await page.locator('.output-panel .lint-status-error').click();
-    const bbcodeTab = page.locator('.output-panel .preview-tab', { hasText: 'BBCode' });
-    await expect(bbcodeTab).toHaveClass(/active/);
+    // Lint detail panel should now be visible
+    await expect(page.locator('.output-panel .panel-lint')).toBeVisible();
   });
 });
 
@@ -465,14 +503,16 @@ test.describe('12. Settings', () => {
   test('settings persist after reload', async ({ page }) => {
     // Add a blacklist term
     await page.getByRole('button', { name: 'Settings' }).click();
-    const input = page.locator('.settings-panel .settings-input');
+    const input = page.getByTestId('blocked-input');
     await input.fill('testterm');
     await input.press('Enter');
     await page.waitForTimeout(200);
 
-    // Reload
+    // Reload and search for the term
     await page.reload();
     await page.getByRole('button', { name: 'Settings' }).click();
+    const reloadedInput = page.getByTestId('blocked-input');
+    await reloadedInput.fill('testterm');
     await expect(page.locator('.settings-panel')).toContainText('testterm');
 
     // Cleanup
