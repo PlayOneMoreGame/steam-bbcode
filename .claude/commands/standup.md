@@ -5,11 +5,29 @@ description: Daily morning standup — agents review current state and recommend
 
 ## Daily Standup
 
+### Ticket Registry
+
+The local ticket registry is at:
+`~/.claude/projects/-Users-jchackert-OneMoreGame-steam-bbcode/memory/tickets.json`
+
+This file is the source of truth for "our" tickets. Use it instead of raw Jira queries to avoid noise from other teams' tickets in the SMD project.
+
+- **Read it** in Step 1 to get current open/done ticket counts
+- **Write to it** in Step 4 when creating new tickets (pass `--registry` flag)
+- **Update it** when closing tickets (set status to "done", add "closed" date)
+- All tickets MUST be assigned to Jeff (assignee_id in jira-config.json)
+
 ### Step 1: Gather State
 
 Read context files:
 - ~/OneMoreGame/steam-bbcode/CLAUDE.md
 - ~/OneMoreGame/steam-bbcode/ROADMAP.md
+- ~/.claude/projects/-Users-jchackert-OneMoreGame-steam-bbcode/memory/tickets.json
+
+From the ticket registry, report:
+- Total open tickets (status != "done")
+- Total done tickets
+- List open tickets by key and summary
 
 Check repo status:
 ```bash
@@ -60,6 +78,12 @@ Flag any conflicts between agent recommendations. Present the plan for approval 
 
 After the plan is approved, use the standup-to-jira skill to create tickets:
 - Write ticket definitions to /tmp/standup-tickets.json
-- Run: python ~/OneMoreGame/standup-to-jira/scripts/create_tickets.py --config ~/.config/omg/jira-config.json --tickets /tmp/standup-tickets.json --dry-run
+- Dry run first: `python ~/OneMoreGame/standup-to-jira/scripts/create_tickets.py --config ~/.config/omg/jira-config.json --tickets /tmp/standup-tickets.json --dry-run`
 - Show preview, wait for approval
-- Create tickets on confirmation
+- Create with registry update: `python ~/OneMoreGame/standup-to-jira/scripts/create_tickets.py --config ~/.config/omg/jira-config.json --tickets /tmp/standup-tickets.json --registry ~/.claude/projects/-Users-jchackert-OneMoreGame-steam-bbcode/memory/tickets.json`
+
+### Closing Tickets
+
+When closing tickets in Jira (via REST API), ALWAYS also update the local registry:
+1. Transition the ticket to "Done" in Jira
+2. Update tickets.json: set `"status": "done"` and add `"closed": "YYYY-MM-DD"`

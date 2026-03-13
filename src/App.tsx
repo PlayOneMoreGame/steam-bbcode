@@ -46,9 +46,22 @@ export function App() {
   // File names - null means we're showing the welcome doc
   const [mdFileName, setMdFileName] = useState<string | null>(null);
 
-  // Markdown content - always starts with welcome doc on fresh load
-  const [markdown, setMarkdown] = useState(WELCOME_MARKDOWN);
-  const baseContentRef = useRef(WELCOME_MARKDOWN);
+  // Markdown content — restore saved draft for returning users, welcome doc for first visit
+  const [markdown, setMarkdown] = useState(() => {
+    try {
+      const saved = localStorage.getItem('steam-bbcode-draft');
+      if (saved) {
+        const { markdown: savedMarkdown } = JSON.parse(saved);
+        // Return visitor with work in progress — restore it
+        if (savedMarkdown && savedMarkdown !== WELCOME_MARKDOWN) return savedMarkdown;
+        // Return visitor with nothing in progress — start empty
+        if (savedMarkdown === WELCOME_MARKDOWN) return '';
+      }
+    } catch { /* corrupted draft, fall through */ }
+    // First visit — show welcome doc
+    return WELCOME_MARKDOWN;
+  });
+  const baseContentRef = useRef(markdown);
 
   // Context persists across sessions
   const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
