@@ -1,20 +1,19 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
-import { OutputPanel, type TranslationState } from '@/components/OutputPanel';
+import { OutputPanel } from '@/components/OutputPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
-import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm, resetBlacklist } from '@/lib/blacklist-store';
-import { getDntTerms, addDntTerm, removeDntTerm, resetDntTerms } from '@/lib/dnt-store';
 import { markdownToBBCode } from '@/lib/converter';
 import { lintBBCode } from '@/lib/linter';
-import { detectFormat, type InputFormat } from '@/lib/format-detector';
 import { extractPlaceholderImages } from '@/lib/image-placeholders';
-import { translateBBCode, hashString } from '@/lib/translation-service';
-import { getApiKey } from '@/lib/api-key-store';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAutoSave, formatLastSaved } from '@/hooks/useAutoSave';
 import { useFileService, MD_FILTERS } from '@/hooks/useFileService';
 import { useRecentFiles } from '@/hooks/useRecentFiles';
 import { useImageStore } from '@/hooks/useImageStore';
+import { useBlacklist } from '@/hooks/useBlacklist';
+import { useDntTerms } from '@/hooks/useDntTerms';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useFormatDetection } from '@/hooks/useFormatDetection';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 import { WELCOME_MARKDOWN } from '@/lib/welcome';
@@ -70,64 +69,13 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
 
   // Blacklist state — loaded from localStorage
-  const [blacklist, setBlacklist] = useState<string[]>(() => getBlacklist());
-
-  const handleAddBlacklistTerm = useCallback((term: string) => {
-    addBlacklistTerm(term);
-    setBlacklist(getBlacklist());
-    trackEvent('blacklist_term_added', { term });
-  }, []);
-
-  const handleRemoveBlacklistTerm = useCallback((term: string) => {
-    removeBlacklistTerm(term);
-    setBlacklist(getBlacklist());
-    trackEvent('blacklist_term_removed', { term });
-  }, []);
-
-  const handleResetBlacklist = useCallback(() => {
-    resetBlacklist();
-    setBlacklist(getBlacklist());
-    trackEvent('blacklist_terms_reset');
-  }, []);
+  const { blacklist, addTerm: handleAddBlacklistTerm, removeTerm: handleRemoveBlacklistTerm, resetBlacklist: handleResetBlacklist } = useBlacklist();
 
   // DNT (Do Not Translate) state — loaded from localStorage
-  const [dntTerms, setDntTerms] = useState<string[]>(() => getDntTerms());
-
-  const handleAddDntTerm = useCallback((term: string) => {
-    addDntTerm(term);
-    setDntTerms(getDntTerms());
-    trackEvent('dnt_term_added', { term });
-  }, []);
-
-  const handleRemoveDntTerm = useCallback((term: string) => {
-    removeDntTerm(term);
-    setDntTerms(getDntTerms());
-    trackEvent('dnt_term_removed', { term });
-  }, []);
-
-  const handleResetDntTerms = useCallback(() => {
-    resetDntTerms();
-    setDntTerms(getDntTerms());
-    trackEvent('dnt_terms_reset');
-  }, []);
+  const { dntTerms, addTerm: handleAddDntTerm, removeTerm: handleRemoveDntTerm, resetTerms: handleResetDntTerms } = useDntTerms();
 
   // Format detection (debounced)
-  const [detectedFormat, setDetectedFormat] = useState<InputFormat>('markdown');
-  const formatTimerRef = useRef<ReturnType<typeof setTimeout>>();
-
-  useEffect(() => {
-    if (formatTimerRef.current) {
-      clearTimeout(formatTimerRef.current);
-    }
-    formatTimerRef.current = setTimeout(() => {
-      setDetectedFormat(detectFormat(markdown));
-    }, 300);
-    return () => {
-      if (formatTimerRef.current) {
-        clearTimeout(formatTimerRef.current);
-      }
-    };
-  }, [markdown]);
+  const detectedFormat = useFormatDetection(markdown);
 
   // Auto-save draft for crash recovery
   const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
@@ -207,6 +155,9 @@ export function App() {
       baseContentRef.current = markdown;
     }
   }, [saveFileAs, markdown, mdFileName]);
+
+  // Translation state
+  const { translations, apiKeyDialogOpen, setApiKeyDialogOpen, handleTranslate, handleApiKeySaved } = useTranslation(bbcode, dntTerms);
 
   // Copy BBCode to clipboard (for keyboard shortcut)
   const handleCopyBBCode = useCallback(async () => {
@@ -311,73 +262,6 @@ export function App() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
-
-  // Translation state
-  const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
-  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
-  const sourceHashRef = useRef<number>(0);
-
-  // Track source BBCode hash for stale detection
-  useEffect(() => {
-    const newHash = hashString(bbcode);
-    if (sourceHashRef.current !== 0 && sourceHashRef.current !== newHash) {
-      // Source changed — mark all completed translations as stale
-      setTranslations(prev => {
-        const next = { ...prev };
-        for (const lang of Object.keys(next)) {
-          if (next[lang].status === 'done') {
-            next[lang] = { ...next[lang], stale: true };
-          }
-        }
-        return next;
-      });
-    }
-    sourceHashRef.current = newHash;
-  }, [bbcode]);
-
-  const handleTranslate = useCallback(async (lang: string) => {
-    // Check for API key first
-    if (!getApiKey()) {
-      setApiKeyDialogOpen(true);
-      return;
-    }
-
-    // Set translating state
-    setTranslations(prev => ({
-      ...prev,
-      [lang]: { bbcode: '', status: 'translating', stale: false },
-    }));
-
-    trackEvent('translate_started', { lang });
-
-    const result = await translateBBCode(bbcode, lang, dntTerms);
-
-    if (result.ok) {
-      setTranslations(prev => ({
-        ...prev,
-        [lang]: { bbcode: result.bbcode, status: 'done', stale: false },
-      }));
-      trackEvent('translate_completed', { lang });
-    } else {
-      if (result.code === 'missing_api_key') {
-        setApiKeyDialogOpen(true);
-        setTranslations(prev => ({
-          ...prev,
-          [lang]: { bbcode: '', status: 'idle', stale: false },
-        }));
-      } else {
-        setTranslations(prev => ({
-          ...prev,
-          [lang]: { bbcode: '', status: 'error', error: result.error, stale: false },
-        }));
-        trackEvent('translate_error', { lang, error: result.error });
-      }
-    }
-  }, [bbcode, dntTerms]);
-
-  const handleApiKeySaved = useCallback(() => {
-    setApiKeyDialogOpen(false);
-  }, []);
 
   return (
     <div className="app">
