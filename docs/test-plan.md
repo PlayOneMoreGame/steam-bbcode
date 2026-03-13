@@ -1,6 +1,7 @@
-# SteamBBEditor — Manual Test Plan v2
+# SteamBBEditor — Manual Test Plan v3
 ## Staging: https://staging-steam-bbcode.dev.onemoregame.live
 ### Credentials: steambb / REDACTED
+### Automated: 559 unit tests + 119 E2E tests (678 total)
 
 ---
 
@@ -89,17 +90,18 @@ Using Confluence paste with images:
 - [ ] Drag image file onto editor — image stored and preview renders inline
 
 ## 7. Translation
-- [ ] Translate button visible in output panel header
-- [ ] Click Translate — language selection appears
-- [ ] Select pt-BR and/or es-LATAM
-- [ ] Translation tabs appear with loading state
-- [ ] **Translation tab shows STEAM PREVIEW (rendered), not raw BBCode**
-- [ ] **Can switch between Preview and BBCode within translation tab**
+Output panel has two header rows: Row 1 is view mode (Preview / BBCode), Row 2 is language selector (English / pt-BR / es-LATAM). These are independent dimensions.
+
+- [ ] Translate button visible in output panel language row
+- [ ] Click Translate — language options appear (pt-BR, es-LATAM)
+- [ ] Select pt-BR and/or es-LATAM — translation begins with loading state
+- [ ] **Selecting a language shows STEAM PREVIEW (rendered) by default, not raw BBCode**
+- [ ] **View mode toggle (Preview / BBCode) works independently for each language**
 - [ ] Translated content preserves all formatting (headings, lists, bold)
 - [ ] DNT terms remain in English (SWAPMEAT, Squat Daddy, etc.)
-- [ ] Copy button shows "Copy pt-BR" / "Copy es-LATAM"
-- [ ] Edit source content — stale indicator appears on translation tabs
-- [ ] Re-translate updates the tabs
+- [ ] Copy button label updates per language: "Copy BBCode" / "Copy pt-BR" / "Copy es-LATAM"
+- [ ] Edit source content — stale indicator (yellow dot) appears on translated languages
+- [ ] Re-translate clears stale indicator and updates content
 
 ## 8. Term Protection
 ### Do Not Translate (DNT)
@@ -140,6 +142,7 @@ Using Confluence paste with images:
 - [ ] ⌘S triggers Save As dialog
 - [ ] ⌘⇧C copies BBCode to clipboard
 - [ ] Paste inserts at cursor, doesn't overwrite entire editor
+- [ ] **Paste after typing**: type several lines, move cursor to middle, paste Confluence HTML — pasted content splices at cursor, typed content preserved on both sides (regression: stale closure bug)
 - [ ] Line numbers visible
 - [ ] Editor header: clean layout, no unnecessary buttons
 - [ ] Scrolling works smoothly
@@ -163,7 +166,7 @@ Using Confluence paste with images:
 - [ ] Closing and reopening preserves state
 
 ## 13. Footer
-- [ ] Keyboard shortcuts displayed (⌘O, ⌘S, ⌘⇧C)
+- [ ] Keyboard shortcuts displayed (⌘N, ⌘O, ⌘S, ⌘⇧C)
 - [ ] Feedback link present
 - [ ] Save status indicator
 - [ ] Slim status-bar style
@@ -179,7 +182,36 @@ Using Confluence paste with images:
 - [ ] Multiple rapid pastes — no crashes or flicker
 - [ ] XSS attempt: paste `[url=javascript:alert(1)]click[/url]` — sanitized, no alert
 
-## 16. Analytics (PostHog)
+## 16. Native Menu Bar (Requires Tauri build)
+### File Menu
+- [ ] File > New (⌘N) — resets editor to welcome document
+- [ ] File > Open... (⌘O) — opens native file picker, loads .md file
+- [ ] File > Save As... (⌘S) — opens native save dialog
+- [ ] File > Close Window (⌘W) — closes the window
+
+### Edit Menu
+- [ ] Edit > Undo (⌘Z) — undoes last change in focused text field
+- [ ] Edit > Redo (⌘⇧Z) — redoes last undo
+- [ ] Edit > Cut / Copy / Paste / Select All — all work with textarea
+- [ ] Native Edit items work without custom JS (handled by macOS)
+
+### View Menu
+- [ ] View > Toggle Tags Reference (⌘T) — opens/closes tag reference popover
+- [ ] View > Toggle Settings (⌘,) — opens/closes settings panel
+
+### Window Menu
+- [ ] Window > Minimize — minimizes the window
+- [ ] Window > Zoom — toggles fullscreen zoom
+- [ ] "Bring All to Front" is NOT present (removed intentionally)
+
+### Help Menu
+- [ ] Help > SteamBBEditor Help — opens GitHub repo in default browser (not in-app)
+
+### App Menu (macOS only)
+- [ ] SteamBBEditor > About SteamBBEditor — shows native About dialog
+- [ ] SteamBBEditor > Quit (⌘Q) — exits the app
+
+## 17. Analytics (PostHog)
 - [ ] Open PostHog Live Events tab
 - [ ] Load the app — session_start and $pageview events appear
 - [ ] Paste content — paste event fires
@@ -207,6 +239,7 @@ Using Confluence paste with images:
 | 13. Footer | | |
 | 14. Responsive | | |
 | 15. Edge Cases | | |
-| 16. Analytics | | |
+| 16. Menu Bar | | Requires Tauri build |
+| 17. Analytics | | |
 
 **Tester:** _______________  **Date:** _______________  **Build:** main @ _______________
