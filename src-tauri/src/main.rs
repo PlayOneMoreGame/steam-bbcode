@@ -59,9 +59,7 @@ fn build_menu() -> Menu {
         "Window",
         Menu::new()
             .add_native_item(MenuItem::Minimize)
-            .add_native_item(MenuItem::Zoom)
-            .add_native_item(MenuItem::Separator)
-            .add_item(CustomMenuItem::new("bring-all-to-front", "Bring All to Front")),
+            .add_native_item(MenuItem::Zoom),
     );
 
     // -- Help menu --
@@ -84,8 +82,19 @@ fn main() {
         .menu(build_menu())
         .on_menu_event(|event| {
             let id = event.menu_item_id();
-            // Emit all custom menu events to the frontend for handling
-            let _ = event.window().emit("menu-event", id);
+            match id {
+                "help" => {
+                    let _ = tauri::api::shell::open(
+                        &event.window().shell_scope(),
+                        "https://github.com/PlayOneMoreGame/steam-bbcode",
+                        None,
+                    );
+                }
+                _ => {
+                    // Forward all other custom menu events to the frontend
+                    let _ = event.window().emit("menu-event", id);
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

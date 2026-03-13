@@ -118,7 +118,7 @@ export function MarkdownPanel({
     if (plain) {
       onInputMethodChange?.('markdown_paste', plain);
     }
-  }, [onChange, context, onInputMethodChange]);
+  }, [value, onChange, context, onInputMethodChange]);
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
