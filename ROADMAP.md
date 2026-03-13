@@ -24,6 +24,7 @@
 - Tab key handling (inserts 2 spaces)
 - Keyboard shortcuts (Cmd+S, Cmd+O, Escape)
 - Paste-at-cursor (splice, not replace)
+- handlePaste stale closure fix (refs instead of stale state in paste handler)
 - Skip welcome document on repeat visits
 - Tag reference as floating popover
 
@@ -74,6 +75,7 @@
 - Tauri v1 macOS build (Apple Silicon + Intel)
 - Tauri v1 Windows build (x64)
 - Native file dialogs (Open, Save As)
+- Native macOS menu bar (File, Edit, View, Window, Help)
 - Non-destructive file workflow
 
 **DevOps**
@@ -85,7 +87,7 @@
 
 ---
 
-## Completed Jira Tickets (19 closed)
+## Completed Jira Tickets (21 closed)
 
 | Ticket | Summary |
 |--------|---------|
@@ -106,17 +108,19 @@
 | SMD-4375 | Basic auth for staging |
 | SMD-4376 | Editor header simplification |
 | SMD-4381 | Fix nuclear paste (splice at cursor) |
+| SMD-4382 | Extract state hooks from App.tsx (4 hooks, 541 to 425 lines) |
+| SMD-4363 | Native macOS menu bar (removed Bring All to Front, Help links to GitHub) |
 | SMD-4384 | Fix code fence header conversion bug |
 | SMD-4386 | Skip welcome document on repeat visits |
 
 ---
 
-## Next Up: Code Health (1-2 days)
+## Next Up
 
 | Ticket | Summary | Owner | Priority |
 |--------|---------|-------|----------|
-| SMD-4382 | Extract state hooks from App.tsx | Frontend Engineer | Medium |
 | SMD-4383 | Add SyntaxEditor component tests | Frontend Engineer | Medium |
+| SMD-4364 | Keyboard shortcuts: tab switching | Frontend Engineer | Medium |
 
 ---
 
@@ -124,16 +128,17 @@
 
 ### 3a: Menu Bar + Shortcuts (Tauri v1, 3-5 days)
 
+SMD-4363 (native menu bar) completed. Remaining:
+
 | Ticket | Summary | Owner | Dependency |
 |--------|---------|-------|------------|
-| SMD-4363 | Native macOS menu bar (static, v1) | Tauri Engineer + Frontend | None |
-| SMD-4364 | Keyboard shortcuts: tab switching | Frontend Engineer | Pairs with SMD-4363 |
+| SMD-4364 | Keyboard shortcuts: tab switching | Frontend Engineer | None (moved to Next Up) |
 
 ### 3b: Tauri v2 Migration (1-2 weeks)
 
 | Ticket | Summary | Owner | Dependency |
 |--------|---------|-------|------------|
-| SMD-4366 | Tauri v1 -> v2 migration | Tauri Engineer (primary) | SMD-4363 done first |
+| SMD-4366 | Tauri v1 -> v2 migration | Tauri Engineer (primary) | None (SMD-4363 done) |
 
 Acceptance: builds on macOS ARM + Intel + Windows, all tests pass, existing features identical.
 
@@ -174,7 +179,7 @@ SMD-4367 should be split:
 | [BUILD.md](BUILD.md) | Desktop app build instructions, versioning |
 | [WEBAPP.md](WEBAPP.md) | Web deployment (Amplify, S3, Terraform) |
 | [ROADMAP.md](ROADMAP.md) | This file - feature tracking |
-| [docs/test-plan.md](docs/test-plan.md) | QA test plan |
+| [docs/test-plan.md](docs/test-plan.md) | QA test plan (v3, updated 2026-03-13) |
 
 ---
 
