@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react';
-import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm, resetBlacklist as resetBlacklistStore } from '@/lib/blacklist-store';
+import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm, resetBlacklist as resetBlacklistStore, isOrgTerm } from '@/lib/blacklist-store';
 import { trackEvent } from '@/lib/analytics';
+
+export { isOrgTerm };
 
 export interface UseBlacklistReturn {
   blacklist: string[];
   addTerm: (term: string) => void;
   removeTerm: (term: string) => void;
   resetBlacklist: () => void;
+  isOrgTerm: (term: string) => boolean;
 }
 
 export function useBlacklist(): UseBlacklistReturn {
@@ -30,5 +33,5 @@ export function useBlacklist(): UseBlacklistReturn {
     trackEvent('blacklist_terms_reset');
   }, []);
 
-  return { blacklist, addTerm, removeTerm, resetBlacklist };
+  return { blacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm };
 }

@@ -1995,6 +1995,21 @@ body {
   border-style: dashed;
 }
 
+.settings-chip-org {
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+  border-style: dashed;
+  cursor: default;
+}
+
+.settings-chip-lock {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
 .settings-chip-text {
   max-width: 200px;
   overflow: hidden;

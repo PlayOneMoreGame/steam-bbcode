@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { isDefaultBlockedWord } from '@/lib/blacklist-store';
-import { isDefaultTerm } from '@/lib/dnt-store';
+import { isOrgTerm } from '@/lib/blacklist-store';
+import { isWorkspaceTerm } from '@/lib/dnt-store';
 
 interface SettingsPanelProps {
   blacklist: string[];
@@ -88,7 +88,7 @@ export function SettingsPanel({
           </span>
         </h3>
         <p className="settings-section-desc">
-          Terms that trigger warnings in the editor and translation output. Search to find or remove terms — all terms are removable, including defaults.
+          Terms that trigger warnings in the editor and translation output. Org defaults cannot be removed. Search to find terms or add your own.
         </p>
 
         <div className="settings-add-row">
@@ -114,7 +114,7 @@ export function SettingsPanel({
           <button
             className="btn btn-sm btn-secondary"
             onClick={onResetBlacklist}
-            title="Reset to default blocked words list"
+            title="Remove all custom terms (org defaults are always present)"
             data-testid="blocked-reset-btn"
           >
             Reset
@@ -126,23 +126,33 @@ export function SettingsPanel({
           <div className="settings-search-results">
             {filteredBlocked.length > 0 ? (
               <div className="settings-chip-list" data-testid="blocked-chips">
-                {filteredBlocked.slice(0, 50).map(term => (
-                  <span
-                    key={term}
-                    className={`settings-chip ${isDefaultBlockedWord(term) ? 'settings-chip-default' : ''}`}
-                    data-testid="blocked-chip"
-                  >
-                    <span className="settings-chip-text">{term}</span>
-                    <button
-                      className="settings-chip-remove"
-                      onClick={() => onRemoveTerm(term)}
-                      aria-label={`Remove ${term}`}
-                      title={`Remove "${term}"`}
+                {filteredBlocked.slice(0, 50).map(term => {
+                  const isOrg = isOrgTerm(term);
+                  return (
+                    <span
+                      key={term}
+                      className={`settings-chip ${isOrg ? 'settings-chip-org' : ''}`}
+                      data-testid="blocked-chip"
                     >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                      {isOrg && (
+                        <span className="settings-chip-lock" aria-label="Org default" title="Org default — cannot be removed">
+                          <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 0-4 4v2H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1V5a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H6V5z"/></svg>
+                        </span>
+                      )}
+                      <span className="settings-chip-text">{term}</span>
+                      {!isOrg && (
+                        <button
+                          className="settings-chip-remove"
+                          onClick={() => onRemoveTerm(term)}
+                          aria-label={`Remove ${term}`}
+                          title={`Remove "${term}"`}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
                 {filteredBlocked.length > 50 && (
                   <span className="settings-chip-overflow">
                     +{filteredBlocked.length - 50} more
@@ -163,28 +173,38 @@ export function SettingsPanel({
       <div className="settings-section">
         <h3 className="settings-section-title">Do Not Translate</h3>
         <p className="settings-section-desc">
-          These terms are preserved exactly when translating. Default game terms are shown in a muted style.
+          These terms are preserved exactly when translating. Workspace defaults cannot be removed. Add your own terms below.
         </p>
 
         {dntTerms.length > 0 ? (
           <div className="settings-chip-list" data-testid="dnt-chips">
-            {dntTerms.map(term => (
-              <span
-                key={term}
-                className={`settings-chip ${isDefaultTerm(term) ? 'settings-chip-default' : ''}`}
-                data-testid="dnt-chip"
-              >
-                <span className="settings-chip-text">{term}</span>
-                <button
-                  className="settings-chip-remove"
-                  onClick={() => onRemoveDntTerm(term)}
-                  aria-label={`Remove ${term}`}
-                  title={`Remove "${term}"`}
+            {dntTerms.map(term => {
+              const isWs = isWorkspaceTerm(term);
+              return (
+                <span
+                  key={term}
+                  className={`settings-chip ${isWs ? 'settings-chip-org' : ''}`}
+                  data-testid="dnt-chip"
                 >
-                  x
-                </button>
-              </span>
-            ))}
+                  {isWs && (
+                    <span className="settings-chip-lock" aria-label="Workspace default" title="Workspace default — cannot be removed">
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 0-4 4v2H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1V5a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H6V5z"/></svg>
+                    </span>
+                  )}
+                  <span className="settings-chip-text">{term}</span>
+                  {!isWs && (
+                    <button
+                      className="settings-chip-remove"
+                      onClick={() => onRemoveDntTerm(term)}
+                      aria-label={`Remove ${term}`}
+                      title={`Remove "${term}"`}
+                    >
+                      x
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <p className="settings-empty">No terms configured.</p>
@@ -212,7 +232,7 @@ export function SettingsPanel({
           <button
             className="btn btn-sm btn-secondary"
             onClick={onResetDntTerms}
-            title="Reset to default SWAPMEAT glossary"
+            title="Remove all custom terms (workspace defaults are always present)"
             data-testid="dnt-reset-btn"
           >
             Reset to defaults
