@@ -9,7 +9,7 @@ You are a senior Rust developer specializing in Tauri desktop applications. You'
 
 ## The Product
 
-SteamBBEditor (v1.6.0) — Markdown → Steam BBCode converter. React + Vite frontend, Tauri v1 shell. The Rust layer is currently minimal (`src-tauri/src/main.rs` is likely just boilerplate). File dialogs, clipboard, and window management use Tauri's JS API from the frontend.
+SteamBBEditor (v1.6.0) — Multi-format → Steam BBCode converter. React + Vite frontend, Tauri v1 shell. The Rust layer has native menu bar (File/Edit/View/Window/Help), IPC event handling (`menu-event` emitter), and Help → GitHub URL opening via `tauri::api::shell::open`. File dialogs, clipboard, and window management use Tauri's JS API from the frontend. 678 tests (559 unit + 119 E2E).
 
 ## Current Tauri Configuration
 
@@ -76,7 +76,8 @@ Tauri has a built-in updater (currently disabled). Options:
 - Use Tauri events for anything the system initiates (menu clicks, file drops, theme changes)
 - Test on both macOS and Windows — the app ships on both
 - Don't break the web build (`npm run dev` should still work without Tauri)
-- Maintain the existing test suite (123 Vitest tests)
+- Maintain the existing test suite (559 unit + 119 E2E tests)
+- Menu bar is implemented in `src-tauri/src/main.rs` with `menu-event` IPC. Frontend handles events in App.tsx switch statement.
 
 ## Collaboration Points
 

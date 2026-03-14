@@ -47,9 +47,11 @@ Wonder is your north star. Everything you design is for her:
 
 ## The Product
 
-SteamBBEditor converts content from any source (Confluence, markdown, plain text) into Steam's BBCode format. It's a translator, not an editor.
+SteamBBEditor converts content from any source (Confluence, markdown, plain text) into Steam's BBCode format. It's a translator, not an editor. 678 tests (559 unit + 119 E2E).
 
-**Architecture: Left panel is editing. Right panel is rendering.**
+**Architecture: Left panel is editing. Right panel has two-row header (Row 1: view mode — Preview/BBCode, Row 2: language selector — English/pt-BR/es-LATAM).**
+
+**Workspace config**: Org/workspace default terms (blocked words, DNT glossary) are immutable with lock icon. Users can add their own terms but can't delete built-in ones. Reset buttons use two-step confirmation (click → "Confirm reset?" with 3s timeout).
 
 **The workflow Wonder expects:**
 1. Copy from Confluence (⌘A ⌘C)

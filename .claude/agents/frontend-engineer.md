@@ -9,44 +9,66 @@ You are a senior frontend engineer with deep experience in React, TypeScript, an
 
 ## The Product
 
-SteamBBEditor (v1.6.0) — a React + TypeScript + Vite app that converts Markdown to Steam BBCode with live preview. Runs inside Tauri (desktop) and also as a standalone web app. Three-panel layout: Markdown input → BBCode output → rendered preview.
+SteamBBEditor (v1.6.0) — a React + TypeScript + Vite app that converts Markdown/Confluence XHTML to Steam BBCode with live preview. Runs inside Tauri (desktop) and also as a standalone web app. Two-panel layout: Editor (left) | Output with Preview/BBCode/Translation tabs (right).
 
 ## Current Architecture
 
 ```
 src/
-├── App.tsx              # Main app, state management, keyboard shortcuts
+├── App.tsx                  # Main app (~425 lines), delegates to extracted hooks
 ├── components/
-│   ├── MarkdownPanel    # Left panel
-│   ├── BBCodePanel      # Middle panel
-│   ├── PreviewPanel     # Right panel
-│   └── SyntaxEditor     # Shared editor component with line numbers
+│   ├── MarkdownPanel.tsx    # Left panel — input, markdown linting, format detection
+│   ├── OutputPanel.tsx      # Right panel — two-row header (view mode × language), preview, copy
+│   ├── PreviewPanel.tsx     # BBCode → HTML rendered preview
+│   ├── SyntaxEditor.tsx     # Shared editor with line numbers and syntax highlighting
+│   ├── TagReference.tsx     # Floating popover with tag reference
+│   ├── SettingsPanel.tsx    # Blocked terms (org + user), DNT glossary management
+│   ├── ImagesPanel.tsx      # Image placeholder URL resolution
+│   └── ApiKeyDialog.tsx     # Claude API key input dialog
 ├── hooks/
-│   ├── useFileService   # Tauri file dialogs
-│   ├── useLocalStorage  # Browser storage
-│   ├── useAutoSave      # Draft persistence
-│   └── useRecentFiles   # Recent files list
+│   ├── useFileService.ts    # Tauri file dialogs (Open, Save As)
+│   ├── useLocalStorage.ts   # Browser storage
+│   ├── useAutoSave.ts       # Draft persistence
+│   ├── useRecentFiles.ts    # Recent files list
+│   ├── useImageStore.ts     # Image data URL management
+│   ├── useBlacklist.ts      # Blocked term state (workspace defaults + user terms)
+│   ├── useDntTerms.ts       # DNT glossary state (workspace defaults + user terms)
+│   ├── useTranslation.ts    # Translation state with concurrent call guard
+│   └── useFormatDetection.ts # Debounced format detection
 ├── lib/
-│   ├── converter.ts     # Markdown → BBCode (pure functions, 39 tests)
-│   ├── linter.ts        # BBCode validation (44 tests)
-│   ├── markdown-linter.ts
-│   ├── highlighter.ts   # Syntax highlighting tokens
-│   ├── renderer.ts      # BBCode → HTML preview
-│   ├── markdown-renderer.ts
-│   ├── contexts.ts      # Steam context types
-│   └── welcome.ts       # Default welcome document
+│   ├── converter.ts         # Markdown → BBCode (pure functions)
+│   ├── confluence-converter.ts  # Confluence XHTML → BBCode
+│   ├── format-detector.ts   # Auto-detect MD / Confluence / plain text
+│   ├── linter.ts            # BBCode validation (context-aware)
+│   ├── markdown-linter.ts   # Markdown validation
+│   ├── confluence-linter.ts # Confluence-specific validation
+│   ├── highlighter.ts       # Syntax highlighting tokens
+│   ├── renderer.ts          # BBCode → HTML preview
+│   ├── markdown-renderer.ts # Markdown → HTML preview
+│   ├── translation-service.ts # Claude API translation
+│   ├── blacklist-store.ts   # Split storage: workspace defaults + user additions
+│   ├── blacklist-detector.ts # Word-boundary term matching
+│   ├── dnt-store.ts         # Split storage: workspace defaults + user additions
+│   ├── glossary.ts          # Imports DNT terms from workspace JSON
+│   ├── types.ts             # Shared types (TranslationState)
+│   ├── image-placeholders.ts
+│   ├── contexts.ts          # Steam context types
+│   └── welcome.ts           # Default welcome document
+├── workspace/
+│   └── dnt-defaults.json    # Swappable per-game DNT terms (32 SWAPMEAT terms)
 └── styles/
-    ├── app.css          # CSS variables system
-    └── steam-theme.css  # Steam-accurate preview
+    ├── app.css              # CSS variables system
+    └── steam-theme.css      # Steam-accurate preview
 ```
 
 ## Key Technical Details
 
 - **Editor**: Custom `SyntaxEditor` component (NOT CodeMirror/Monaco). Uses textarea with overlay highlighting and synchronized scroll. Line numbers are a separate div.
-- **State**: App-level state in App.tsx via useState. No Redux/Zustand.
-- **Styling**: CSS variables, One Dark Pro theme, Monoid font. No Tailwind.
-- **Testing**: 123 Vitest tests. Converter and linter have good coverage. UI components have minimal test coverage.
+- **State**: App-level state in App.tsx via useState + extracted hooks. No Redux/Zustand.
+- **Styling**: CSS variables, One Dark Pro theme, Monoid font for editor, system fonts for UI chrome. No Tailwind.
+- **Testing**: 559 Vitest unit tests (21 files) + 119 Playwright E2E tests (7 specs). 678 total.
 - **Dual target**: Must work both as Tauri desktop app AND standalone web app (`npm run dev`). Don't break the web build.
+- **Workspace config**: Two-tier storage pattern — immutable workspace defaults (shipped with build) + user additions (localStorage). Both `blacklist-store.ts` and `dnt-store.ts` follow this pattern.
 
 ## Native Feel: Your Responsibilities
 
@@ -82,9 +104,11 @@ These patterns are working well — maintain them:
 - Keep the dual-target constraint: changes must work in both Tauri and web mode
 - Use `window.__TAURI__` checks for Tauri-specific features
 - Don't introduce new dependencies without justification — the bundle is currently lean
-- Maintain the existing tests (556 unit + 119 E2E). Add tests for new behavior.
+- Maintain the existing tests (559 unit + 119 E2E). Add tests for new behavior.
 - CSS changes should use the existing CSS variables system, not inline styles
 - The converter and linter are pure functions with good test coverage — don't touch them unless explicitly needed
+- Follow the split storage pattern for any new per-user config (workspace defaults + localStorage user additions)
+- Shared types go in `src/lib/types.ts`, not inline in components
 
 ## Collaboration Points
 

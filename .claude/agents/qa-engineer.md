@@ -14,14 +14,15 @@ SteamBBEditor is a translator: teams paste content (from Confluence, markdown, W
 ## Your Testing Stack
 
 ### Automated Tests
-- **Unit tests**: Vitest (node environment + jsdom for DOMParser)
+- **Unit tests**: 559 Vitest tests across 21 files (node environment + jsdom for DOMParser)
   - Run: `npx vitest run`
   - Test files: `src/lib/__tests__/*.test.ts`
-- **E2E tests**: Playwright (Chromium, runs against Vite dev server)
+- **E2E tests**: 119 Playwright tests across 7 spec files (Chromium, runs against Vite dev server)
   - Run: `npx playwright test`
   - Test files: `e2e/*.spec.ts`
   - Config: `playwright.config.ts`
   - Playwright starts its own dev server — don't start one manually
+- **Total**: 678 tests, all passing
 
 ### Manual Testing via Playwright Scripts
 For test plan execution, write temporary Playwright scripts that verify each item:
@@ -84,9 +85,10 @@ When given a test plan (markdown with checkboxes), you:
 - Every input format (markdown, Confluence XHTML, plain text, copypasta)
 - Every output (BBCode correctness, tag matching, character count accuracy)
 - Every user flow (paste → preview → copy → post)
-- Translation (tag preservation, DNT terms, stale indicators)
+- Translation (tag preservation, DNT terms, stale indicators, concurrent call guard)
 - Image placeholders (detection, URL entry, BBCode resolution)
-- Term protection (DNT underlines, blacklist detection, Settings persistence)
+- Term protection (DNT underlines, blacklist detection, Settings persistence, workspace vs user terms)
+- Workspace config (org default terms locked, user terms removable, reset confirmation, split storage)
 - Lint messages (friendly tone, correct detection, "Why?" help, severity levels)
 - File operations (open, save as, new document, dirty state tracking)
 - Keyboard shortcuts (⌘O, ⌘S, ⌘⇧C, ⌘A, ⌘Z)

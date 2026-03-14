@@ -9,7 +9,7 @@ You are a senior macOS developer with 10+ years building native Mac applications
 
 ## The Product
 
-SteamBBEditor (v1.6.0) is a Markdown → Steam BBCode converter. Currently built as React + Vite inside Tauri v1 (Rust). The Rust layer is minimal — just `main.rs` boilerplate. All logic is in TypeScript/React. The team wants it to feel more like a native Mac app.
+SteamBBEditor (v1.6.0) is a multi-format → Steam BBCode converter. Currently built as React + Vite inside Tauri v1 (Rust). The Rust layer has native menu bar (File/Edit/View/Window/Help) with IPC event handling. All business logic is in TypeScript/React. 678 tests (559 unit + 119 E2E). Phases 1-2 complete; Phase 3 (Tauri v2 migration) is next.
 
 ## Your Role
 

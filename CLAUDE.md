@@ -26,11 +26,15 @@ src/
 │   ├── ImagesPanel.tsx      # Image placeholder URL resolution
 │   └── ApiKeyDialog.tsx     # Claude API key input dialog
 ├── hooks/
-│   ├── useFileService.ts    # Tauri file dialogs (Open, Save As)
-│   ├── useLocalStorage.ts   # Browser storage
 │   ├── useAutoSave.ts       # Draft persistence
+│   ├── useBlacklist.ts      # Blocked term state and persistence
+│   ├── useDntTerms.ts       # Do Not Translate glossary state
+│   ├── useFileService.ts    # Tauri file dialogs (Open, Save As)
+│   ├── useFormatDetection.ts # Auto-detect input format with debounce
+│   ├── useImageStore.ts     # Image data URL management
+│   ├── useLocalStorage.ts   # Browser storage
 │   ├── useRecentFiles.ts    # Recent files list
-│   └── useImageStore.ts     # Image data URL management
+│   └── useTranslation.ts    # Claude API translation state
 ├── lib/
 │   ├── converter.ts         # Markdown -> BBCode conversion (pure functions)
 │   ├── confluence-converter.ts  # Confluence XHTML -> BBCode conversion
@@ -44,11 +48,14 @@ src/
 │   ├── image-placeholders.ts # {placeholder:filename} extraction and resolution
 │   ├── translation-service.ts # Claude API translation (pt-BR, es-LATAM)
 │   ├── glossary.ts          # DNT glossary for translation
-│   ├── dnt-store.ts         # Do Not Translate term persistence
+│   ├── term-store.ts        # Generic term store factory (three-tier: studio/title/user)
+│   ├── dnt-store.ts         # Do Not Translate term persistence (thin wrapper)
 │   ├── api-key-store.ts     # Claude API key persistence
 │   ├── blacklist-detector.ts # Blocked term detection with word boundaries
-│   ├── blacklist-store.ts   # Blocked term persistence
+│   ├── blacklist-store.ts   # Blocked term persistence (thin wrapper)
 │   ├── blocked-words-default.ts # Default blocked terms list
+│   ├── workspace-types.ts   # Workspace config TypeScript interfaces
+│   ├── workspace-loader.ts  # Static workspace config loader
 │   ├── Terms-to-Block.csv   # Source CSV for blocked terms
 │   ├── splitter.ts          # Discord 2000-char message splitter
 │   ├── plaintext-normalizer.ts # Plain text cleanup
@@ -56,7 +63,13 @@ src/
 │   ├── utils.ts             # Shared utilities
 │   ├── contexts.ts          # Steam context types (announcements, guides, etc.)
 │   ├── welcome.ts           # Default welcome document
-│   └── __tests__/           # Vitest unit tests (556 tests across 21 files)
+│   ├── types.ts             # Shared TypeScript types
+│   └── __tests__/           # Vitest unit tests
+├── workspace/
+│   ├── studio.json          # Studio config (One More Game)
+│   ├── dnt-defaults.json    # Legacy DNT defaults (superseded by title config)
+│   └── titles/
+│       └── swapmeat.json    # Title config (DNT terms, localization targets)
 └── styles/
     ├── app.css              # Main styles with CSS variables
     └── steam-theme.css      # Steam-accurate preview styling
@@ -73,15 +86,15 @@ src/
 - **`src/lib/blacklist-detector.ts`** - Blocked term detection with word-boundary matching.
 - **`src/lib/image-placeholders.ts`** - Extracts and resolves `{placeholder:filename}` in BBCode.
 - **`src/App.tsx`** - Main component. State management, keyboard shortcuts, panel coordination.
-- **`src/components/OutputPanel.tsx`** - Tabbed output panel (Preview / BBCode / Translation tabs).
+- **`src/components/OutputPanel.tsx`** - Two-row header (view mode x language), preview, copy.
 - **`scripts/bump-version.sh`** - Release script. Run with `npm run release`.
 
 ## Testing
 
 ```bash
-npm run test:run    # Run all 556 unit tests once
+npm run test:run    # Run all unit tests once
 npm run test        # Watch mode
-npx playwright test # Run 55 E2E tests (7 spec files)
+npx playwright test # Run 123 E2E tests (9 spec files)
 ```
 
 Unit tests are in `src/lib/__tests__/`. E2E tests are in `e2e/`.

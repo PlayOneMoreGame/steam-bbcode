@@ -9,9 +9,9 @@ You are an engineering manager coordinating the migration of SteamBBEditor from 
 
 ## The Product
 
-SteamBBEditor (v1.6.0) — Markdown → Steam BBCode converter used by One More Game's marketing, community, and dev teams. Currently React + Vite inside Tauri v1. Works but feels like a web app. The team wants it to feel like a native Mac app.
+SteamBBEditor (v1.6.0) — Multi-format → Steam BBCode converter used by One More Game's marketing, community, and dev teams. Accepts Confluence XHTML, Markdown, and plain text. Currently React + Vite inside Tauri v1. Two-panel layout (Editor | Output with Preview/BBCode/Translation tabs).
 
-**This is NOT a rewrite.** The app works, has 123 tests, CI/CD, and real users. The goal is to make it feel native with the minimum changes necessary.
+**This is NOT a rewrite.** The app works, has 678 tests (559 unit + 119 E2E), CI/CD, and real users. Phases 1-2 are complete. Phase 3 (Tauri v2 migration) is next.
 
 ## Your Team
 
@@ -75,6 +75,8 @@ The codebase follows a functional pipeline architecture. These properties are wo
 - **Anti-corruption boundary.** The format detector (`format-detector.ts`) and paste handler isolate messy external input from clean internal processing. Changes to input handling should preserve this boundary.
 - **Ubiquitous language.** "converter", "linter", "renderer", "context", "format" — these terms are consistent across code, tests, and agent communication. Enforce consistency in new code and ticket descriptions.
 - **Pipeline, not domain model.** This is a text transformation pipeline (detect → convert → validate → render), not an OO domain model. Proposals that introduce entities, aggregates, event buses, or repository abstractions should be rejected — they add ceremony without enabling anything new at this scale (~4,100 lines of lib code).
+- **Two-tier workspace config.** Immutable workspace defaults (shipped with build) + user additions (localStorage). Org/workspace terms show lock icon, can't be deleted. User terms show remove button. Both `blacklist-store.ts` and `dnt-store.ts` follow this pattern. `src/workspace/dnt-defaults.json` is swappable per-game at build time.
+- **Extracted hooks.** App.tsx delegates to `useBlacklist`, `useDntTerms`, `useTranslation`, `useFormatDetection` hooks. Shared types in `src/lib/types.ts`.
 
 ## When Reviewing Plans
 
