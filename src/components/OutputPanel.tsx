@@ -3,19 +3,11 @@ import { PreviewPanel } from './PreviewPanel';
 import { ImagesPanel } from './ImagesPanel';
 import { ApiKeyDialog } from './ApiKeyDialog';
 import { lintBBCode, type LintResult } from '@/lib/linter';
-import { SUPPORTED_LANGUAGES } from '@/lib/translation-service';
+import { getSupportedLanguages, LANGUAGE_DISPLAY_NAMES } from '@/lib/translation-service';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { ImageDataUrlMap } from '@/lib/renderer';
 import { trackEvent } from '@/lib/analytics';
-
-export type OutputTab = 'preview' | 'bbcode' | string; // string for translation lang codes
-
-export interface TranslationState {
-  bbcode: string;
-  status: 'idle' | 'translating' | 'done' | 'error';
-  error?: string;
-  stale: boolean;
-}
+import type { TranslationState } from '@/lib/types';
 
 interface OutputPanelProps {
   bbcode: string;
@@ -120,16 +112,13 @@ export function OutputPanel({
   const charCount = activeBBCode.length;
   const charPercent = Math.min(100, Math.round((charCount / charLimit) * 100));
 
-  // Copy content is always the raw BBCode for the active language
-  const activeCopyContent = activeBBCode;
-
   const activeCopyLabel = activeLang === 'en'
     ? 'Copy BBCode'
     : `Copy ${activeLang.toUpperCase()}`;
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(activeCopyContent);
+      await navigator.clipboard.writeText(activeBBCode);
       setCopyFeedback('Copied!');
       setTimeout(() => setCopyFeedback(''), 2000);
       trackEvent('copy_clicked', { panel: activeLang === 'en' ? 'bbcode' : 'translation', lang: activeLang });
@@ -140,7 +129,7 @@ export function OutputPanel({
       setCopyFeedback('Failed');
       setTimeout(() => setCopyFeedback(''), 2000);
     }
-  }, [activeCopyContent, activeLang, onWorkflowComplete]);
+  }, [activeBBCode, activeLang, onWorkflowComplete]);
 
   const handleTranslateSelect = useCallback((lang: string) => {
     setTranslateMenuOpen(false);
@@ -270,7 +259,7 @@ export function OutputPanel({
             {translateMenuOpen && (
               <div className="translate-dropdown-menu">
                 <div className="dropdown-header">Target Language</div>
-                {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
+                {Object.entries(getSupportedLanguages()).map(([code, name]) => (
                   <button
                     key={code}
                     className="dropdown-item"
@@ -358,7 +347,7 @@ export function OutputPanel({
       {activeLang !== 'en' && activeTranslation?.status === 'translating' ? (
         <div className="translation-tab-loading">
           <div className="translation-spinner" />
-          <p>Translating to {SUPPORTED_LANGUAGES[activeLang] || activeLang}...</p>
+          <p>Translating to {LANGUAGE_DISPLAY_NAMES[activeLang] || activeLang}...</p>
         </div>
       ) : activeLang !== 'en' && activeTranslation?.status === 'error' ? (
         <div className="translation-tab-error">

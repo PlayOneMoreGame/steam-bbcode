@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { translateBBCode, hashString } from '@/lib/translation-service';
 import { getApiKey } from '@/lib/api-key-store';
 import { trackEvent } from '@/lib/analytics';
-import type { TranslationState } from '@/components/OutputPanel';
+import type { TranslationState } from '@/lib/types';
 
 export interface UseTranslationReturn {
   translations: Record<string, TranslationState>;
@@ -16,6 +16,7 @@ export function useTranslation(bbcode: string, dntTerms: string[]): UseTranslati
   const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const sourceHashRef = useRef<number>(0);
+  const inflightRef = useRef<Set<string>>(new Set());
 
   // Track source BBCode hash for stale detection
   useEffect(() => {
@@ -36,6 +37,9 @@ export function useTranslation(bbcode: string, dntTerms: string[]): UseTranslati
   }, [bbcode]);
 
   const handleTranslate = useCallback(async (lang: string) => {
+    // Guard against concurrent calls for the same language
+    if (inflightRef.current.has(lang)) return;
+
     // Check for API key first
     if (!getApiKey()) {
       setApiKeyDialogOpen(true);
@@ -48,30 +52,35 @@ export function useTranslation(bbcode: string, dntTerms: string[]): UseTranslati
       [lang]: { bbcode: '', status: 'translating', stale: false },
     }));
 
+    inflightRef.current.add(lang);
     trackEvent('translate_started', { lang });
 
-    const result = await translateBBCode(bbcode, lang, dntTerms);
+    try {
+      const result = await translateBBCode(bbcode, lang, dntTerms);
 
-    if (result.ok) {
-      setTranslations(prev => ({
-        ...prev,
-        [lang]: { bbcode: result.bbcode, status: 'done', stale: false },
-      }));
-      trackEvent('translate_completed', { lang });
-    } else {
-      if (result.code === 'missing_api_key') {
-        setApiKeyDialogOpen(true);
+      if (result.ok) {
         setTranslations(prev => ({
           ...prev,
-          [lang]: { bbcode: '', status: 'idle', stale: false },
+          [lang]: { bbcode: result.bbcode, status: 'done', stale: false },
         }));
+        trackEvent('translate_completed', { lang });
       } else {
-        setTranslations(prev => ({
-          ...prev,
-          [lang]: { bbcode: '', status: 'error', error: result.error, stale: false },
-        }));
-        trackEvent('translate_error', { lang, error: result.error });
+        if (result.code === 'missing_api_key') {
+          setApiKeyDialogOpen(true);
+          setTranslations(prev => ({
+            ...prev,
+            [lang]: { bbcode: '', status: 'idle', stale: false },
+          }));
+        } else {
+          setTranslations(prev => ({
+            ...prev,
+            [lang]: { bbcode: '', status: 'error', error: result.error, stale: false },
+          }));
+          trackEvent('translate_error', { lang, error: result.error });
+        }
       }
+    } finally {
+      inflightRef.current.delete(lang);
     }
   }, [bbcode, dntTerms]);
 

@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { DO_NOT_TRANSLATE_PATTERNS } from './glossary';
 import { getDntTerms } from './dnt-store';
 import { getApiKey } from './api-key-store';
+import { getWorkspaceConfig } from './workspace-loader';
 
 export interface TranslationSuccess {
   ok: true;
@@ -21,18 +22,32 @@ export interface TranslationError {
 
 export type TranslationResult = TranslationSuccess | TranslationError;
 
-/** Supported target languages */
-export const SUPPORTED_LANGUAGES: Record<string, string> = {
+/** Display names for language codes. Add entries here when new localization targets are configured. */
+export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   'pt-BR': 'Brazilian Portuguese',
   'es-LATAM': 'Latin American Spanish',
 };
+
+/**
+ * Returns the supported translation languages for the active title,
+ * derived from the workspace config's localizationTargets.
+ */
+export function getSupportedLanguages(): Record<string, string> {
+  const config = getWorkspaceConfig();
+  const targets = config.title.localizationTargets;
+  const result: Record<string, string> = {};
+  for (const code of targets) {
+    result[code] = LANGUAGE_DISPLAY_NAMES[code] || code;
+  }
+  return result;
+}
 
 /**
  * Build the system prompt for translation, including the Do Not Translate glossary.
  * When dntTerms is provided, those are used; otherwise the current stored terms are loaded.
  */
 export function buildSystemPrompt(targetLang: string, dntTerms?: string[]): string {
-  const langName = SUPPORTED_LANGUAGES[targetLang] || targetLang;
+  const langName = LANGUAGE_DISPLAY_NAMES[targetLang] || targetLang;
   const terms = dntTerms ?? getDntTerms();
   const glossaryList = terms.map(term => `- ${term}`).join('\n');
   const patternDescriptions = DO_NOT_TRANSLATE_PATTERNS.map(p => `- Pattern: ${p.source}`).join('\n');

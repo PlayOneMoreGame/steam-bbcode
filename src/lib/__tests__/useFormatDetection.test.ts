@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectFormat, type InputFormat } from '../format-detector';
+import { detectFormat } from '../format-detector';
 
 /**
  * Tests for the format detection logic underlying useFormatDetection.

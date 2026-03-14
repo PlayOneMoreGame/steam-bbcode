@@ -74,7 +74,7 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('@mentions');
   });
 
-  it('falls back to the lang code if not in SUPPORTED_LANGUAGES', () => {
+  it('falls back to the lang code if not in LANGUAGE_DISPLAY_NAMES', () => {
     const prompt = buildSystemPrompt('fr-FR');
     expect(prompt).toContain('fr-FR');
   });

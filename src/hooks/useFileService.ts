@@ -78,7 +78,7 @@ export function useFileService() {
         if (!selected || Array.isArray(selected)) return null;
         
         const content = await apis.fs.readTextFile(selected);
-        const name = selected.split('/').pop() || 'untitled';
+        const name = selected.replace(/^.*[\\/]/, '') || 'untitled';
         
         setCurrentFile({ name, path: selected, content });
         return content;
@@ -121,7 +121,7 @@ export function useFileService() {
       if (!apis) return null;
       
       const content = await apis.fs.readTextFile(path);
-      const name = path.split('/').pop() || 'untitled';
+      const name = path.replace(/^.*[\\/]/, '') || 'untitled';
       
       setCurrentFile({ name, path, content });
       return content;
@@ -154,7 +154,7 @@ export function useFileService() {
         
         await apis.fs.writeTextFile(savePath, content);
         
-        const name = savePath.split('/').pop() || defaultName;
+        const name = savePath.replace(/^.*[\\/]/, '') || defaultName;
         setCurrentFile({ name, path: savePath, content });
         
         return savePath;
