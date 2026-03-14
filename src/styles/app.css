@@ -742,6 +742,16 @@ body {
   background-color: var(--discord-active);
 }
 
+.btn-warning {
+  background-color: var(--accent-warning, #d19a66);
+  color: var(--bg-primary);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background-color: var(--accent-warning-hover, #c08050);
+  color: var(--bg-primary);
+}
+
 /* ==========================================================================
    Modified Indicator
    ========================================================================== */
@@ -1968,6 +1978,29 @@ body {
   color: var(--text-dim);
   line-height: 1.5;
   margin: 0;
+}
+
+.settings-workspace-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.settings-workspace-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  font-size: 12px;
+}
+
+.settings-workspace-label {
+  color: var(--text-muted);
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.settings-workspace-value {
+  color: var(--text-primary);
 }
 
 .settings-chip-list {

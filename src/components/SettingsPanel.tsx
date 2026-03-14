@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { isOrgTerm } from '@/lib/blacklist-store';
 import { isWorkspaceTerm } from '@/lib/dnt-store';
+import { getWorkspaceConfig } from '@/lib/workspace-loader';
 
 interface SettingsPanelProps {
   blacklist: string[];
@@ -25,12 +26,38 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const [blockedSearch, setBlockedSearch] = useState('');
   const [newDntTerm, setNewDntTerm] = useState('');
+  const [resetConfirm, setResetConfirm] = useState<'blacklist' | 'dnt' | null>(null);
   const blockedInputRef = useRef<HTMLInputElement>(null);
   const dntInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     blockedInputRef.current?.focus();
   }, []);
+
+  // Auto-clear reset confirmation after 3 seconds
+  useEffect(() => {
+    if (resetConfirm === null) return;
+    const timer = setTimeout(() => setResetConfirm(null), 3000);
+    return () => clearTimeout(timer);
+  }, [resetConfirm]);
+
+  const handleResetBlacklist = useCallback(() => {
+    if (resetConfirm === 'blacklist') {
+      onResetBlacklist();
+      setResetConfirm(null);
+    } else {
+      setResetConfirm('blacklist');
+    }
+  }, [resetConfirm, onResetBlacklist]);
+
+  const handleResetDnt = useCallback(() => {
+    if (resetConfirm === 'dnt') {
+      onResetDntTerms();
+      setResetConfirm(null);
+    } else {
+      setResetConfirm('dnt');
+    }
+  }, [resetConfirm, onResetDntTerms]);
 
   // Blocked words: filter matches when searching
   const filteredBlocked = useMemo(() => {
@@ -77,8 +104,39 @@ export function SettingsPanel({
     }
   }, [handleAddDnt]);
 
+  // Check if the current DNT input already exists in the list
+  const dntTermExists = useMemo(() => {
+    const query = newDntTerm.trim().toLowerCase();
+    if (!query) return false;
+    return dntTerms.some(t => t.toLowerCase() === query);
+  }, [dntTerms, newDntTerm]);
+
+  const workspaceConfig = useMemo(() => getWorkspaceConfig(), []);
+
   return (
     <div className="settings-panel" data-testid="settings-panel">
+      {/* Workspace info — read-only display */}
+      <div className="settings-section">
+        <h3 className="settings-section-title">Workspace</h3>
+        <p className="settings-section-desc">
+          Current workspace configuration.
+        </p>
+        <div className="settings-workspace-info" data-testid="workspace-info">
+          <div className="settings-workspace-row">
+            <span className="settings-workspace-label">Studio</span>
+            <span className="settings-workspace-value">{workspaceConfig.studio.studio}</span>
+          </div>
+          <div className="settings-workspace-row">
+            <span className="settings-workspace-label">Title</span>
+            <span className="settings-workspace-value">{workspaceConfig.title.title}</span>
+          </div>
+          <div className="settings-workspace-row">
+            <span className="settings-workspace-label">Languages</span>
+            <span className="settings-workspace-value">{workspaceConfig.title.localizationTargets.join(', ')}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Blocked Words — searchable list */}
       <div className="settings-section">
         <h3 className="settings-section-title">
@@ -88,7 +146,7 @@ export function SettingsPanel({
           </span>
         </h3>
         <p className="settings-section-desc">
-          Terms that trigger warnings in the editor and translation output. Org defaults cannot be removed. Search to find terms or add your own.
+          Terms that trigger warnings in the editor and translation output. Built-in terms cannot be removed. Search to find terms or add your own.
         </p>
 
         <div className="settings-add-row">
@@ -112,12 +170,12 @@ export function SettingsPanel({
             Add
           </button>
           <button
-            className="btn btn-sm btn-secondary"
-            onClick={onResetBlacklist}
-            title="Remove all custom terms (org defaults are always present)"
+            className={`btn btn-sm ${resetConfirm === 'blacklist' ? 'btn-warning' : 'btn-secondary'}`}
+            onClick={handleResetBlacklist}
+            title="Remove all custom terms (built-in terms are always present)"
             data-testid="blocked-reset-btn"
           >
-            Reset
+            {resetConfirm === 'blacklist' ? 'Confirm reset?' : 'Reset'}
           </button>
         </div>
 
@@ -135,7 +193,7 @@ export function SettingsPanel({
                       data-testid="blocked-chip"
                     >
                       {isOrg && (
-                        <span className="settings-chip-lock" aria-label="Org default" title="Org default — cannot be removed">
+                        <span className="settings-chip-lock" role="img" aria-label="Built-in default" title="Built-in default — cannot be removed">
                           <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 0-4 4v2H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1V5a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H6V5z"/></svg>
                         </span>
                       )}
@@ -147,7 +205,7 @@ export function SettingsPanel({
                           aria-label={`Remove ${term}`}
                           title={`Remove "${term}"`}
                         >
-                          ×
+                          &times;
                         </button>
                       )}
                     </span>
@@ -173,7 +231,7 @@ export function SettingsPanel({
       <div className="settings-section">
         <h3 className="settings-section-title">Do Not Translate</h3>
         <p className="settings-section-desc">
-          These terms are preserved exactly when translating. Workspace defaults cannot be removed. Add your own terms below.
+          These terms are preserved exactly when translating. Built-in terms cannot be removed. Add your own terms below.
         </p>
 
         {dntTerms.length > 0 ? (
@@ -187,7 +245,7 @@ export function SettingsPanel({
                   data-testid="dnt-chip"
                 >
                   {isWs && (
-                    <span className="settings-chip-lock" aria-label="Workspace default" title="Workspace default — cannot be removed">
+                    <span className="settings-chip-lock" role="img" aria-label="Built-in default" title="Built-in default — cannot be removed">
                       <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a4 4 0 0 0-4 4v2H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-1V5a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H6V5z"/></svg>
                     </span>
                   )}
@@ -199,7 +257,7 @@ export function SettingsPanel({
                       aria-label={`Remove ${term}`}
                       title={`Remove "${term}"`}
                     >
-                      x
+                      &times;
                     </button>
                   )}
                 </span>
@@ -224,18 +282,19 @@ export function SettingsPanel({
           <button
             className="btn btn-sm btn-secondary"
             onClick={handleAddDnt}
-            disabled={!newDntTerm.trim()}
+            disabled={!newDntTerm.trim() || dntTermExists}
+            title={dntTermExists ? 'Term already in list' : 'Add term'}
             data-testid="dnt-add-btn"
           >
             Add
           </button>
           <button
-            className="btn btn-sm btn-secondary"
-            onClick={onResetDntTerms}
-            title="Remove all custom terms (workspace defaults are always present)"
+            className={`btn btn-sm ${resetConfirm === 'dnt' ? 'btn-warning' : 'btn-secondary'}`}
+            onClick={handleResetDnt}
+            title="Remove all custom terms (built-in terms are always present)"
             data-testid="dnt-reset-btn"
           >
-            Reset to defaults
+            {resetConfirm === 'dnt' ? 'Confirm reset?' : 'Reset to defaults'}
           </button>
         </div>
       </div>

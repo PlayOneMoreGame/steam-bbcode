@@ -3,13 +3,12 @@
  * Used by the translation feature (SMD-4370) to instruct the LLM
  * to preserve these terms exactly as written.
  *
- * Workspace defaults are loaded from src/workspace/dnt-defaults.json,
- * which can be swapped per-game at build time.
+ * DNT terms are loaded from the active title's workspace config (SMD-4413).
  */
 
-import dntDefaults from '@/workspace/dnt-defaults.json';
+import { getWorkspaceConfig } from './workspace-loader';
 
-export const DO_NOT_TRANSLATE: string[] = dntDefaults;
+export const DO_NOT_TRANSLATE: string[] = getWorkspaceConfig().title.dntTerms;
 
 /**
  * Regex patterns for terms that should not be translated.

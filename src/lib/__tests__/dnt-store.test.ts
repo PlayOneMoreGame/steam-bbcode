@@ -21,7 +21,6 @@ import {
   addDntTerm,
   removeDntTerm,
   resetDntTerms,
-  isDefaultTerm,
   isWorkspaceTerm,
 } from '../dnt-store';
 
@@ -233,13 +232,4 @@ describe('dnt-store (split model: workspace defaults + user additions)', () => {
     });
   });
 
-  describe('isDefaultTerm (backward compat alias)', () => {
-    it('returns true for workspace terms', () => {
-      expect(isDefaultTerm('SWAPMEAT')).toBe(true);
-    });
-
-    it('returns false for non-workspace terms', () => {
-      expect(isDefaultTerm('CustomBoss')).toBe(false);
-    });
-  });
 });

@@ -14,7 +14,7 @@ const localStorageMock = {
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
 // Import after localStorage is mocked
-import { getBlacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm, isDefaultBlockedWord, setBlacklist, DEFAULT_BLOCKED_WORDS } from '../blacklist-store';
+import { getBlacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm, DEFAULT_BLOCKED_WORDS } from '../blacklist-store';
 
 describe('blacklist-store', () => {
   beforeEach(() => {
@@ -192,13 +192,6 @@ describe('blacklist-store', () => {
     });
   });
 
-  describe('isDefaultBlockedWord (deprecated alias)', () => {
-    it('works the same as isOrgTerm', () => {
-      expect(isDefaultBlockedWord('anal')).toBe(true);
-      expect(isDefaultBlockedWord('xyzzy')).toBe(false);
-    });
-  });
-
   describe('migration from old storage format', () => {
     it('migrates non-default terms from old key to user terms', () => {
       // Simulate old storage: defaults + some custom terms
@@ -248,9 +241,14 @@ describe('blacklist-store', () => {
       expect(result).toContain('custom-once');
     });
 
-    it('setBlacklist writes to old key for migration compat', () => {
-      setBlacklist(['term1', 'term2']);
-      expect(JSON.parse(store['steambb-blacklist-terms'])).toEqual(['term1', 'term2']);
+    it('old key format triggers migration on next read', () => {
+      store['steambb-blacklist-terms'] = JSON.stringify(['term1', 'term2']);
+      const result = getBlacklist();
+      // term1 and term2 are not org defaults, so they become user additions
+      expect(result).toContain('term1');
+      expect(result).toContain('term2');
+      // Old key is cleaned up
+      expect(store['steambb-blacklist-terms']).toBeUndefined();
     });
   });
 
