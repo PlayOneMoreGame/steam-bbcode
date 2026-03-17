@@ -44,8 +44,8 @@ export function App() {
   // Recent files (desktop only)
   const { addRecentFile } = useRecentFiles();
 
-  // File names - null means we're showing the welcome doc
-  const [mdFileName, setMdFileName] = useState<string | null>(null);
+  // File name persists across sessions so the window title restores on relaunch
+  const [mdFileName, setMdFileName] = useLocalStorage<string | null>('steam-bbcode-filename', null);
 
   // Markdown content — restore saved draft for returning users, welcome doc for first visit
   const [markdown, setMarkdown] = useState(() => {

@@ -411,3 +411,68 @@ test('editing content shows dirty indicator', async ({ page }) => {
   await mdEditor.fill('Some new content');
   await expect(page.locator('.save-indicator.unsaved')).toBeVisible();
 });
+
+// ---------------------------------------------------------------------------
+// State persistence across reload (SMD-4417)
+// ---------------------------------------------------------------------------
+
+test('file name persists across reload', async ({ page }) => {
+  // Set a filename via localStorage (simulating a file open)
+  await page.evaluate(() => {
+    localStorage.setItem('steam-bbcode-filename', JSON.stringify('my-patch-notes.md'));
+  });
+  await page.reload();
+
+  // The filename should be visible in the editor panel header
+  await expect(page.locator('.file-name')).toHaveText('my-patch-notes.md');
+
+  // Cleanup
+  await page.evaluate(() => localStorage.removeItem('steam-bbcode-filename'));
+});
+
+test('file name clears after New document', async ({ page }) => {
+  // Set a filename
+  await page.evaluate(() => {
+    localStorage.setItem('steam-bbcode-filename', JSON.stringify('old-file.md'));
+  });
+  await page.reload();
+  await expect(page.locator('.file-name')).toHaveText('old-file.md');
+
+  // Accept the unsaved changes dialog
+  page.on('dialog', dialog => dialog.accept());
+
+  // Dispatch Cmd+N to create new document
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'n',
+      code: 'KeyN',
+      metaKey: true,
+      bubbles: true,
+    }));
+  });
+
+  // Filename should be gone
+  await expect(page.locator('.file-name')).toHaveCount(0);
+
+  // Reload and verify it stays gone
+  await page.reload();
+  await expect(page.locator('.file-name')).toHaveCount(0);
+
+  // Cleanup
+  await page.evaluate(() => localStorage.removeItem('steam-bbcode-filename'));
+});
+
+test('context selection persists across reload', async ({ page }) => {
+  // Switch to forums context
+  await page.selectOption('.control-select', 'forums');
+
+  // Reload
+  await page.reload();
+
+  // Context should still be forums
+  const select = page.locator('.control-select');
+  await expect(select).toHaveValue('forums');
+
+  // Cleanup — reset to default
+  await page.evaluate(() => localStorage.removeItem('steam-bbcode-context'));
+});

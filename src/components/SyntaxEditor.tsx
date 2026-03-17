@@ -7,6 +7,9 @@ import {
 } from '@/lib/highlighter';
 import { detectBlacklistTerms } from '@/lib/blacklist-detector';
 
+/** Debounce delay for syntax highlighting updates (ms) */
+const HIGHLIGHT_DEBOUNCE_MS = 50;
+
 export interface SyntaxEditorHandle {
   scrollToLine: (line: number, column?: number, length?: number) => void;
   selectRange: (start: number, end: number) => void;
@@ -144,16 +147,16 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     }));
   }, [lineCount, errorLines, warningLines]);
 
-  // Tokenize and highlight (including blacklist terms)
-  const highlightedHtml = useMemo(() => {
+  // Compute highlighted HTML for a given value
+  const computeHighlightedHtml = useCallback((text: string): string => {
     const tokens: HighlightToken[] = language === 'markdown'
-      ? tokenizeMarkdown(value)
-      : tokenizeBBCode(value);
+      ? tokenizeMarkdown(text)
+      : tokenizeBBCode(text);
 
     // Add blacklist term tokens
     if (blacklistTerms.length > 0) {
-      const matches = detectBlacklistTerms(value, blacklistTerms);
-      const lines = value.split('\n');
+      const matches = detectBlacklistTerms(text, blacklistTerms);
+      const lines = text.split('\n');
       for (const match of matches) {
         // Convert line/column to character offset
         let offset = 0;
@@ -169,8 +172,28 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
       }
     }
 
-    return applyHighlighting(value, tokens);
-  }, [value, language, blacklistTerms]);
+    return applyHighlighting(text, tokens);
+  }, [language, blacklistTerms]);
+
+  // Debounced syntax highlighting — the overlay trails the textarea by up to
+  // HIGHLIGHT_DEBOUNCE_MS so rapid keystrokes don't trigger re-tokenization
+  // on every character. The textarea itself remains immediate.
+  const [highlightedHtml, setHighlightedHtml] = useState(() => computeHighlightedHtml(value));
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedHtml(computeHighlightedHtml(value));
+    }, HIGHLIGHT_DEBOUNCE_MS);
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, [value, computeHighlightedHtml]);
 
   // Sync on value change
   useEffect(() => {
