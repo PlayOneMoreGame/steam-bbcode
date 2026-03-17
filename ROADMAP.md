@@ -3,9 +3,9 @@
 ## Current Status (v1.6.0) - Updated 2026-03-13
 
 ### Test Coverage
-- 559 Vitest unit tests across 21 files
+- 695 Vitest unit tests across 26 files
 - 119 Playwright E2E tests across 7 spec files
-- 678 total tests, all passing
+- 814 total tests, all passing
 
 ### Completed Features
 
@@ -87,7 +87,7 @@
 
 ---
 
-## Completed Jira Tickets (21 closed)
+## Completed Jira Tickets (31 closed)
 
 | Ticket | Summary |
 |--------|---------|
@@ -110,8 +110,21 @@
 | SMD-4381 | Fix nuclear paste (splice at cursor) |
 | SMD-4382 | Extract state hooks from App.tsx (4 hooks, 541 to 425 lines) |
 | SMD-4363 | Native macOS menu bar (removed Bring All to Front, Help links to GitHub) |
+| SMD-4383 | Add SyntaxEditor component tests |
 | SMD-4384 | Fix code fence header conversion bug |
 | SMD-4386 | Skip welcome document on repeat visits |
+| SMD-4409 | Protect org-level blocked words from user deletion |
+| SMD-4410 | Extract DNT glossary to swappable workspace config |
+| SMD-4413 | Workspace config: studio/title directory structure |
+| SMD-4414 | Workspace config: wire term stores to title config |
+| SMD-4415 | Workspace config: title selector UI |
+| SMD-4416 | Workspace config: per-title localization targets |
+| SMD-4420 | Guard against concurrent translation API calls |
+| SMD-4421 | Add confirmation dialog to reset buttons in Settings |
+| SMD-4424 | Move TranslationState type to shared types file |
+| SMD-4425 | Fix Windows path splitting in useFileService |
+| SMD-4419 | Fix blacklist term line/column offsets in linter |
+| SMD-4422 | Add unit tests for useAutoSave hook |
 
 ---
 
@@ -119,7 +132,7 @@
 
 | Ticket | Summary | Owner | Priority |
 |--------|---------|-------|----------|
-| SMD-4383 | Add SyntaxEditor component tests | Frontend Engineer | Medium |
+| SMD-4423 | Add unit tests for useLocalStorage hook | Frontend Engineer | Medium |
 | SMD-4364 | Keyboard shortcuts: tab switching | Frontend Engineer | Medium |
 
 ---
