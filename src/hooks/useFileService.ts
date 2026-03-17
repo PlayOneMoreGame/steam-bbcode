@@ -3,9 +3,9 @@
 
 import { useState, useCallback } from 'react';
 
-// Check if running in Tauri
+// Check if running in Tauri (v2 uses __TAURI_INTERNALS__)
 const isTauri = () => {
-  return typeof window !== 'undefined' && '__TAURI__' in window;
+  return typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
 };
 
 // Dynamically import Tauri APIs only when in Tauri environment
@@ -13,8 +13,8 @@ const getTauriApis = async () => {
   if (!isTauri()) return null;
   
   const [dialog, fs] = await Promise.all([
-    import('@tauri-apps/api/dialog'),
-    import('@tauri-apps/api/fs'),
+    import('@tauri-apps/plugin-dialog'),
+    import('@tauri-apps/plugin-fs'),
   ]);
   
   return { dialog, fs };

@@ -2,88 +2,59 @@
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:3000",
-    "distDir": "../dist"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3000"
   },
-  "package": {
-    "productName": "SteamBBEditor",
-    "version": "1.7.0"
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "copyright": "© 2026 One More Game",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "longDescription": "Convert Markdown to Steam BBCode with live preview, linting, and Discord export.",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null,
+      "minimumSystemVersion": "10.15"
+    },
+    "resources": [],
+    "shortDescription": "Markdown to Steam BBCode converter",
+    "targets": "all"
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "clipboard": {
-        "writeText": true
-      },
-      "dialog": {
-        "open": true,
-        "save": true
-      },
-      "fs": {
-        "readFile": true,
-        "writeFile": true,
-        "scope": ["$DOCUMENT/**", "$DESKTOP/**", "$DOWNLOAD/**"]
-      },
-      "window": {
-        "all": false,
-        "close": true,
-        "hide": true,
-        "show": true,
-        "maximize": true,
-        "minimize": true,
-        "unmaximize": true,
-        "unminimize": true,
-        "startDragging": true,
-        "setTitle": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "copyright": "© 2026 One More Game",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "com.onemoregame.steam-bbcode",
-      "longDescription": "Convert Markdown to Steam BBCode with live preview, linting, and Discord export.",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null,
-        "minimumSystemVersion": "10.15"
-      },
-      "resources": [],
-      "shortDescription": "Markdown to Steam BBCode converter",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
-    "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https://api.anthropic.com; font-src 'self'"
-    },
-    "updater": {
-      "active": false
-    },
+  "productName": "SteamBBEditor",
+  "mainBinaryName": "SteamBBEditor",
+  "version": "1.7.0",
+  "identifier": "com.onemoregame.steam-bbcode",
+  "plugins": {},
+  "app": {
     "windows": [
       {
         "fullscreen": false,
         "height": 800,
-        "width": 1400,
+        "width": 1200,
         "minHeight": 600,
-        "minWidth": 900,
+        "minWidth": 800,
         "resizable": true,
         "title": "SteamBBEditor",
-        "center": true
+        "center": true,
+        "useHttpsScheme": true
       }
-    ]
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src ipc: http://ipc.localhost 'self' https://api.anthropic.com; font-src 'self'"
+    }
   }
 }

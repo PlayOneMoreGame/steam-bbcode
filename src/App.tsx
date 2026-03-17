@@ -135,8 +135,8 @@ export function App() {
     const title = mdFileName
       ? `${mdFileName} - SteamBBEditor`
       : 'SteamBBEditor';
-    import('@tauri-apps/api/window').then(({ appWindow }) => {
-      appWindow.setTitle(title);
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      getCurrentWindow().setTitle(title);
     }).catch(() => {});
   }, [mdFileName, isDesktop]);
 
@@ -222,7 +222,7 @@ export function App() {
 
   // Listen for native menu events from Tauri (desktop only)
   useEffect(() => {
-    if (!('__TAURI__' in window)) return;
+    if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window)) return;
 
     let unlisten: (() => void) | undefined;
 
