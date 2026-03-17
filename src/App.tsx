@@ -140,11 +140,16 @@ export function App() {
 
   // Reset editor to welcome document (New)
   const handleNew = useCallback(() => {
+    if (markdown !== baseContentRef.current) {
+      if (!window.confirm('You have unsaved changes. Discard and start a new document?')) {
+        return;
+      }
+    }
     setMarkdown(WELCOME_MARKDOWN);
     setMdFileName(null);
     baseContentRef.current = WELCOME_MARKDOWN;
     trackEvent('new_document');
-  }, []);
+  }, [markdown]);
 
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';

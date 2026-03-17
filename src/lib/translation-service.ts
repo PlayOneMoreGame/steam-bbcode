@@ -79,6 +79,10 @@ export async function translateBBCode(
   targetLang: string,
   dntTerms?: string[]
 ): Promise<TranslationResult> {
+  if (!bbcode.trim()) {
+    return { ok: true, bbcode: '' };
+  }
+
   const apiKey = getApiKey();
   if (!apiKey) {
     return {

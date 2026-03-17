@@ -62,11 +62,11 @@ export function bbcodeToHTML(bbcode: string, imageDataUrls?: ImageDataUrlMap): s
   // Links — sanitize URL protocol to prevent javascript: XSS
   html = html.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, (_m, url: string, text: string) => {
     const safeUrl = sanitizeUrl(url);
-    return `<a href="${safeUrl}" class="steam-link" target="_blank" rel="noopener">${text}</a>`;
+    return `<a href="${escapeHtmlAttr(safeUrl)}" class="steam-link" target="_blank" rel="noopener">${text}</a>`;
   });
   html = html.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, (_m, url: string) => {
     const safeUrl = sanitizeUrl(url);
-    return `<a href="${safeUrl}" class="steam-link" target="_blank" rel="noopener">${safeUrl}</a>`;
+    return `<a href="${escapeHtmlAttr(safeUrl)}" class="steam-link" target="_blank" rel="noopener">${safeUrl}</a>`;
   });
 
   // Images — blob images for drag-and-drop, normal img for URLs
@@ -100,7 +100,7 @@ export function bbcodeToHTML(bbcode: string, imageDataUrls?: ImageDataUrlMap): s
 
   // YouTube videos (previewyoutube tag)
   html = html.replace(
-    /\[previewyoutube=([a-zA-Z0-9_-]+)\]\[\/previewyoutube\]/gi,
+    /\[previewyoutube=([a-zA-Z0-9_-]+)(?:;full)?\]\[\/previewyoutube\]/gi,
     '<div class="steam-video"><iframe src="https://www.youtube.com/embed/$1" frameborder="0" allowfullscreen></iframe></div>'
   );
 

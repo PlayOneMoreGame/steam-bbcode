@@ -95,7 +95,7 @@ function processMedia(text: string, context: SteamContext, notes: string[]): str
   // Convert YouTube links to previewyoutube tags
   result = result.replace(
     youtubeImageRegex(),
-    '[previewyoutube=$3][/previewyoutube]'
+    '[previewyoutube=$3;full][/previewyoutube]'
   );
 
   // Regular images

@@ -361,7 +361,7 @@ export function OutputPanel({
           <p>No translation available for {activeLang.toUpperCase()}.</p>
         </div>
       ) : viewMode === 'preview' ? (
-        <PreviewPanel content={activeBBCode} imageDataUrls={activeLang === 'en' ? imageDataUrls : undefined} />
+        <PreviewPanel content={activeBBCode} imageDataUrls={imageDataUrls} />
       ) : (
         <div className="output-bbcode-tab">
           <pre className="bbcode-readonly">{activeBBCode}</pre>

@@ -516,8 +516,28 @@ function checkListItems(
   const listContent = bbcode.replace(/\[(list|olist)\][\s\S]*?\[\/(list|olist)\]/gi, '');
   const strayItemMatch = /\[\*\]/.exec(listContent);
   if (strayItemMatch) {
-    // Find position in original text
-    const originalIndex = bbcode.indexOf('[*]');
+    // Find the stray [*] position in the original text by matching offset in stripped text
+    const strayOffset = strayItemMatch.index;
+    // Walk original text, skipping list blocks, to find the matching [*]
+    let originalIndex = -1;
+    let strippedPos = 0;
+    const listBlockRegex = /\[(list|olist)\][\s\S]*?\[\/(list|olist)\]/gi;
+    let listMatch;
+    const segments: { start: number; end: number }[] = [];
+    while ((listMatch = listBlockRegex.exec(bbcode)) !== null) {
+      segments.push({ start: listMatch.index, end: listMatch.index + listMatch[0].length });
+    }
+    for (let i = 0; i < bbcode.length; i++) {
+      // Skip if inside a list block
+      const inListBlock = segments.some(s => i >= s.start && i < s.end);
+      if (inListBlock) continue;
+      if (strippedPos === strayOffset) {
+        originalIndex = i;
+        break;
+      }
+      strippedPos++;
+    }
+    if (originalIndex === -1) originalIndex = bbcode.indexOf('[*]');
     const line = getLineNumber(bbcode, originalIndex);
     errors.push({
       type: 'error',
