@@ -82,6 +82,14 @@ export function useAutoSave<T>(
     };
   }, [key, value, delay]);
 
+  // Re-render every 10s to keep relative time display fresh
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!state.lastSaved) return;
+    const id = window.setInterval(() => setTick(t => t + 1), 10000);
+    return () => clearInterval(id);
+  }, [state.lastSaved]);
+
   return { ...state, save };
 }
 

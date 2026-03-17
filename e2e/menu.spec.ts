@@ -100,4 +100,47 @@ test('footer keyboard hints include New shortcut', async ({ page }) => {
   await expect(hints).toContainText('Open');
   await expect(hints).toContainText('Save As');
   await expect(hints).toContainText('Copy BBCode');
+  await expect(hints).toContainText('Preview');
+  await expect(hints).toContainText('BBCode');
+});
+
+// ---------------------------------------------------------------------------
+// Cmd+1 / Cmd+2 — tab switching in output panel
+// ---------------------------------------------------------------------------
+
+test('cmd+1 switches to Preview tab', async ({ page }) => {
+  // Start by switching to BBCode tab
+  await page.locator('.output-panel .preview-tab', { hasText: 'BBCode' }).click();
+  await expect(page.locator('.output-panel .preview-tab.active')).toHaveText('BBCode');
+
+  // Dispatch Cmd+1
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: '1',
+      code: 'Digit1',
+      metaKey: true,
+      bubbles: true,
+    }));
+  });
+
+  // Preview tab should now be active
+  await expect(page.locator('.output-panel .preview-tab.active')).toHaveText('Steam Preview');
+});
+
+test('cmd+2 switches to BBCode tab', async ({ page }) => {
+  // Verify we start on Preview
+  await expect(page.locator('.output-panel .preview-tab.active')).toHaveText('Steam Preview');
+
+  // Dispatch Cmd+2
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: '2',
+      code: 'Digit2',
+      metaKey: true,
+      bubbles: true,
+    }));
+  });
+
+  // BBCode tab should now be active
+  await expect(page.locator('.output-panel .preview-tab.active')).toHaveText('BBCode');
 });

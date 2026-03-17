@@ -67,10 +67,10 @@ export function ApiKeyDialog({ open, onClose, onSaved }: ApiKeyDialogProps) {
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Anthropic API Key"
+        aria-label="Translation API Key"
       >
         <div className="api-key-dialog-header">
-          <h3 className="api-key-dialog-title">Anthropic API Key</h3>
+          <h3 className="api-key-dialog-title">Translation API Key</h3>
           <button
             className="api-key-dialog-close"
             onClick={onClose}
@@ -82,8 +82,8 @@ export function ApiKeyDialog({ open, onClose, onSaved }: ApiKeyDialogProps) {
 
         <div className="api-key-dialog-body">
           <p className="api-key-dialog-description">
-            Enter your Anthropic API key to enable translation.
-            The key is stored locally in your browser and never sent to our servers.
+            Enter your API key to enable translation. Ask your team lead if you don't have one.
+            The key is stored locally in your browser.
           </p>
 
           <input

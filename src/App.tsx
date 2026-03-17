@@ -22,6 +22,8 @@ import { trackEvent, trackPageView, buildWorkflowProperties, type InputMethod } 
 import '@/styles/app.css';
 import '@/styles/steam-theme.css';
 
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+
 export function App() {
   // File service
   const { openFile, saveFileAs, isDesktop, currentFile } = useFileService();
@@ -401,10 +403,12 @@ export function App() {
         {/* Footer */}
         <footer className="footer">
           <span className="keyboard-hints">
-            <kbd>⌘N</kbd> New
-            <kbd>⌘O</kbd> Open
-            <kbd>⌘S</kbd> Save As
-            <kbd>⌘⇧C</kbd> Copy BBCode
+            <kbd>{isMac ? '⌘' : 'Ctrl+'}N</kbd> New
+            <kbd>{isMac ? '⌘' : 'Ctrl+'}O</kbd> Open
+            <kbd>{isMac ? '⌘' : 'Ctrl+'}S</kbd> Save As
+            <kbd>{isMac ? '⌘⇧' : 'Ctrl+Shift+'}C</kbd> Copy BBCode
+            <kbd>{isMac ? '⌘' : 'Ctrl+'}1</kbd> Preview
+            <kbd>{isMac ? '⌘' : 'Ctrl+'}2</kbd> BBCode
           </span>
           <div className="footer-right">
             <div className="footer-save-status">

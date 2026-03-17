@@ -50,6 +50,22 @@ export function OutputPanel({
   const [translateMenuOpen, setTranslateMenuOpen] = useState(false);
   const translateMenuRef = useRef<HTMLDivElement>(null);
 
+  // Global keyboard shortcuts: Cmd/Ctrl+1 = Preview, Cmd/Ctrl+2 = BBCode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === '1') {
+        e.preventDefault();
+        setViewMode('preview');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setViewMode('bbcode');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Close translate menu when clicking outside or pressing Escape
   useEffect(() => {
     if (!translateMenuOpen) return;

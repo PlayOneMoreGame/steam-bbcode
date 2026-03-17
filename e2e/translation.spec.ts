@@ -43,7 +43,7 @@ test('selecting a language without API key shows the API key dialog', async ({ p
 
   const dialog = page.locator('.api-key-dialog');
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('Anthropic API Key');
+  await expect(dialog).toContainText('Translation API Key');
   await expect(dialog).toContainText('stored locally');
 });
 
