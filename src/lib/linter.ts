@@ -92,22 +92,66 @@ export function lintBBCode(bbcode: string, context: SteamContext, options?: Lint
 
   // Check for blocked words in BBCode text content (strips tags first)
   if (options?.blacklist && options.blacklist.length > 0) {
-    const textOnly = bbcode.replace(/\[[^\]]*\]/g, '');
+    const { text: textOnly, offsetMap } = stripTagsWithMap(bbcode);
     const matches = detectBlacklistTerms(textOnly, options.blacklist);
     for (const m of matches) {
+      // Convert stripped-text line/column to absolute index in stripped string
+      const strippedLines = textOnly.split('\n');
+      let strippedAbsIndex = 0;
+      for (let i = 0; i < m.line - 1; i++) {
+        strippedAbsIndex += strippedLines[i].length + 1; // +1 for \n
+      }
+      strippedAbsIndex += m.column - 1; // column is 1-indexed
+
+      // Map back to original bbcode position
+      const originalIndex = offsetMap[strippedAbsIndex];
+      const originalLine = getLineNumber(bbcode, originalIndex);
+      const originalColumn = getColumnInLine(bbcode, originalIndex);
+
       warnings.push({
         type: 'warning',
         message: `Blocked word "${m.term}" found in output`,
-        line: m.line,
-        column: m.column,
+        line: originalLine,
+        column: originalColumn,
         length: m.length,
         help: 'This word is on your blocked words list. You can edit the list in Settings.',
       });
-      warningLines.add(m.line);
+      warningLines.add(originalLine);
     }
   }
 
   return { errors, warnings, errorLines, warningLines };
+}
+
+/**
+ * Strip BBCode tags from text while building an offset map.
+ * offsetMap[i] = the index in the original bbcode string that corresponds
+ * to position i in the stripped text.
+ */
+function stripTagsWithMap(bbcode: string): { text: string; offsetMap: number[] } {
+  const offsetMap: number[] = [];
+  let text = '';
+  const tagPattern = /\[[^\]]*\]/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tagPattern.exec(bbcode)) !== null) {
+    // Copy characters before the tag
+    for (let i = lastIndex; i < match.index; i++) {
+      offsetMap.push(i);
+      text += bbcode[i];
+    }
+    // Skip the tag (no entries in offsetMap)
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Copy remaining characters after last tag
+  for (let i = lastIndex; i < bbcode.length; i++) {
+    offsetMap.push(i);
+    text += bbcode[i];
+  }
+
+  return { text, offsetMap };
 }
 
 /**

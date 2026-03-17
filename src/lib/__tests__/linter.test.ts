@@ -526,4 +526,60 @@ Visit [url=https://example.com]our site[/url] for more info.`;
       expect(blankWarnings[0].line).toBe(8);
     });
   });
+
+  describe('blacklist offset accuracy', () => {
+    const blacklist = ['badword', 'term1', 'term2'];
+
+    it('reports correct column for term inside [b] tags', () => {
+      const result = lintBBCode('[b]badword[/b]', 'announcements', { blacklist });
+      const match = result.warnings.find(w => w.message.includes('badword'));
+      expect(match).toBeDefined();
+      expect(match!.column).toBe(4); // [b] is 3 chars, badword starts at column 4
+      expect(match!.line).toBe(1);
+    });
+
+    it('reports correct column for term inside nested [b][i] tags', () => {
+      const result = lintBBCode('[b][i]badword[/i][/b]', 'announcements', { blacklist });
+      const match = result.warnings.find(w => w.message.includes('badword'));
+      expect(match).toBeDefined();
+      expect(match!.column).toBe(7); // [b][i] is 6 chars, badword starts at column 7
+      expect(match!.line).toBe(1);
+    });
+
+    it('reports correct column for term inside [url=...] tag', () => {
+      const result = lintBBCode('[url=https://x.com]badword[/url]', 'announcements', { blacklist });
+      const match = result.warnings.find(w => w.message.includes('badword'));
+      expect(match).toBeDefined();
+      expect(match!.column).toBe(20); // [url=https://x.com] is 19 chars
+      expect(match!.line).toBe(1);
+    });
+
+    it('reports correct line and column for multiline list with term', () => {
+      const bbcode = '[list]\n[*]badword\n[/list]';
+      const result = lintBBCode(bbcode, 'announcements', { blacklist });
+      const match = result.warnings.find(w => w.message.includes('badword'));
+      expect(match).toBeDefined();
+      expect(match!.line).toBe(2);
+      expect(match!.column).toBe(4); // [*] is 3 chars, badword starts at column 4
+    });
+
+    it('reports correct columns for multiple terms with tags', () => {
+      const bbcode = '[b]term1[/b] and [i]term2[/i]';
+      const result = lintBBCode(bbcode, 'announcements', { blacklist });
+      const m1 = result.warnings.find(w => w.message.includes('term1'));
+      const m2 = result.warnings.find(w => w.message.includes('term2'));
+      expect(m1).toBeDefined();
+      expect(m2).toBeDefined();
+      expect(m1!.column).toBe(4); // after [b]
+      expect(m2!.column).toBe(21); // [b]term1[/b] and [i] = 20 chars
+    });
+
+    it('works correctly with no tags (plain text)', () => {
+      const result = lintBBCode('plain badword text', 'announcements', { blacklist });
+      const match = result.warnings.find(w => w.message.includes('badword'));
+      expect(match).toBeDefined();
+      expect(match!.column).toBe(7); // "plain " is 6 chars
+      expect(match!.line).toBe(1);
+    });
+  });
 });
