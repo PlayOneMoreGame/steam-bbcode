@@ -16,6 +16,9 @@ test('cmd+n resets editor to welcome document', async ({ page }) => {
   await mdEditor.fill('# Custom content\n\nThis is not the welcome doc.');
   await expect(mdEditor).toHaveValue(/Custom content/);
 
+  // Accept the unsaved changes confirmation dialog
+  page.on('dialog', dialog => dialog.accept());
+
   // Dispatch Cmd+N
   await page.evaluate(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', {
@@ -38,6 +41,9 @@ test('cmd+n resets file name and content', async ({ page }) => {
 
   // Edit content
   await mdEditor.fill('# Some file content');
+
+  // Accept the unsaved changes confirmation dialog
+  page.on('dialog', dialog => dialog.accept());
 
   // Dispatch Cmd+N
   await page.evaluate(() => {

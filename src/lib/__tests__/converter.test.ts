@@ -137,12 +137,12 @@ describe('markdownToBBCode', () => {
   describe('YouTube videos', () => {
     it('converts YouTube watch URLs', () => {
       const result = markdownToBBCode('![video](https://www.youtube.com/watch?v=dQw4w9WgXcQ)', 'announcements');
-      expect(result.bbcode).toBe('[previewyoutube=dQw4w9WgXcQ][/previewyoutube]');
+      expect(result.bbcode).toBe('[previewyoutube=dQw4w9WgXcQ;full][/previewyoutube]');
     });
 
     it('converts youtu.be short URLs', () => {
       const result = markdownToBBCode('![video](https://youtu.be/dQw4w9WgXcQ)', 'announcements');
-      expect(result.bbcode).toBe('[previewyoutube=dQw4w9WgXcQ][/previewyoutube]');
+      expect(result.bbcode).toBe('[previewyoutube=dQw4w9WgXcQ;full][/previewyoutube]');
     });
 
     it('adds note about videos in forums context', () => {

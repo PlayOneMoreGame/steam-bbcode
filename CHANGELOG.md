@@ -2,6 +2,60 @@
 
 All notable changes to SteamBBEditor will be documented in this file.
 
+## [1.7.0] - 2026-03-17
+
+### Added
+- **Three-tier workspace config** — studio/title/user configuration model for blocked words, DNT glossary, and localization targets
+- **SWAPMEAT title config** — DNT terms, localization targets (pt-BR, es-LATAM), and title-specific blocked words loaded from workspace config
+- **Workspace info in Settings** — displays active studio, title, and languages
+- **Reset confirmation dialogs** — 3-second two-step confirmation prevents accidental resets
+- **Concurrent translation guard** — prevents double-firing translation API calls
+- **useAutoSave unit tests** — 28 tests covering formatLastSaved and auto-save algorithm
+- **ESLint 9 flat config** and Prettier setup
+
+### Fixed
+- **Blacklist linter offsets** — line/column positions now correctly reference original BBCode, not tag-stripped text
+- **URL XSS in preview** — href attributes now escaped with `escapeHtmlAttr` to prevent attribute injection
+- **YouTube embed format** — converter now outputs `[previewyoutube=ID;full]` matching Steam's required format
+- **Stray list item detection** — `[*]` outside lists now points to the correct line in the original BBCode
+- **Empty translation guard** — empty content returns immediately instead of calling the API
+- **Translated preview images** — image placeholders now display in translated previews, not just English
+- **New document confirmation** — File > New warns before discarding unsaved changes
+- **Code fence protection** — headers inside fenced code blocks no longer get converted
+- **Nuclear paste** — paste now inserts at cursor instead of replacing entire editor content
+- **handlePaste stale closure** — fixed missing dependency in useCallback
+- **Windows path splitting** — file name extraction handles both `/` and `\` separators
+
+### Changed
+- **Protected blocked words** — 678 studio-level defaults are immutable, marked with lock icons
+- **DNT glossary from config** — terms loaded from title config instead of hardcoded defaults
+- **Localization targets from config** — language list driven by title config, not hardcoded
+- **App.tsx refactored** — extracted 4 state hooks (useBlacklist, useDntTerms, useTranslation, useFormatDetection), 541 → 425 lines
+- **createTermStore factory** — eliminated ~250 lines of duplication across blacklist and DNT stores
+- **Tag reference** — repositioned as floating popover
+- **Welcome document** — skipped on repeat visits
+- **Copyright updated** to 2026
+
+## [1.6.0] - 2026-01-30
+
+### Added
+- **Confluence XHTML converter** — paste Confluence content directly, auto-detected and converted to BBCode
+- **Format auto-detection** — automatically identifies Markdown, Confluence XHTML, or plain text input
+- **Confluence-specific linter** — validates Confluence-format input with targeted warnings
+- **Two-panel layout** — Editor + Output (with Preview/BBCode/Translation tabs)
+- **Claude API translation** — translate BBCode to pt-BR and es-LATAM via Claude Haiku 4.5
+- **Do Not Translate glossary** — editable DNT terms preserved during translation
+- **Blocked term detection** — 678 default terms with word-boundary matching and wavy underline highlighting
+- **Image placeholders** — `{placeholder:filename}` extraction with Steam URL resolution panel
+- **Better lint messages** — expandable "Why?" help text with friendly explanations
+- **Native macOS menu bar** — File, Edit, View, Window, Help menus with keyboard shortcuts
+- **Dynamic window title** — shows current document name
+- **CSS native feel** — system fonts, macOS scrollbars, focus-visible states, reduced-motion support
+- **Basic auth for staging** — CloudFront function protects staging environment
+
+### Fixed
+- hasChanges tracking uses opened file content, not welcome document
+
 ## [1.5.3] - 2026-01-30
 
 ### Fixed
