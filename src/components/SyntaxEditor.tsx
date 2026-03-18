@@ -6,6 +6,7 @@ import {
   type HighlightToken
 } from '@/lib/highlighter';
 import { detectBlacklistTerms } from '@/lib/blacklist-detector';
+import { ContextMenu, type ContextMenuEntry } from './ContextMenu';
 
 /** Debounce delay for syntax highlighting updates (ms) */
 const HIGHLIGHT_DEBOUNCE_MS = 50;
@@ -27,6 +28,15 @@ const ACCEPTED_IMAGE_TYPES = new Set([
 /** Maximum image file size in bytes (10 MB) */
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
+/** Text file extensions accepted for drag-and-drop */
+const TEXT_FILE_EXTENSIONS = new Set(['md', 'markdown', 'txt', 'bbcode']);
+
+/** Check if a filename has a text file extension we accept */
+function isTextFile(filename: string): boolean {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  return TEXT_FILE_EXTENSIONS.has(ext);
+}
+
 interface SyntaxEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -38,6 +48,8 @@ interface SyntaxEditorProps {
   onSave?: () => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onImageDrop?: (filename: string, dataUrl: string) => void;
+  onFileDrop?: (filename: string, content: string) => void;
+  onPasteAsConfluence?: () => void;
   blacklistTerms?: string[];
 }
 
@@ -52,14 +64,18 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
   onSave,
   onPaste,
   onImageDrop,
+  onFileDrop,
+  onPasteAsConfluence,
   blacklistTerms = [],
 }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [dragIsTextFile, setDragIsTextFile] = useState(false);
   const dragCounterRef = useRef(0);
   const pastedImageCountRef = useRef(0);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Sync scroll positions - defined early so useImperativeHandle can use it
   const syncScroll = useCallback(() => {
@@ -245,6 +261,16 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     reader.readAsDataURL(file);
   }, [onImageDrop, insertImageTag]);
 
+  // Read a text file dropped on the editor
+  const processTextFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = reader.result as string;
+      onFileDrop?.(file.name, content);
+    };
+    reader.readAsText(file);
+  }, [onFileDrop]);
+
   // Drag-and-drop handlers
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -252,6 +278,17 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     dragCounterRef.current++;
     if (e.dataTransfer.types.includes('Files')) {
       setIsDragOver(true);
+      // Check if any dragged file is a text file (for overlay text)
+      const items = Array.from(e.dataTransfer.items);
+      const hasTextFile = items.some(item => {
+        // dataTransfer.items may not expose filename during dragenter on all browsers
+        // Fall back to checking the type
+        if (item.kind === 'file') {
+          return item.type === 'text/plain' || item.type === 'text/markdown' || item.type === '';
+        }
+        return false;
+      });
+      setDragIsTextFile(hasTextFile);
     }
   }, []);
 
@@ -261,6 +298,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     dragCounterRef.current--;
     if (dragCounterRef.current === 0) {
       setIsDragOver(false);
+      setDragIsTextFile(false);
     }
   }, []);
 
@@ -274,13 +312,18 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+    setDragIsTextFile(false);
     dragCounterRef.current = 0;
 
     const files = Array.from(e.dataTransfer.files);
     for (const file of files) {
+      if (isTextFile(file.name)) {
+        processTextFile(file);
+        return; // Only load the first text file
+      }
       processImageFile(file);
     }
-  }, [processImageFile]);
+  }, [processImageFile, processTextFile]);
 
   // Enhanced paste handler: detect image data in clipboard
   const handleImagePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -306,6 +349,92 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
     onPaste?.(e);
   }, [processImageFile, onPaste]);
 
+  // Context menu handler
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLTextAreaElement>) => {
+    if (readOnly) return; // Let browser handle it for read-only editors
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, [readOnly]);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Build context menu items
+  const contextMenuItems = useMemo((): ContextMenuEntry[] => {
+    const textarea = textareaRef.current;
+    const hasSelection = textarea
+      ? textarea.selectionStart !== textarea.selectionEnd
+      : false;
+
+    const items: ContextMenuEntry[] = [
+      {
+        label: 'Cut',
+        disabled: !hasSelection,
+        action: () => {
+          document.execCommand('cut');
+        },
+      },
+      {
+        label: 'Copy',
+        disabled: !hasSelection,
+        action: () => {
+          document.execCommand('copy');
+        },
+      },
+      {
+        label: 'Paste',
+        action: async () => {
+          try {
+            const text = await navigator.clipboard.readText();
+            const ta = textareaRef.current;
+            if (ta) {
+              const start = ta.selectionStart;
+              const end = ta.selectionEnd;
+              const before = value.substring(0, start);
+              const after = value.substring(end);
+              onChange(before + text + after);
+              // Move cursor after pasted text
+              requestAnimationFrame(() => {
+                ta.focus();
+                const newPos = start + text.length;
+                ta.setSelectionRange(newPos, newPos);
+              });
+            }
+          } catch {
+            // Clipboard read may be denied — fall back to execCommand
+            document.execCommand('paste');
+          }
+        },
+      },
+      {
+        label: 'Select All',
+        action: () => {
+          const ta = textareaRef.current;
+          if (ta) {
+            ta.focus();
+            ta.setSelectionRange(0, value.length);
+          }
+        },
+      },
+    ];
+
+    // Add "Paste as Confluence" if the callback is provided (only in markdown mode)
+    if (onPasteAsConfluence) {
+      items.push(
+        { separator: true },
+        {
+          label: 'Paste as Confluence',
+          action: () => {
+            onPasteAsConfluence();
+          },
+        },
+      );
+    }
+
+    return items;
+  }, [value, onChange, onPasteAsConfluence, contextMenu]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const textarea = e.currentTarget;
@@ -316,11 +445,15 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
       onSave?.();
     }
 
-    // Escape - Blur editor
+    // Escape - Close context menu or blur editor
     if (e.key === 'Escape') {
-      textarea.blur();
+      if (contextMenu) {
+        setContextMenu(null);
+      } else {
+        textarea.blur();
+      }
     }
-  }, [onSave]);
+  }, [onSave, contextMenu]);
 
   return (
     <div
@@ -359,6 +492,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
           onScroll={syncScroll}
           onKeyDown={handleKeyDown}
           onPaste={handleImagePaste}
+          onContextMenu={handleContextMenu}
           readOnly={readOnly}
           placeholder={placeholder}
           spellCheck={language === 'markdown'}
@@ -369,10 +503,22 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
       {isDragOver && (
         <div className="editor-drop-zone" aria-hidden="true">
           <div className="editor-drop-zone-content">
-            <span className="editor-drop-zone-icon">&#x1F5BC;</span>
-            <span className="editor-drop-zone-text">Drop images here</span>
+            <span className="editor-drop-zone-icon">{dragIsTextFile ? '\u{1F4C4}' : '\u{1F5BC}'}</span>
+            <span className={dragIsTextFile ? 'editor-drop-zone-text-file' : 'editor-drop-zone-text'}>
+              {dragIsTextFile ? 'Drop file to open' : 'Drop images here'}
+            </span>
           </div>
         </div>
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems}
+          onClose={closeContextMenu}
+        />
       )}
     </div>
   );

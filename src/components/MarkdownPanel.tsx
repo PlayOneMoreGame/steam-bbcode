@@ -34,6 +34,7 @@ interface MarkdownPanelProps {
   context?: SteamContext;
   blacklist?: string[];
   onImageDrop?: (filename: string, dataUrl: string) => void;
+  onFileDrop?: (filename: string, content: string) => void;
   onInputMethodChange?: (method: InputMethod, content: string) => void;
 }
 
@@ -47,6 +48,7 @@ export function MarkdownPanel({
   context = 'announcements',
   blacklist = [],
   onImageDrop,
+  onFileDrop,
   onInputMethodChange,
 }: MarkdownPanelProps) {
   const [showDiscord, setShowDiscord] = useState(false);
@@ -119,6 +121,35 @@ export function MarkdownPanel({
       onInputMethodChange?.('markdown_paste', plain);
     }
   }, [value, onChange, context, onInputMethodChange]);
+
+  // "Paste as Confluence" context menu action: read clipboard HTML and run Confluence conversion
+  const handlePasteAsConfluence = useCallback(async () => {
+    try {
+      // Try to read HTML from clipboard via the Clipboard API
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        if (item.types.includes('text/html')) {
+          const blob = await item.getType('text/html');
+          const html = await blob.text();
+          const { markdown } = confluenceToMarkdown(html, context);
+          onChange(markdown);
+          onInputMethodChange?.('confluence_paste', markdown);
+          trackEvent('paste_confluence', { source: 'context_menu' });
+          return;
+        }
+      }
+      // No HTML on clipboard — try plain text and convert as Confluence storage format
+      const plain = await navigator.clipboard.readText();
+      if (plain) {
+        const { markdown } = confluenceToMarkdown(plain, context);
+        onChange(markdown);
+        onInputMethodChange?.('confluence_paste', markdown);
+        trackEvent('paste_confluence', { source: 'context_menu_plain' });
+      }
+    } catch {
+      // Clipboard read denied — silently fail
+    }
+  }, [onChange, context, onInputMethodChange]);
 
   const handleLintClick = useCallback((msg: { line?: number; start?: number; end?: number; column?: number; length?: number }) => {
     if (!editorRef.current) return;
@@ -264,6 +295,8 @@ export function MarkdownPanel({
         onSave={onSaveAs}
         onPaste={handlePaste}
         onImageDrop={onImageDrop}
+        onFileDrop={onFileDrop}
+        onPasteAsConfluence={handlePasteAsConfluence}
         blacklistTerms={blacklist}
       />
 
