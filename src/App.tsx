@@ -461,14 +461,11 @@ export function App() {
         {/* Header */}
         <header className="header">
           <div className="header-top">
-            <h1 className="title">
-              SteamBBEditor
-
-            </h1>
+            <h1 className="title">SteamBBEditor</h1>
 
             <div className="controls">
               <div className="control-group">
-                <label className="control-label">Steam Context:</label>
+                <label className="control-label">Post Type:</label>
                 <select
                   className="control-select"
                   value={context}
@@ -570,6 +567,7 @@ export function App() {
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize panels"
+            title="Drag to resize panels. Double-click to reset."
           />
 
           <OutputPanel

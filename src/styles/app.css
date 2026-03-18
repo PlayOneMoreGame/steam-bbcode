@@ -1327,6 +1327,11 @@ body {
   border-color: var(--border-secondary);
 }
 
+.install-tip-btn:focus-visible {
+  outline: 1px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
 .install-tip-popover {
   position: absolute;
   bottom: 100%;

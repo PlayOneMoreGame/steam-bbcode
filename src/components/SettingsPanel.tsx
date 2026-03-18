@@ -294,7 +294,7 @@ export function SettingsPanel({
             title="Remove all custom terms (built-in terms are always present)"
             data-testid="dnt-reset-btn"
           >
-            {resetConfirm === 'dnt' ? 'Confirm reset?' : 'Reset to defaults'}
+            {resetConfirm === 'dnt' ? 'Confirm reset?' : 'Reset'}
           </button>
         </div>
       </div>
