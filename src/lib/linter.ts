@@ -559,18 +559,20 @@ function checkListWhitespace(
   warnings: LintMessage[],
   warningLines: Set<number>
 ): void {
-  // Find each [list]...[/list] block individually, then check for \n\n inside it.
-  // Using a non-greedy match that excludes nested [list] tags to avoid crossing boundaries.
-  const blockPattern = /\[list\]([\s\S]*?)\[\/list\]/gi;
+  // Find each [list]...[/list] or [olist]...[/olist] block individually,
+  // then check for \n\n inside it.
+  const blockPattern = /\[(?:o?list)\]([\s\S]*?)\[\/(?:o?list)\]/gi;
   let blockMatch;
 
   while ((blockMatch = blockPattern.exec(bbcode)) !== null) {
     const blockContent = blockMatch[1];
+    // Compute the opening tag length ([list] = 6, [olist] = 7)
+    const openTagLength = blockMatch[0].indexOf(']') + 1;
     // Search for blank lines (\n\n) within this specific block
     let searchStart = 0;
     let blankIdx;
     while ((blankIdx = blockContent.indexOf('\n\n', searchStart)) !== -1) {
-      const line = getLineNumber(bbcode, blockMatch.index + '[list]'.length + blankIdx + 1);
+      const line = getLineNumber(bbcode, blockMatch.index + openTagLength + blankIdx + 1);
       warnings.push({
         type: 'warning',
         message: 'Blank line inside a list may break the formatting on Steam',

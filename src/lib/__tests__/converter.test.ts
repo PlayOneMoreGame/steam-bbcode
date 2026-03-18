@@ -219,6 +219,47 @@ describe('markdownToBBCode', () => {
     });
   });
 
+  describe('edge cases', () => {
+    it('returns empty bbcode for empty input', () => {
+      const result = markdownToBBCode('', 'announcements');
+      expect(result.bbcode).toBe('');
+      expect(result.notes).toHaveLength(0);
+    });
+
+    it('handles nested lists (indented sub-items)', () => {
+      const md = '- Parent\n  - Child 1\n  - Child 2\n- Another parent';
+      const result = markdownToBBCode(md, 'announcements');
+      // Sub-items should be captured as list items (Steam BBCode has no nested list support)
+      expect(result.bbcode).toContain('[list]');
+      expect(result.bbcode).toContain('[*]Parent');
+      expect(result.bbcode).toContain('[*]Child 1');
+      expect(result.bbcode).toContain('[*]Child 2');
+      expect(result.bbcode).toContain('[*]Another parent');
+      expect(result.bbcode).toContain('[/list]');
+    });
+
+    it('converts lists with inline formatting', () => {
+      const md = '- **bold** item\n- *italic* item\n- ~~struck~~ item';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toContain('[*][b]bold[/b] item');
+      expect(result.bbcode).toContain('[*][i]italic[/i] item');
+      expect(result.bbcode).toContain('[*][strike]struck[/strike] item');
+    });
+
+    it('converts multiple images in one document', () => {
+      const md = '![first](https://example.com/a.png)\n\nSome text\n\n![second](https://example.com/b.png)\n\n![third](https://example.com/c.png)';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toContain('[img]https://example.com/a.png[/img]');
+      expect(result.bbcode).toContain('[img]https://example.com/b.png[/img]');
+      expect(result.bbcode).toContain('[img]https://example.com/c.png[/img]');
+    });
+
+    it('converts YouTube embed URL format', () => {
+      const result = markdownToBBCode('![video](https://youtube.com/embed/abc123)', 'announcements');
+      expect(result.bbcode).toBe('[previewyoutube=abc123;full][/previewyoutube]');
+    });
+  });
+
   describe('complex documents', () => {
     it('handles a full patch notes example', () => {
       const md = `# Patch 1.2.3

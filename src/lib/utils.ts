@@ -22,7 +22,7 @@ export function getColumnInLine(text: string, position: number): number {
  * Returns a new RegExp each call because /g flag is stateful.
  */
 export function youtubeImageRegex(): RegExp {
-  return /!\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)[^)]*)\)/g;
+  return /!\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)[^)]*)\)/g;
 }
 
 /**

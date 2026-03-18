@@ -506,6 +506,31 @@ Visit [url=https://example.com]our site[/url] for more info.`;
       expect(blankWarnings).toHaveLength(0);
     });
 
+    it('flags a blank line inside an [olist] block', () => {
+      const bbcode = '[olist]\n[*] step 1\n\n[*] step 2\n[/olist]';
+      const result = lintBBCode(bbcode, 'announcements');
+      const blankWarnings = result.warnings.filter(w => w.message.includes('Blank line inside a list'));
+      expect(blankWarnings).toHaveLength(1);
+      expect(blankWarnings[0].line).toBe(3);
+    });
+
+    it('does NOT flag blank lines between separate [olist] blocks', () => {
+      const bbcode = [
+        '[olist]',
+        '[*] step 1',
+        '[*] step 2',
+        '[/olist]',
+        '',
+        '[olist]',
+        '[*] step 3',
+        '[*] step 4',
+        '[/olist]',
+      ].join('\n');
+      const result = lintBBCode(bbcode, 'announcements');
+      const blankWarnings = result.warnings.filter(w => w.message.includes('Blank line inside a list'));
+      expect(blankWarnings).toHaveLength(0);
+    });
+
     it('correctly flags blank line inside one list while ignoring gaps between others', () => {
       const bbcode = [
         '[list]',
