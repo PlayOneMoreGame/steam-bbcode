@@ -67,22 +67,22 @@ export function ApiKeyDialog({ open, onClose, onSaved }: ApiKeyDialogProps) {
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Translation API Key"
+        aria-label="Translation Key"
       >
         <div className="api-key-dialog-header">
-          <h3 className="api-key-dialog-title">Translation API Key</h3>
+          <h3 className="api-key-dialog-title">Translation Key</h3>
           <button
             className="api-key-dialog-close"
             onClick={onClose}
             aria-label="Close"
           >
-            x
+            {'\u00D7'}
           </button>
         </div>
 
         <div className="api-key-dialog-body">
           <p className="api-key-dialog-description">
-            Enter your API key to enable translation. Ask your team lead if you don't have one.
+            Enter the translation key your team lead provided.
             The key is stored locally in your browser.
           </p>
 

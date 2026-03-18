@@ -496,6 +496,7 @@ export const SyntaxEditor = forwardRef<SyntaxEditorHandle, SyntaxEditorProps>(({
           readOnly={readOnly}
           placeholder={placeholder}
           spellCheck={language === 'markdown'}
+          aria-label={readOnly ? 'Output content' : 'Editor content'}
         />
       </div>
 

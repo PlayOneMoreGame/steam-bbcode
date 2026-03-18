@@ -184,7 +184,7 @@ export function MarkdownPanel({
           <button
             className="btn btn-secondary"
             onClick={onOpen}
-            title="Open file (Cmd+O)"
+            title="Open file"
           >
             Open
           </button>
@@ -201,6 +201,7 @@ export function MarkdownPanel({
                 <div
                   className="lint-message error clickable"
                   onClick={() => handleLintClick(msg)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleLintClick(msg); } }}
                   role="button"
                   tabIndex={0}
                 >
@@ -230,6 +231,7 @@ export function MarkdownPanel({
                 <div
                   className="lint-message warning clickable"
                   onClick={() => handleLintClick(msg)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleLintClick(msg); } }}
                   role="button"
                   tabIndex={0}
                 >
@@ -259,6 +261,7 @@ export function MarkdownPanel({
                 <div
                   className="lint-message note clickable"
                   onClick={() => handleLintClick(msg)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleLintClick(msg); } }}
                   role="button"
                   tabIndex={0}
                 >
@@ -289,7 +292,7 @@ export function MarkdownPanel({
         value={value}
         onChange={onChange}
         language="markdown"
-        placeholder="Paste your Markdown here, or click Open to load a file..."
+        placeholder="Paste your content here, or drop a file to get started..."
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
         onSave={onSaveAs}

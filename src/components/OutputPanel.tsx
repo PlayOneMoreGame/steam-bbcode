@@ -130,7 +130,7 @@ export function OutputPanel({
 
   const activeCopyLabel = activeLang === 'en'
     ? 'Copy BBCode'
-    : `Copy ${activeLang.toUpperCase()}`;
+    : `Copy ${LANGUAGE_DISPLAY_NAMES[activeLang] || activeLang}`;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -273,12 +273,13 @@ export function OutputPanel({
               + Translate
             </button>
             {translateMenuOpen && (
-              <div className="translate-dropdown-menu">
+              <div className="translate-dropdown-menu" role="menu">
                 <div className="dropdown-header">Target Language</div>
                 {Object.entries(getSupportedLanguages()).map(([code, name]) => (
                   <button
                     key={code}
                     className="dropdown-item"
+                    role="menuitem"
                     onClick={() => handleTranslateSelect(code)}
                   >
                     {name} ({code})
@@ -374,7 +375,7 @@ export function OutputPanel({
         </div>
       ) : activeLang !== 'en' && !hasContent ? (
         <div className="translation-tab-empty">
-          <p>No translation available for {activeLang.toUpperCase()}.</p>
+          <p>No translation available for {LANGUAGE_DISPLAY_NAMES[activeLang] || activeLang}.</p>
         </div>
       ) : viewMode === 'preview' ? (
         <PreviewPanel content={activeBBCode} imageDataUrls={imageDataUrls} />
@@ -401,7 +402,7 @@ export function OutputPanel({
           />
         </div>
         <span className="char-count-inline">
-          {charCount.toLocaleString()} / {charLimit.toLocaleString()}
+          {charCount.toLocaleString()} / {charLimit.toLocaleString()} chars
         </span>
       </div>
 
