@@ -1376,6 +1376,52 @@ body {
 }
 
 /* ==========================================================================
+   Auto-updater badge (desktop only)
+   ========================================================================== */
+
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.update-badge-btn {
+  background: var(--bg-green-subtle);
+  border: 1px solid var(--accent-green);
+  border-radius: 3px;
+  color: var(--accent-green);
+  font-size: 11px;
+  padding: 1px 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.update-badge-btn:hover {
+  background: var(--bg-green-medium);
+  color: var(--text-primary);
+}
+
+.update-badge-restart {
+  background: var(--bg-blue-subtle);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.update-badge-restart:hover {
+  background: rgba(97, 175, 239, 0.2);
+  color: var(--text-primary);
+}
+
+.update-badge-progress {
+  font-size: 11px;
+  color: var(--accent-blue);
+}
+
+.update-badge-error {
+  font-size: 11px;
+  color: var(--accent-red);
+}
+
+/* ==========================================================================
    Responsive: Tablet (2 columns)
    ========================================================================== */
 

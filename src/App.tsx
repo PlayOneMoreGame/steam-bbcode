@@ -28,6 +28,81 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 const GITHUB_RELEASES_URL = 'https://github.com/PlayOneMoreGame/steam-bbcode/releases';
 const GITHUB_API_LATEST = 'https://api.github.com/repos/PlayOneMoreGame/steam-bbcode/releases/latest';
 
+// Auto-updater state for desktop app
+interface UpdateInfo {
+  version: string;
+  status: 'available' | 'downloading' | 'ready' | 'error';
+  progress?: number;
+  error?: string;
+}
+
+function useAutoUpdater(isDesktop: boolean) {
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const checkedRef = useRef(false);
+
+  // Check for updates on mount (desktop only, non-blocking)
+  useEffect(() => {
+    if (!isDesktop || checkedRef.current) return;
+    checkedRef.current = true;
+
+    (async () => {
+      try {
+        const { check } = await import('@tauri-apps/plugin-updater');
+        const update = await check();
+        if (update) {
+          setUpdateInfo({ version: update.version, status: 'available' });
+        }
+      } catch {
+        // Silently fail — updater not configured or no network
+      }
+    })();
+  }, [isDesktop]);
+
+  const downloadAndInstall = useCallback(async () => {
+    if (!updateInfo || updateInfo.status !== 'available') return;
+
+    try {
+      const { check } = await import('@tauri-apps/plugin-updater');
+      const update = await check();
+      if (!update) return;
+
+      setUpdateInfo(prev => prev ? { ...prev, status: 'downloading', progress: 0 } : null);
+
+      let totalBytes = 0;
+      let downloadedBytes = 0;
+
+      await update.downloadAndInstall((event) => {
+        if (event.event === 'Started' && event.data.contentLength) {
+          totalBytes = event.data.contentLength;
+        } else if (event.event === 'Progress') {
+          downloadedBytes += event.data.chunkLength;
+          const progress = totalBytes > 0 ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+          setUpdateInfo(prev => prev ? { ...prev, progress } : null);
+        } else if (event.event === 'Finished') {
+          setUpdateInfo(prev => prev ? { ...prev, status: 'ready', progress: 100 } : null);
+        }
+      });
+
+      // After install completes, prompt restart
+      setUpdateInfo(prev => prev ? { ...prev, status: 'ready' } : null);
+    } catch (err) {
+      setUpdateInfo(prev => prev ? { ...prev, status: 'error', error: String(err) } : null);
+    }
+  }, [updateInfo]);
+
+  const restartApp = useCallback(async () => {
+    try {
+      const { relaunch } = await import('@tauri-apps/plugin-process');
+      await relaunch();
+    } catch {
+      // process plugin not available — tell user to restart manually
+      setUpdateInfo(prev => prev ? { ...prev, status: 'error', error: 'Please restart the app manually to complete the update.' } : null);
+    }
+  }, []);
+
+  return { updateInfo, downloadAndInstall, restartApp };
+}
+
 interface ReleaseAsset {
   name: string;
   browser_download_url: string;
@@ -104,6 +179,9 @@ export function App() {
   // Desktop app download link (web only)
   const downloadInfo = useLatestRelease(isDesktop);
   const [showInstallTip, setShowInstallTip] = useState(false);
+
+  // Auto-updater (desktop only)
+  const { updateInfo, downloadAndInstall, restartApp } = useAutoUpdater(isDesktop);
 
   // Analytics: session start + page view on mount
   const inputMethodRef = useRef<InputMethod>('unknown');
@@ -540,6 +618,37 @@ export function App() {
               )}
               {saveStatus === 'unsaved' && <span className="save-indicator unsaved">●</span>}
             </div>
+            {isDesktop && updateInfo && (
+              <span className="update-badge" data-testid="update-badge">
+                {updateInfo.status === 'available' && (
+                  <button
+                    className="update-badge-btn"
+                    onClick={downloadAndInstall}
+                    title={`Update to v${updateInfo.version}`}
+                  >
+                    Update v{updateInfo.version}
+                  </button>
+                )}
+                {updateInfo.status === 'downloading' && (
+                  <span className="update-badge-progress">
+                    Downloading{updateInfo.progress != null ? ` ${updateInfo.progress}%` : '...'}
+                  </span>
+                )}
+                {updateInfo.status === 'ready' && (
+                  <button
+                    className="update-badge-btn update-badge-restart"
+                    onClick={restartApp}
+                  >
+                    Restart to update
+                  </button>
+                )}
+                {updateInfo.status === 'error' && (
+                  <span className="update-badge-error" title={updateInfo.error}>
+                    Update failed
+                  </span>
+                )}
+              </span>
+            )}
             {!isDesktop && downloadInfo && (
               <span className="download-app-wrapper">
                 <a

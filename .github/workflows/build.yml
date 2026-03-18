@@ -60,31 +60,36 @@ jobs:
         uses: tauri-apps/tauri-action@v0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri updater signing key — generate with: npx tauri signer generate -w ~/.tauri/steam-bbcode.key
+          # Set TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD as repository secrets
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'SteamBBEditor ${{ github.ref_name }}'
           releaseBody: |
             ## Downloads
-            
+
             | Platform | File |
             |----------|------|
             | macOS (Apple Silicon) | `SteamBBEditor_*_aarch64.dmg` |
             | macOS (Intel) | `SteamBBEditor_*_x64.dmg` |
             | Windows | `SteamBBEditor_*_x64_en-US.msi` |
-            
+
             ### Installation
-            
+
             **macOS:** Download `.dmg`, open it, drag app to Applications.
-            
+
             **Windows:** Download `.msi`, double-click to install.
-            
+
             ### First Launch (Unsigned App)
-            
+
             **macOS:** Right-click app → Open → Click "Open"
-            
+
             **Windows:** Click "More info" → "Run anyway"
           releaseDraft: true
           prerelease: false
+          updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
 
   notify:
