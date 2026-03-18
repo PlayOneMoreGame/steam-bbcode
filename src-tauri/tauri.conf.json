@@ -30,6 +30,23 @@
       "signingIdentity": null,
       "minimumSystemVersion": "10.15"
     },
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "mimeType": "text/markdown",
+        "description": "Markdown files"
+      },
+      {
+        "ext": ["txt"],
+        "mimeType": "text/plain",
+        "description": "Text files"
+      },
+      {
+        "ext": ["bbcode"],
+        "mimeType": "text/plain",
+        "description": "BBCode files"
+      }
+    ],
     "resources": [],
     "shortDescription": "Markdown to Steam BBCode converter",
     "targets": "all"
@@ -38,7 +55,14 @@
   "mainBinaryName": "SteamBBEditor",
   "version": "1.7.0",
   "identifier": "com.onemoregame.steam-bbcode",
-  "plugins": {},
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/PlayOneMoreGame/steam-bbcode/releases/latest/download/latest.json"
+      ],
+      "pubkey": "UPDATER_PUBKEY_PLACEHOLDER"
+    }
+  },
   "app": {
     "windows": [
       {

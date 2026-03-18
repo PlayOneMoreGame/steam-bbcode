@@ -5,13 +5,62 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuild
 use tauri::{Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
 
+/// Read a file from disk and emit its content to the frontend.
+/// Called when the app is launched with a file argument or receives a file-open event.
+fn open_file_and_emit(app: &tauri::AppHandle, path: &str) {
+    if let Ok(content) = std::fs::read_to_string(path) {
+        // Extract filename from path
+        let filename = std::path::Path::new(path)
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or(path)
+            .to_string();
+
+        #[derive(Clone, serde::Serialize)]
+        struct FileOpenPayload {
+            filename: String,
+            content: String,
+            path: String,
+        }
+
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.emit(
+                "file-open",
+                FileOpenPayload {
+                    filename,
+                    content,
+                    path: path.to_string(),
+                },
+            );
+        }
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Check if the app was launched with a file argument
+            let args: Vec<String> = std::env::args().collect();
+            if args.len() > 1 {
+                let file_path = &args[1];
+                let path = std::path::Path::new(file_path);
+                if path.exists() && path.is_file() {
+                    let handle = app.handle().clone();
+                    let file_path = file_path.clone();
+                    // Emit after the window is ready
+                    std::thread::spawn(move || {
+                        // Small delay to ensure the frontend is loaded
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                        open_file_and_emit(&handle, &file_path);
+                    });
+                }
+            }
             // -- App menu (macOS only, ignored on Windows) --
             let app_menu = SubmenuBuilder::new(app, "SteamBBEditor")
                 .about(None)
