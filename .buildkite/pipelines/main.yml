@@ -36,6 +36,18 @@ steps:
       os: linux
       hardware_env: prod
   - wait
+  - label: ":globe_with_meridians: Deploy (staging)"
+    command:
+      - npm run build
+      - aws s3 sync dist/ s3://staging-steam-bbcode.dev.onemoregame.live --delete
+      - aws cloudfront create-invalidation --distribution-id ETNUMFXECZ49V --paths "/*"
+    agents:
+      os: linux
+      hardware_env: prod
+    branches: main
+    concurrency: 1
+    concurrency_group: staging_steam-bbcode
+  - wait
   - label: ":terraform: Deploy (live)"
     commands:
       - cd ops/live
