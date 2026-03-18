@@ -1064,6 +1064,60 @@ body {
   color: var(--accent-blue);
 }
 
+/* ==========================================================================
+   Context Menu
+   ========================================================================== */
+
+.context-menu {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 16px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+
+.context-menu-item:hover:not(:disabled) {
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
+}
+
+.context-menu-item:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--border-primary);
+  margin: 4px 0;
+}
+
+/* Drop zone overlay text for files (not images) */
+.editor-drop-zone-text-file {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent-green);
+}
+
 /* Image thumbnail in ImagesPanel */
 .images-panel-thumbnail {
   flex-shrink: 0;

@@ -188,6 +188,17 @@ export function App() {
     imageStore.addImage(filename, dataUrl);
   }, [imageStore]);
 
+  // Handle text file drop — load file content into editor
+  const handleFileDrop = useCallback((filename: string, content: string) => {
+    setMarkdown(content);
+    setMdFileName(filename);
+    baseContentRef.current = content;
+    inputMethodRef.current = 'file_open';
+    pasteTimestampRef.current = Date.now();
+    contentAtPasteRef.current = content;
+    trackEvent('file_opened', { source: 'drag_drop' });
+  }, []);
+
   // File operations
   const handleOpenMarkdown = useCallback(async () => {
     const content = await openFile(MD_FILTERS);
@@ -304,7 +315,8 @@ export function App() {
   useEffect(() => {
     if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window)) return;
 
-    let unlisten: (() => void) | undefined;
+    let unlistenMenu: (() => void) | undefined;
+    let unlistenFileOpen: (() => void) | undefined;
 
     import('@tauri-apps/api/event').then(({ listen }) => {
       listen<string>('menu-event', (event) => {
@@ -326,12 +338,27 @@ export function App() {
             break;
         }
       }).then((fn) => {
-        unlisten = fn;
+        unlistenMenu = fn;
+      });
+
+      // Listen for file-open events (launched with file argument or file association)
+      listen<{ filename: string; content: string; path: string }>('file-open', (event) => {
+        const { filename, content } = event.payload;
+        setMarkdown(content);
+        setMdFileName(filename);
+        baseContentRef.current = content;
+        inputMethodRef.current = 'file_open';
+        pasteTimestampRef.current = Date.now();
+        contentAtPasteRef.current = content;
+        trackEvent('file_opened', { source: 'file_association' });
+      }).then((fn) => {
+        unlistenFileOpen = fn;
       });
     });
 
     return () => {
-      unlisten?.();
+      unlistenMenu?.();
+      unlistenFileOpen?.();
     };
   }, [handleNew, handleOpenMarkdown, handleSaveMarkdownAs]);
 
@@ -449,6 +476,7 @@ export function App() {
             context={context}
             blacklist={blacklist}
             onImageDrop={handleImageDrop}
+            onFileDrop={handleFileDrop}
             onInputMethodChange={(method: InputMethod, content: string) => {
               inputMethodRef.current = method;
               pasteTimestampRef.current = Date.now();
