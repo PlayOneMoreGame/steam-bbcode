@@ -84,7 +84,7 @@ jobs:
 
             ### First Launch (Unsigned App)
 
-            **macOS:** Right-click app → Open → Click "Open"
+            **macOS:** Right-click app → Open → Click "Open". If blocked, run: `xattr -d com.apple.quarantine /Applications/SteamBBEditor.app`
 
             **Windows:** Click "More info" → "Run anyway"
           releaseDraft: true

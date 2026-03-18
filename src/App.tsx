@@ -670,6 +670,7 @@ export function App() {
                 {showInstallTip && (
                   <div className="install-tip-popover">
                     <p><strong>macOS:</strong> Right-click the app &rarr; Open &rarr; Click &ldquo;Open&rdquo;</p>
+                    <p className="install-tip-code">If that doesn&rsquo;t work: <code>xattr -d com.apple.quarantine /Applications/SteamBBEditor.app</code></p>
                     <p><strong>Windows:</strong> Click &ldquo;More info&rdquo; &rarr; &ldquo;Run anyway&rdquo;</p>
                   </div>
                 )}
