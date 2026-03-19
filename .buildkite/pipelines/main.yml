@@ -1,75 +1,19 @@
-#omgcmd { overwrite: false }
-
-# Copyright (C) 2022 One More Game - All Rights Reserved
-# Unauthorized copying of this file, via any medium is strictly prohibited
-# Proprietary and confidential
-
 steps:
-  - label: ":terraform: Terraform CI"
-    command: make tf-ci-apply
-    agents:
-      os: linux
-      hardware_env: prod
-    branches: main
-    concurrency: 1
-    concurrency_group: ci_steam-bbcode
-  - wait
-  - label: ":file_cabinet: Get Version"
-    command:
-      - .buildkite/tasks/version.sh
-    agents:
-      os: linux
-      hardware_env: prod
-  - wait
-  - label: ":hammer: Build"
-    command:
-      - .buildkite/tasks/clean.sh && .buildkite/tasks/build.sh
-    agents:
-      os: linux
-      hardware_env: prod
+  - label: ":hammer: build"
+    command: .buildkite/build
     artifact_paths:
-      - "dist/**/*"
-  - label: ":test_tube: Test"
-    command:
-      - .buildkite/tasks/clean.sh && .buildkite/tasks/test.sh
+      - "pkg/steam_bbcode.tar.gz"
     agents:
+      hardware_env: dev
       os: linux
-      hardware_env: prod
   - wait
-  - label: ":globe_with_meridians: Deploy (staging)"
-    command:
-      - npm run build
-      - aws s3 sync dist/ s3://staging-steam-bbcode.dev.onemoregame.live --delete
-      - aws cloudfront create-invalidation --distribution-id ETNUMFXECZ49V --paths "/*"
-    agents:
-      os: linux
-      hardware_env: prod
+  - label: ":globe_with_meridians: deploy (staging)"
+    command: .buildkite/deploy staging
     branches: main
-    concurrency: 1
-    concurrency_group: staging_steam-bbcode
-  - wait
-  - label: ":terraform: Deploy (live)"
-    commands:
-      - cd ops/live
-      - make tf-live-upgrade
-      - make tf-live-apply
     agents:
+      hardware_env: dev
       os: linux
-      hardware_env: prod
-    branches: main
-    concurrency: 1
-    concurrency_group: deploy_steam-bbcode
-  - wait
-  - label: ":rocket: Publish"
-    command:
-      - .buildkite/tasks/publish.sh
-    agents:
-      os: linux
-      hardware_env: prod
-    branches: main
-    concurrency: 1
-    concurrency_group: publish_steam-bbcode
-    retry:
-      automatic:
-        exit_status: "*"
-        limit: 3
+    env:
+      AWS_S3_BUCKET: staging-steam-bbcode.dev.onemoregame.live
+      AWS_CLOUDFRONT_DIST_ID: "ETNUMFXECZ49V"
+      OMG_ENV: staging

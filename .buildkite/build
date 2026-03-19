@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "--- Installing dependencies"
+time make ci
+
+echo "+++ Building"
+time make build
+
+echo "--- Packaging"
+time make package

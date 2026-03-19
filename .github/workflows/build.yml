@@ -1,9 +1,7 @@
-name: Build & Release
+name: Desktop Build & Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -16,44 +14,7 @@ permissions:
   contents: write
 
 jobs:
-  # Web build + deploy to staging (runs on every push to main)
-  deploy-staging:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm run test:run
-
-      - name: Build web app
-        run: npm run build
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-
-      - name: Deploy to staging S3
-        run: aws s3 sync dist/ s3://staging-steam-bbcode.dev.onemoregame.live --delete
-
-      - name: Invalidate CloudFront cache
-        run: aws cloudfront create-invalidation --distribution-id ETNUMFXECZ49V --paths "/*"
-
-  # Desktop builds (runs on every push to main and tags)
-  build-desktop:
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -139,17 +100,15 @@ jobs:
           args: ${{ matrix.args }}
 
   notify:
-    needs: [deploy-staging, build-desktop]
+    needs: build
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Build Status
         run: |
-          if [ "${{ needs.deploy-staging.result }}" == "success" ] && [ "${{ needs.build-desktop.result }}" == "success" ]; then
-            echo "All builds completed successfully"
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "All desktop builds completed successfully"
           else
-            echo "Some builds failed"
-            echo "Staging: ${{ needs.deploy-staging.result }}"
-            echo "Desktop: ${{ needs.build-desktop.result }}"
+            echo "Some desktop builds failed"
             exit 1
           fi

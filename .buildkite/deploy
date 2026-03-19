@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "--- Download artifacts"
+time make pipeline-pull
+
+echo "--- Terraforming"
+pushd "ops/$1"
+time make "tf-$1-bootstrap"
+time make "tf-$1-apply"
+popd
+
+echo "+++ Deploying to S3"
+time make deploy
