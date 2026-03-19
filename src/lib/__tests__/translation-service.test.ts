@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DO_NOT_TRANSLATE } from '../glossary';
+import { getDoNotTranslateTerms } from '../glossary';
 
 // Mock localStorage for node environment
 const localStorageMock = (() => {
@@ -50,7 +50,7 @@ describe('buildSystemPrompt', () => {
 
   it('includes all default Do Not Translate terms when no custom terms provided', () => {
     const prompt = buildSystemPrompt('es-LATAM');
-    for (const term of DO_NOT_TRANSLATE) {
+    for (const term of getDoNotTranslateTerms()) {
       expect(prompt).toContain(term);
     }
   });

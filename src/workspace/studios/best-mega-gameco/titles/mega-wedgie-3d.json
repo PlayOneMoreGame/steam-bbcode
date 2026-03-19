@@ -1,0 +1,28 @@
+{
+  "slug": "mega-wedgie-3d",
+  "displayName": "Mega Wedgie 3D",
+  "studioSlug": "best-mega-gameco",
+  "dntTerms": [
+    "Mega Wedgie 3D",
+    "Wedginator",
+    "Captain Underpantz",
+    "The Wedge Zone",
+    "Atomic Wedgie",
+    "Grundlesnap",
+    "Wedge-O-Matic",
+    "El Wedgio",
+    "Sir Pantsalot",
+    "Briefs of Destiny",
+    "The Undie Underground",
+    "Wedge Points",
+    "Grundlebucks"
+  ],
+  "blockedWords": [
+    "cheat", "hack", "exploit", "dupe", "glitch",
+    "grief", "griefer", "griefing", "toxic",
+    "boosting", "modded", "aimbot", "wallhack",
+    "speedhack", "lag switch", "ddos", "doxxing",
+    "swatting", "account sharing", "rmt"
+  ],
+  "localizationTargets": ["pt-BR", "es-LATAM", "ko", "zh-Hans", "ja", "de", "fr"]
+}

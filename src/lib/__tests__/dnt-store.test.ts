@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DO_NOT_TRANSLATE } from '../glossary';
 
 // Mock localStorage before importing the module
 const store: Record<string, string> = {};
@@ -22,106 +21,90 @@ import {
   removeDntTerm,
   resetDntTerms,
   isWorkspaceTerm,
+  isProtectedTerm,
+  isTitleTerm,
+  getTier,
 } from '../dnt-store';
+import { getWorkspaceConfig } from '../workspace-loader';
 
-describe('dnt-store (split model: workspace defaults + user additions)', () => {
+// Get the default DNT terms from the workspace config (SWAPMEAT title)
+const TITLE_DNT_TERMS = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' }).title.dntTerms;
+
+// Scoped localStorage key for the default workspace
+const USER_KEY = 'steambb-dnt-user-one-more-game-swapmeat';
+
+describe('dnt-store (split model: title defaults + user additions)', () => {
   beforeEach(() => {
     localStorageMock.clear();
     vi.clearAllMocks();
   });
 
   describe('getDntTerms', () => {
-    it('returns workspace defaults when no user terms stored', () => {
+    it('returns title defaults when no user terms stored', () => {
       const terms = getDntTerms();
-      expect(terms).toEqual(DO_NOT_TRANSLATE);
+      expect(terms).toEqual(TITLE_DNT_TERMS);
     });
 
-    it('returns workspace defaults + user additions when user terms exist', () => {
-      store['steambb-dnt-user-terms'] = JSON.stringify(['CustomTerm', 'AnotherTerm']);
+    it('returns title defaults + user additions when user terms exist', () => {
+      store[USER_KEY] = JSON.stringify(['CustomTerm', 'AnotherTerm']);
       const terms = getDntTerms();
-      expect(terms).toContain('SWAPMEAT'); // workspace default
+      expect(terms).toContain('SWAPMEAT'); // title default
       expect(terms).toContain('CustomTerm'); // user addition
       expect(terms).toContain('AnotherTerm'); // user addition
-      expect(terms.length).toBe(DO_NOT_TRANSLATE.length + 2);
+      expect(terms.length).toBe(TITLE_DNT_TERMS.length + 2);
     });
 
-    it('deduplicates case-insensitively (workspace wins)', () => {
-      store['steambb-dnt-user-terms'] = JSON.stringify(['swapmeat']); // duplicate of workspace term
+    it('deduplicates case-insensitively (title default wins)', () => {
+      store[USER_KEY] = JSON.stringify(['swapmeat']); // duplicate of title term
       const terms = getDntTerms();
       const count = terms.filter(t => t.toLowerCase() === 'swapmeat').length;
       expect(count).toBe(1);
-      // The workspace version should be the one that survives
       expect(terms).toContain('SWAPMEAT');
     });
 
     it('returns defaults for corrupted user terms JSON', () => {
-      store['steambb-dnt-user-terms'] = 'not-json';
-      expect(getDntTerms()).toEqual(DO_NOT_TRANSLATE);
+      store[USER_KEY] = 'not-json';
+      expect(getDntTerms()).toEqual(TITLE_DNT_TERMS);
     });
 
     it('returns defaults for non-array user terms JSON', () => {
-      store['steambb-dnt-user-terms'] = '{"not": "array"}';
-      expect(getDntTerms()).toEqual(DO_NOT_TRANSLATE);
+      store[USER_KEY] = '{"not": "array"}';
+      expect(getDntTerms()).toEqual(TITLE_DNT_TERMS);
     });
   });
 
   describe('migration from old format', () => {
-    it('migrates old single-list format to user additions', () => {
-      // Old format: all terms in one key
-      store['steambb-dnt-terms'] = JSON.stringify([
-        ...DO_NOT_TRANSLATE,
-        'CustomBoss',
-        'MyNewTerm',
-      ]);
-
+    it('migrates old unscoped key to scoped user terms', () => {
+      store['steambb-dnt-user-terms'] = JSON.stringify(['CustomBoss', 'MyNewTerm']);
       const terms = getDntTerms();
-      // Should have all workspace defaults + the two custom terms
       expect(terms).toContain('SWAPMEAT');
       expect(terms).toContain('CustomBoss');
       expect(terms).toContain('MyNewTerm');
-
       // Old key should be removed
-      expect(store['steambb-dnt-terms']).toBeUndefined();
-
-      // User terms should be stored separately
-      const userTerms = JSON.parse(store['steambb-dnt-user-terms']);
-      expect(userTerms).toEqual(['CustomBoss', 'MyNewTerm']);
-    });
-
-    it('removes old key even if it only has defaults (no user additions)', () => {
-      store['steambb-dnt-terms'] = JSON.stringify([...DO_NOT_TRANSLATE]);
-      getDntTerms();
-      expect(store['steambb-dnt-terms']).toBeUndefined();
-      // No user terms key should be created
       expect(store['steambb-dnt-user-terms']).toBeUndefined();
+      // Scoped key should have the user terms
+      expect(JSON.parse(store[USER_KEY])).toEqual(['CustomBoss', 'MyNewTerm']);
     });
 
     it('handles corrupted old format gracefully', () => {
-      store['steambb-dnt-terms'] = 'not-json';
+      store['steambb-dnt-user-terms'] = 'not-json';
       const terms = getDntTerms();
-      expect(terms).toEqual(DO_NOT_TRANSLATE);
-      expect(store['steambb-dnt-terms']).toBeUndefined();
-    });
-
-    it('handles non-array old format gracefully', () => {
-      store['steambb-dnt-terms'] = '{"not": "array"}';
-      const terms = getDntTerms();
-      expect(terms).toEqual(DO_NOT_TRANSLATE);
-      expect(store['steambb-dnt-terms']).toBeUndefined();
+      expect(terms).toEqual(TITLE_DNT_TERMS);
+      expect(store['steambb-dnt-user-terms']).toBeUndefined();
     });
   });
 
   describe('setDntTerms', () => {
-    it('stores only non-workspace terms', () => {
+    it('stores only non-title-default terms', () => {
       setDntTerms(['SWAPMEAT', 'CustomTerm', 'Tangus']);
-      const userTerms = JSON.parse(store['steambb-dnt-user-terms']);
+      const userTerms = JSON.parse(store[USER_KEY]);
       expect(userTerms).toEqual(['CustomTerm']);
     });
 
     it('overwrites existing user terms', () => {
       setDntTerms(['old']);
       setDntTerms(['new']);
-      const userTerms = JSON.parse(store['steambb-dnt-user-terms']);
+      const userTerms = JSON.parse(store[USER_KEY]);
       expect(userTerms).toEqual(['new']);
     });
   });
@@ -131,24 +114,23 @@ describe('dnt-store (split model: workspace defaults + user additions)', () => {
       addDntTerm('NewGameTerm');
       const terms = getDntTerms();
       expect(terms).toContain('NewGameTerm');
-      expect(terms).toContain('SWAPMEAT'); // workspace defaults still present
+      expect(terms).toContain('SWAPMEAT');
     });
 
-    it('skips if already a workspace default (case-insensitive)', () => {
+    it('skips if already a title default (case-insensitive)', () => {
       addDntTerm('SWAPMEAT');
-      // No user terms should be stored
-      expect(store['steambb-dnt-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
 
-    it('skips if already a workspace default with different case', () => {
+    it('skips if already a title default with different case', () => {
       addDntTerm('swapmeat');
-      expect(store['steambb-dnt-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
 
     it('prevents duplicate user terms (case-insensitive)', () => {
       addDntTerm('CustomBoss');
       addDntTerm('customboss');
-      const userTerms = JSON.parse(store['steambb-dnt-user-terms']);
+      const userTerms = JSON.parse(store[USER_KEY]);
       expect(userTerms).toEqual(['CustomBoss']);
     });
 
@@ -159,23 +141,22 @@ describe('dnt-store (split model: workspace defaults + user additions)', () => {
 
     it('does not add empty string', () => {
       addDntTerm('');
-      expect(store['steambb-dnt-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
 
     it('does not add whitespace-only string', () => {
       addDntTerm('   ');
-      expect(store['steambb-dnt-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
   });
 
   describe('removeDntTerm', () => {
-    it('does NOT remove workspace default terms', () => {
+    it('does NOT remove title default terms', () => {
       removeDntTerm('Tangus');
-      const terms = getDntTerms();
-      expect(terms).toContain('Tangus'); // still present
+      expect(getDntTerms()).toContain('Tangus');
     });
 
-    it('does NOT remove workspace defaults case-insensitively', () => {
+    it('does NOT remove title defaults case-insensitively', () => {
       removeDntTerm('tangus');
       expect(getDntTerms()).toContain('Tangus');
     });
@@ -200,36 +181,76 @@ describe('dnt-store (split model: workspace defaults + user additions)', () => {
   });
 
   describe('resetDntTerms', () => {
-    it('clears user additions, workspace defaults remain', () => {
+    it('clears user additions, title defaults remain', () => {
       addDntTerm('CustomTerm');
       resetDntTerms();
       const terms = getDntTerms();
-      expect(terms).toEqual(DO_NOT_TRANSLATE);
+      expect(terms).toEqual(TITLE_DNT_TERMS);
       expect(terms).not.toContain('CustomTerm');
     });
 
     it('clears user terms localStorage key', () => {
       addDntTerm('CustomTerm');
       resetDntTerms();
-      expect(store['steambb-dnt-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
   });
 
-  describe('isWorkspaceTerm', () => {
-    it('returns true for workspace terms', () => {
+  describe('isWorkspaceTerm / isProtectedTerm', () => {
+    it('returns true for title default terms', () => {
       expect(isWorkspaceTerm('SWAPMEAT')).toBe(true);
-      expect(isWorkspaceTerm('Tangus')).toBe(true);
+      expect(isProtectedTerm('Tangus')).toBe(true);
     });
 
     it('is case-insensitive', () => {
       expect(isWorkspaceTerm('swapmeat')).toBe(true);
-      expect(isWorkspaceTerm('TANGUS')).toBe(true);
+      expect(isProtectedTerm('TANGUS')).toBe(true);
     });
 
     it('returns false for non-workspace terms', () => {
       expect(isWorkspaceTerm('CustomBoss')).toBe(false);
-      expect(isWorkspaceTerm('MyNewTerm')).toBe(false);
+    });
+
+    it('returns false for user terms', () => {
+      addDntTerm('CustomBoss');
+      expect(isProtectedTerm('CustomBoss')).toBe(false);
     });
   });
 
+  describe('isTitleTerm', () => {
+    it('returns true for title default terms', () => {
+      expect(isTitleTerm('SWAPMEAT')).toBe(true);
+      expect(isTitleTerm('Tangus')).toBe(true);
+    });
+
+    it('is case-insensitive', () => {
+      expect(isTitleTerm('swapmeat')).toBe(true);
+    });
+
+    it('returns false for user terms', () => {
+      addDntTerm('CustomBoss');
+      expect(isTitleTerm('CustomBoss')).toBe(false);
+    });
+  });
+
+  describe('getTier', () => {
+    it('returns title for title default terms', () => {
+      expect(getTier('SWAPMEAT')).toBe('title');
+      expect(getTier('Tangus')).toBe('title');
+    });
+
+    it('is case-insensitive', () => {
+      expect(getTier('swapmeat')).toBe('title');
+      expect(getTier('TANGUS')).toBe('title');
+    });
+
+    it('returns user for user-added terms', () => {
+      addDntTerm('CustomBoss');
+      expect(getTier('CustomBoss')).toBe('user');
+    });
+
+    it('returns null for unknown terms', () => {
+      expect(getTier('nonexistent')).toBeNull();
+    });
+  });
 });

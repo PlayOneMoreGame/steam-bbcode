@@ -26,6 +26,11 @@ export type TranslationResult = TranslationSuccess | TranslationError;
 export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   'pt-BR': 'Brazilian Portuguese',
   'es-LATAM': 'Latin American Spanish',
+  'ko': 'Korean',
+  'zh-Hans': 'Simplified Chinese',
+  'ja': 'Japanese',
+  'de': 'German',
+  'fr': 'French',
 };
 
 /**

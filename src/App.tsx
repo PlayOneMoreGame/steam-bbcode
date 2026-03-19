@@ -15,6 +15,9 @@ import { useDntTerms } from '@/hooks/useDntTerms';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFormatDetection } from '@/hooks/useFormatDetection';
 import { useResizablePanes } from '@/hooks/useResizablePanes';
+import { getWorkspaceSelection, setWorkspaceSelection } from '@/lib/workspace-loader';
+import { switchWorkspace } from '@/lib/workspace-stores';
+import type { WorkspaceSelection } from '@/lib/workspace-types';
 import type { SteamContext } from '@/lib/contexts';
 import { CONTEXT_LABELS } from '@/lib/contexts';
 import { WELCOME_MARKDOWN } from '@/lib/welcome';
@@ -225,11 +228,22 @@ export function App() {
   const tagsBtnRef = useRef<HTMLButtonElement>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Blacklist state — loaded from localStorage
-  const { blacklist, addTerm: handleAddBlacklistTerm, removeTerm: handleRemoveBlacklistTerm, resetBlacklist: handleResetBlacklist } = useBlacklist();
+  // Workspace selection (studio + title)
+  const [workspaceSelection, setWorkspaceSelectionState] = useState<WorkspaceSelection>(() => getWorkspaceSelection());
+  const workspaceKey = `${workspaceSelection.studioSlug}/${workspaceSelection.titleSlug}`;
 
-  // DNT (Do Not Translate) state — loaded from localStorage
-  const { dntTerms, addTerm: handleAddDntTerm, removeTerm: handleRemoveDntTerm, resetTerms: handleResetDntTerms } = useDntTerms();
+  const handleSwitchWorkspace = useCallback((sel: WorkspaceSelection) => {
+    setWorkspaceSelection(sel);
+    switchWorkspace(sel);
+    setWorkspaceSelectionState(sel);
+    trackEvent('workspace_switched', { studio: sel.studioSlug, title: sel.titleSlug });
+  }, []);
+
+  // Blacklist state — loaded from localStorage, refreshes on workspace switch
+  const { blacklist, addTerm: handleAddBlacklistTerm, removeTerm: handleRemoveBlacklistTerm, resetBlacklist: handleResetBlacklist } = useBlacklist(workspaceKey);
+
+  // DNT (Do Not Translate) state — loaded from localStorage, refreshes on workspace switch
+  const { dntTerms, addTerm: handleAddDntTerm, removeTerm: handleRemoveDntTerm, resetTerms: handleResetDntTerms } = useDntTerms(workspaceKey);
 
   // Format detection (debounced)
   const detectedFormat = useFormatDetection(markdown);
@@ -531,6 +545,8 @@ export function App() {
               onAddDntTerm={handleAddDntTerm}
               onRemoveDntTerm={handleRemoveDntTerm}
               onResetDntTerms={handleResetDntTerms}
+              workspaceSelection={workspaceSelection}
+              onSwitchWorkspace={handleSwitchWorkspace}
             />
           )}
         </header>

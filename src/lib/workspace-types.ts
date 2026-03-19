@@ -1,25 +1,32 @@
 /**
- * Workspace configuration types for multi-title support (SMD-4413).
+ * Workspace configuration types for multi-studio, multi-title support.
  *
- * Hierarchy: Studio -> Title -> Person
- * Example:   One More Game -> SWAPMEAT -> Jeff/Wonder
+ * Hierarchy: Studio -> Title -> User (teams/users is a future tier)
+ * Example:   One More Game -> SWAPMEAT -> Jeff
+ *            Best Mega Gameco -> Mega Wedgie 3D -> (their team)
  */
 
 export interface StudioConfig {
-  studio: string;
-  /** Org-wide compliance baseline. Optional; blocked-words-default.ts is the current source. */
-  blockedWords?: string[];
+  slug: string;
+  displayName: string;
 }
 
 export interface TitleConfig {
-  title: string;
+  slug: string;
+  displayName: string;
+  studioSlug: string;
   dntTerms: string[];
-  /** Title-specific blocked word additions on top of the studio baseline. */
-  blockedWords?: string[];
+  blockedWords: string[];
   localizationTargets: string[];
 }
 
 export interface WorkspaceConfig {
   studio: StudioConfig;
   title: TitleConfig;
+}
+
+/** Selection state persisted in localStorage */
+export interface WorkspaceSelection {
+  studioSlug: string;
+  titleSlug: string;
 }

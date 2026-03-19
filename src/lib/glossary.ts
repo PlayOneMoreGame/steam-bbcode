@@ -1,14 +1,17 @@
 /**
  * Terms that must NOT be translated or localized.
- * Used by the translation feature (SMD-4370) to instruct the LLM
+ * Used by the translation feature to instruct the LLM
  * to preserve these terms exactly as written.
  *
- * DNT terms are loaded from the active title's workspace config (SMD-4413).
+ * DNT terms are loaded from the active workspace's store.
  */
 
-import { getWorkspaceConfig } from './workspace-loader';
+import { getDntTerms } from './dnt-store';
 
-export const DO_NOT_TRANSLATE: string[] = getWorkspaceConfig().title.dntTerms;
+/** Get the current DNT terms for the active workspace. */
+export function getDoNotTranslateTerms(): string[] {
+  return getDntTerms();
+}
 
 /**
  * Regex patterns for terms that should not be translated.

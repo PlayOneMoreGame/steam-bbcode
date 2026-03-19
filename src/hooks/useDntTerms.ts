@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getDntTerms, addDntTerm, removeDntTerm, resetDntTerms as resetDntTermsStore, isWorkspaceTerm } from '@/lib/dnt-store';
 import { trackEvent } from '@/lib/analytics';
 
@@ -10,8 +10,13 @@ export interface UseDntTermsReturn {
   isWorkspaceTerm: (term: string) => boolean;
 }
 
-export function useDntTerms(): UseDntTermsReturn {
+export function useDntTerms(workspaceKey?: string): UseDntTermsReturn {
   const [dntTerms, setDntTerms] = useState<string[]>(() => getDntTerms());
+
+  // Re-read from store when workspace switches
+  useEffect(() => {
+    setDntTerms(getDntTerms());
+  }, [workspaceKey]);
 
   const addTerm = useCallback((term: string) => {
     addDntTerm(term);

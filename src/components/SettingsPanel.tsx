@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { isOrgTerm } from '@/lib/blacklist-store';
 import { isWorkspaceTerm } from '@/lib/dnt-store';
-import { getWorkspaceConfig } from '@/lib/workspace-loader';
+import { getWorkspaceConfig, getAvailableStudios, getAvailableTitles } from '@/lib/workspace-loader';
+import type { WorkspaceSelection } from '@/lib/workspace-types';
 
 interface SettingsPanelProps {
   blacklist: string[];
@@ -12,6 +13,8 @@ interface SettingsPanelProps {
   onAddDntTerm: (term: string) => void;
   onRemoveDntTerm: (term: string) => void;
   onResetDntTerms: () => void;
+  workspaceSelection: WorkspaceSelection;
+  onSwitchWorkspace: (sel: WorkspaceSelection) => void;
 }
 
 export function SettingsPanel({
@@ -23,6 +26,8 @@ export function SettingsPanel({
   onAddDntTerm,
   onRemoveDntTerm,
   onResetDntTerms,
+  workspaceSelection,
+  onSwitchWorkspace,
 }: SettingsPanelProps) {
   const [blockedSearch, setBlockedSearch] = useState('');
   const [newDntTerm, setNewDntTerm] = useState('');
@@ -111,24 +116,57 @@ export function SettingsPanel({
     return dntTerms.some(t => t.toLowerCase() === query);
   }, [dntTerms, newDntTerm]);
 
-  const workspaceConfig = useMemo(() => getWorkspaceConfig(), []);
+  const workspaceConfig = useMemo(() => getWorkspaceConfig(workspaceSelection), [workspaceSelection]);
+  const availableStudios = useMemo(() => getAvailableStudios(), []);
+  const availableTitles = useMemo(
+    () => getAvailableTitles(workspaceSelection.studioSlug),
+    [workspaceSelection.studioSlug]
+  );
+
+  const handleStudioChange = useCallback((studioSlug: string) => {
+    const titles = getAvailableTitles(studioSlug);
+    const firstTitle = titles[0]?.slug ?? '';
+    onSwitchWorkspace({ studioSlug, titleSlug: firstTitle });
+  }, [onSwitchWorkspace]);
+
+  const handleTitleChange = useCallback((titleSlug: string) => {
+    onSwitchWorkspace({ studioSlug: workspaceSelection.studioSlug, titleSlug });
+  }, [workspaceSelection.studioSlug, onSwitchWorkspace]);
 
   return (
     <div className="settings-panel" data-testid="settings-panel">
-      {/* Workspace info — read-only display */}
+      {/* Workspace selector */}
       <div className="settings-section">
         <h3 className="settings-section-title">Workspace</h3>
         <p className="settings-section-desc">
-          Current workspace configuration.
+          Select your studio and title. Settings and terms are scoped per title.
         </p>
         <div className="settings-workspace-info" data-testid="workspace-info">
           <div className="settings-workspace-row">
             <span className="settings-workspace-label">Studio</span>
-            <span className="settings-workspace-value">{workspaceConfig.studio.studio}</span>
+            <select
+              className="control-select"
+              value={workspaceSelection.studioSlug}
+              onChange={e => handleStudioChange(e.target.value)}
+              data-testid="studio-select"
+            >
+              {availableStudios.map(s => (
+                <option key={s.slug} value={s.slug}>{s.displayName}</option>
+              ))}
+            </select>
           </div>
           <div className="settings-workspace-row">
             <span className="settings-workspace-label">Title</span>
-            <span className="settings-workspace-value">{workspaceConfig.title.title}</span>
+            <select
+              className="control-select"
+              value={workspaceSelection.titleSlug}
+              onChange={e => handleTitleChange(e.target.value)}
+              data-testid="title-select"
+            >
+              {availableTitles.map(t => (
+                <option key={t.slug} value={t.slug}>{t.displayName}</option>
+              ))}
+            </select>
           </div>
           <div className="settings-workspace-row">
             <span className="settings-workspace-label">Languages</span>

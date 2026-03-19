@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getBlacklist, addTerm as addBlacklistTerm, removeTerm as removeBlacklistTerm, resetBlacklist as resetBlacklistStore, isOrgTerm } from '@/lib/blacklist-store';
 import { trackEvent } from '@/lib/analytics';
 
@@ -12,8 +12,13 @@ export interface UseBlacklistReturn {
   isOrgTerm: (term: string) => boolean;
 }
 
-export function useBlacklist(): UseBlacklistReturn {
+export function useBlacklist(workspaceKey?: string): UseBlacklistReturn {
   const [blacklist, setBlacklist] = useState<string[]>(() => getBlacklist());
+
+  // Re-read from store when workspace switches
+  useEffect(() => {
+    setBlacklist(getBlacklist());
+  }, [workspaceKey]);
 
   const addTerm = useCallback((term: string) => {
     addBlacklistTerm(term);

@@ -14,7 +14,14 @@ const localStorageMock = {
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
 // Import after localStorage is mocked
-import { getBlacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm, DEFAULT_BLOCKED_WORDS } from '../blacklist-store';
+import { getBlacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm } from '../blacklist-store';
+import { getWorkspaceConfig } from '../workspace-loader';
+
+// Get the default blocked words from the workspace config (SWAPMEAT title)
+const TITLE_BLOCKED_WORDS = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' }).title.blockedWords;
+
+// Scoped localStorage key for the default workspace (one-more-game/swapmeat)
+const USER_KEY = 'steambb-blacklist-user-one-more-game-swapmeat';
 
 describe('blacklist-store', () => {
   beforeEach(() => {
@@ -22,42 +29,41 @@ describe('blacklist-store', () => {
     vi.clearAllMocks();
   });
 
-  describe('DEFAULT_BLOCKED_WORDS', () => {
+  describe('title blocked words', () => {
     it('contains hundreds of terms', () => {
-      expect(DEFAULT_BLOCKED_WORDS.length).toBeGreaterThan(650);
+      expect(TITLE_BLOCKED_WORDS.length).toBeGreaterThan(650);
     });
 
     it('is sorted and lowercase', () => {
-      for (const term of DEFAULT_BLOCKED_WORDS) {
+      for (const term of TITLE_BLOCKED_WORDS) {
         expect(term).toBe(term.toLowerCase());
       }
-      const sorted = [...DEFAULT_BLOCKED_WORDS].sort();
-      expect(DEFAULT_BLOCKED_WORDS).toEqual(sorted);
+      const sorted = [...TITLE_BLOCKED_WORDS].sort();
+      expect(TITLE_BLOCKED_WORDS).toEqual(sorted);
     });
   });
 
   describe('getBlacklist', () => {
     it('returns default list when nothing stored', () => {
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
 
     it('returns defaults plus user terms', () => {
-      store['steambb-blacklist-user-terms'] = JSON.stringify(['custom-term']);
+      store[USER_KEY] = JSON.stringify(['custom-term']);
       const result = getBlacklist();
       expect(result).toContain('custom-term');
-      expect(result.length).toBe(DEFAULT_BLOCKED_WORDS.length + 1);
+      expect(result.length).toBe(TITLE_BLOCKED_WORDS.length + 1);
       // Defaults come first
-      expect(result.slice(0, DEFAULT_BLOCKED_WORDS.length)).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(result.slice(0, TITLE_BLOCKED_WORDS.length)).toEqual(TITLE_BLOCKED_WORDS);
     });
 
     it('returns default list for corrupted user terms', () => {
-      store['steambb-blacklist-user-terms'] = 'not-json';
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      store[USER_KEY] = 'not-json';
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
 
     it('deduplicates user terms that match defaults', () => {
-      // If somehow a default term got into user terms, it should be filtered
-      store['steambb-blacklist-user-terms'] = JSON.stringify(['anal', 'custom-term']);
+      store[USER_KEY] = JSON.stringify(['anal', 'custom-term']);
       const result = getBlacklist();
       expect(result.filter(t => t === 'anal').length).toBe(1);
       expect(result).toContain('custom-term');
@@ -69,19 +75,18 @@ describe('blacklist-store', () => {
       addTerm('xyzzy-custom');
       const result = getBlacklist();
       expect(result).toContain('xyzzy-custom');
-      expect(result.length).toBe(DEFAULT_BLOCKED_WORDS.length + 1);
+      expect(result.length).toBe(TITLE_BLOCKED_WORDS.length + 1);
     });
 
-    it('no-op if term is already an org default', () => {
+    it('no-op if term is already a title default', () => {
       addTerm('anal');
-      // Should NOT create user terms storage
-      expect(store['steambb-blacklist-user-terms']).toBeUndefined();
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(store[USER_KEY]).toBeUndefined();
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
 
-    it('no-op if term is already an org default (case-insensitive)', () => {
+    it('no-op if term is already a title default (case-insensitive)', () => {
       addTerm('ANAL');
-      expect(store['steambb-blacklist-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
 
     it('prevents duplicate user terms (case-insensitive)', () => {
@@ -98,12 +103,12 @@ describe('blacklist-store', () => {
 
     it('does not add empty string', () => {
       addTerm('');
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
 
     it('does not add whitespace-only string', () => {
       addTerm('   ');
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
   });
 
@@ -113,7 +118,7 @@ describe('blacklist-store', () => {
       expect(getBlacklist()).toContain('custom-bad');
       removeTerm('custom-bad');
       expect(getBlacklist()).not.toContain('custom-bad');
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
 
     it('removes user terms case-insensitively', () => {
@@ -122,7 +127,7 @@ describe('blacklist-store', () => {
       expect(getBlacklist()).not.toContain('Custom-Bad');
     });
 
-    it('no-op for org default terms — they cannot be removed', () => {
+    it('no-op for title default terms — they cannot be removed', () => {
       const before = getBlacklist();
       removeTerm('anal');
       const after = getBlacklist();
@@ -130,7 +135,7 @@ describe('blacklist-store', () => {
       expect(after).toEqual(before);
     });
 
-    it('no-op for org defaults regardless of case', () => {
+    it('no-op for title defaults regardless of case', () => {
       removeTerm('ANAL');
       expect(getBlacklist()).toContain('anal');
     });
@@ -146,40 +151,40 @@ describe('blacklist-store', () => {
     it('clears user additions', () => {
       addTerm('custom-a');
       addTerm('custom-b');
-      expect(getBlacklist().length).toBe(DEFAULT_BLOCKED_WORDS.length + 2);
+      expect(getBlacklist().length).toBe(TITLE_BLOCKED_WORDS.length + 2);
       resetBlacklist();
-      expect(getBlacklist()).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(getBlacklist()).toEqual(TITLE_BLOCKED_WORDS);
     });
 
     it('removes user terms localStorage key', () => {
       addTerm('custom');
       resetBlacklist();
-      expect(store['steambb-blacklist-user-terms']).toBeUndefined();
+      expect(store[USER_KEY]).toBeUndefined();
     });
 
-    it('also removes old key if present', () => {
+    it('also removes legacy key if present', () => {
       store['steambb-blacklist-terms'] = JSON.stringify(['old']);
       resetBlacklist();
       expect(store['steambb-blacklist-terms']).toBeUndefined();
     });
 
-    it('org defaults remain after reset', () => {
+    it('title defaults remain after reset', () => {
       resetBlacklist();
       const result = getBlacklist();
-      expect(result).toEqual(DEFAULT_BLOCKED_WORDS);
+      expect(result).toEqual(TITLE_BLOCKED_WORDS);
       expect(result).toContain('anal');
     });
   });
 
   describe('isOrgTerm', () => {
-    it('returns true for org default terms', () => {
+    it('returns true for title default terms', () => {
       expect(isOrgTerm('anal')).toBe(true);
-      expect(isOrgTerm(DEFAULT_BLOCKED_WORDS[0])).toBe(true);
+      expect(isOrgTerm(TITLE_BLOCKED_WORDS[0])).toBe(true);
     });
 
     it('is case-insensitive', () => {
       expect(isOrgTerm('ANAL')).toBe(true);
-      expect(isOrgTerm(DEFAULT_BLOCKED_WORDS[0].toUpperCase())).toBe(true);
+      expect(isOrgTerm(TITLE_BLOCKED_WORDS[0].toUpperCase())).toBe(true);
     });
 
     it('returns false for non-default terms', () => {
@@ -193,62 +198,21 @@ describe('blacklist-store', () => {
   });
 
   describe('migration from old storage format', () => {
-    it('migrates non-default terms from old key to user terms', () => {
-      // Simulate old storage: defaults + some custom terms
-      store['steambb-blacklist-terms'] = JSON.stringify([
-        ...DEFAULT_BLOCKED_WORDS,
-        'custom-migrated',
-      ]);
+    it('migrates non-default terms from old key to scoped user terms', () => {
+      store['steambb-blacklist-user-terms'] = JSON.stringify(['custom-migrated']);
       const result = getBlacklist();
       expect(result).toContain('custom-migrated');
       // Old key should be deleted
-      expect(store['steambb-blacklist-terms']).toBeUndefined();
-      // New key should contain only the custom term
-      expect(JSON.parse(store['steambb-blacklist-user-terms'])).toEqual(['custom-migrated']);
-    });
-
-    it('migrates empty old storage without creating user terms', () => {
-      store['steambb-blacklist-terms'] = '[]';
-      const result = getBlacklist();
-      expect(result).toEqual(DEFAULT_BLOCKED_WORDS);
-      expect(store['steambb-blacklist-terms']).toBeUndefined();
       expect(store['steambb-blacklist-user-terms']).toBeUndefined();
-    });
-
-    it('migrates old storage that only has defaults', () => {
-      store['steambb-blacklist-terms'] = JSON.stringify(DEFAULT_BLOCKED_WORDS);
-      const result = getBlacklist();
-      expect(result).toEqual(DEFAULT_BLOCKED_WORDS);
-      expect(store['steambb-blacklist-terms']).toBeUndefined();
-      // No user terms to migrate
-      expect(store['steambb-blacklist-user-terms']).toBeUndefined();
+      // New scoped key should contain the custom term
+      expect(JSON.parse(store[USER_KEY])).toEqual(['custom-migrated']);
     });
 
     it('handles corrupted old storage', () => {
-      store['steambb-blacklist-terms'] = 'not-json';
+      store['steambb-blacklist-user-terms'] = 'not-json';
       const result = getBlacklist();
-      expect(result).toEqual(DEFAULT_BLOCKED_WORDS);
-      expect(store['steambb-blacklist-terms']).toBeUndefined();
-    });
-
-    it('migration only runs once', () => {
-      store['steambb-blacklist-terms'] = JSON.stringify(['custom-once']);
-      getBlacklist(); // triggers migration
-      // Old key is gone
-      expect(store['steambb-blacklist-terms']).toBeUndefined();
-      // Second call should not error
-      const result = getBlacklist();
-      expect(result).toContain('custom-once');
-    });
-
-    it('old key format triggers migration on next read', () => {
-      store['steambb-blacklist-terms'] = JSON.stringify(['term1', 'term2']);
-      const result = getBlacklist();
-      // term1 and term2 are not org defaults, so they become user additions
-      expect(result).toContain('term1');
-      expect(result).toContain('term2');
-      // Old key is cleaned up
-      expect(store['steambb-blacklist-terms']).toBeUndefined();
+      expect(result).toEqual(TITLE_BLOCKED_WORDS);
+      expect(store['steambb-blacklist-user-terms']).toBeUndefined();
     });
   });
 
@@ -258,7 +222,7 @@ describe('blacklist-store', () => {
       addTerm('another-custom');
       expect(getBlacklist()).toContain('my-custom');
       expect(getBlacklist()).toContain('another-custom');
-      expect(getBlacklist()).toContain('anal'); // org default still there
+      expect(getBlacklist()).toContain('anal'); // title default still there
 
       removeTerm('my-custom');
       expect(getBlacklist()).not.toContain('my-custom');
@@ -266,11 +230,11 @@ describe('blacklist-store', () => {
       expect(getBlacklist()).toContain('anal');
     });
 
-    it('org defaults are always first in the list', () => {
+    it('title defaults are always first in the list', () => {
       addTerm('zzz-custom');
       const result = getBlacklist();
-      const defaultsEnd = DEFAULT_BLOCKED_WORDS.length;
-      expect(result.slice(0, defaultsEnd)).toEqual(DEFAULT_BLOCKED_WORDS);
+      const defaultsEnd = TITLE_BLOCKED_WORDS.length;
+      expect(result.slice(0, defaultsEnd)).toEqual(TITLE_BLOCKED_WORDS);
       expect(result[defaultsEnd]).toBe('zzz-custom');
     });
   });

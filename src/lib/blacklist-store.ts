@@ -1,31 +1,12 @@
-// Blocked words storage — thin wrapper over createTermStore
-// Three tiers:
-//   studio defaults  — org-wide compliance baseline (from blocked-words-default.ts)
-//   title defaults   — title-specific additions (from workspace config)
-//   user additions   — per-person terms in localStorage
-//
-// All default tiers are immutable — users cannot add/remove them.
+// Blocked words storage — delegates to workspace-stores for the active title.
+// Three tiers: studio (none currently) > title (from workspace config) > user (localStorage)
 
-import { createTermStore } from './term-store';
-import { DEFAULT_BLOCKED_WORDS } from './blocked-words-default';
-import { getWorkspaceConfig } from './workspace-loader';
+import { getBlacklistStore } from './workspace-stores';
 
-export { DEFAULT_BLOCKED_WORDS };
-
-const { title } = getWorkspaceConfig();
-
-const store = createTermStore({
-  defaults: DEFAULT_BLOCKED_WORDS,
-  titleDefaults: title.blockedWords ?? [],
-  userStorageKey: 'steambb-blacklist-user-terms',
-  legacyStorageKey: 'steambb-blacklist-terms',
-  legacyCleanupKeys: ['steambb-blacklist-terms'],
-});
-
-export const getBlacklist = store.getAll;
-export const addTerm = store.add;
-export const removeTerm = store.remove;
-export const resetBlacklist = store.reset;
-export const isOrgTerm = store.isDefault;
-export const isTitleTerm = store.isTitleDefault;
-export const getTier = store.getTier;
+export const getBlacklist = () => getBlacklistStore().getAll();
+export const addTerm = (t: string) => getBlacklistStore().add(t);
+export const removeTerm = (t: string) => getBlacklistStore().remove(t);
+export const resetBlacklist = () => getBlacklistStore().reset();
+export const isOrgTerm = (t: string) => getBlacklistStore().isTitleDefault(t);
+export const isTitleTerm = (t: string) => getBlacklistStore().isTitleDefault(t);
+export const getTier = (t: string) => getBlacklistStore().getTier(t);
