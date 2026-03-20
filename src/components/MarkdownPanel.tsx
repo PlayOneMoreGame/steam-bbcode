@@ -24,6 +24,14 @@ function isConfluenceHtml(html: string): boolean {
   return /(<ac:[a-z-]+|<ri:[a-z-]+|atlassian|confluence|data-renderer-start-pos|data-node-type="media)/i.test(html);
 }
 
+/**
+ * Check if HTML clipboard content has any meaningful formatting.
+ * Catches rich text from Confluence Cloud, Google Docs, Word, etc.
+ */
+function isRichHtml(html: string): boolean {
+  return /<(p|h[1-6]|ul|ol|li|strong|em|b|i|table|tr|td|th|blockquote|pre|code|br|hr|div|span)\b/i.test(html);
+}
+
 interface MarkdownPanelProps {
   value: string;
   onChange: (value: string) => void;
@@ -86,15 +94,16 @@ export function MarkdownPanel({
   // Confluence HTML → confluenceToMarkdown, plain text → plaintextToMarkdown
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData('text/html');
-    if (html && isConfluenceHtml(html)) {
+    if (html && (isConfluenceHtml(html) || isRichHtml(html))) {
       e.preventDefault();
       const { markdown } = confluenceToMarkdown(html, context);
       const textarea = e.currentTarget;
       const before = value.substring(0, textarea.selectionStart);
       const after = value.substring(textarea.selectionEnd);
       onChange(before + markdown + after);
-      onInputMethodChange?.('confluence_paste', markdown);
-      trackEvent('paste_confluence', { source: 'clipboard_html' });
+      const source = isConfluenceHtml(html) ? 'confluence_paste' : 'richtext_paste';
+      onInputMethodChange?.(source as InputMethod, markdown);
+      trackEvent('paste_confluence', { source: isConfluenceHtml(html) ? 'clipboard_html' : 'clipboard_richtext' });
       return;
     }
 
