@@ -1,7 +1,10 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
-import { existsSync, cpSync, readdirSync, statSync } from 'fs';
+import { existsSync, cpSync, readdirSync, statSync, writeFileSync } from 'fs';
+import { readFileSync } from 'fs';
+
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'));
 
 /**
  * Vite plugin: copies an external workspace directory into src/workspace/studios/
@@ -70,8 +73,34 @@ function copyWorkspaceDir(): Plugin {
   };
 }
 
+/**
+ * Vite plugin: writes a version.json to the build output directory.
+ * The web app fetches this file periodically to detect when a new
+ * version has been deployed (the JS bundle hash changes but the
+ * user's tab still has the old version loaded).
+ */
+function generateVersionJson(): Plugin {
+  return {
+    name: 'generate-version-json',
+    writeBundle(options) {
+      const outDir = options.dir || resolve(__dirname, 'dist');
+      const versionData = {
+        version: pkg.version,
+        buildTime: new Date().toISOString(),
+      };
+      writeFileSync(
+        resolve(outDir, 'version.json'),
+        JSON.stringify(versionData) + '\n',
+      );
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [copyWorkspaceDir(), react()],
+  plugins: [copyWorkspaceDir(), react(), generateVersionJson()],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

@@ -14,6 +14,7 @@ import { useBlacklist } from '@/hooks/useBlacklist';
 import { useDntTerms } from '@/hooks/useDntTerms';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFormatDetection } from '@/hooks/useFormatDetection';
+import { useVersionCheck } from '@/hooks/useVersionCheck';
 import { useDocuments } from '@/hooks/useDocuments';
 import type { InputFormat } from '@/lib/format-detector';
 import { useResizablePanes } from '@/hooks/useResizablePanes';
@@ -137,6 +138,9 @@ export function App() {
 
   // Auto-updater (desktop only)
   const { updateInfo, downloadAndInstall, restartApp } = useAutoUpdater(isDesktop);
+
+  // Web version check — prompts reload when a new deploy lands
+  const { updateAvailable: webUpdateAvailable, reload: reloadForUpdate, dismiss: dismissUpdate } = useVersionCheck(isDesktop);
 
   // Analytics: session start + page view on mount
   const inputMethodRef = useRef<InputMethod>('unknown');
@@ -518,6 +522,21 @@ export function App() {
 
   return (
     <div className="app">
+      {webUpdateAvailable && (
+        <div className="web-update-banner" role="status" data-testid="web-update-banner">
+          <span>Version {webUpdateAvailable} is available.</span>
+          <button className="web-update-reload" onClick={reloadForUpdate}>
+            Reload to update
+          </button>
+          <button
+            className="web-update-dismiss"
+            onClick={dismissUpdate}
+            aria-label="Dismiss update notification"
+          >
+            &times;
+          </button>
+        </div>
+      )}
       <div className="app-content">
         {/* Header */}
         <header className="header">

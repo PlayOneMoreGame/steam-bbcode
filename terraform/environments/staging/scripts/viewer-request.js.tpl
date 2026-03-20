@@ -76,7 +76,7 @@ function handler(event) {
       cookies: {
         "steambb-studio": {
           value: studioSlug,
-          attributes: "Path=/; Secure; SameSite=Lax; Max-Age=31536000",
+          attributes: "Path=/; Secure; SameSite=Lax; Max-Age=691200",
         },
       },
     };
