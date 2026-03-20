@@ -642,8 +642,6 @@ export function App() {
               contentAtPasteRef.current = content;
             }}
             documents={documents}
-            activeDocName={activeDocName}
-            onSaveDocument={handleSaveDocument}
             onLoadDocument={handleLoadDocument}
             onDeleteDocument={handleDeleteDocument}
             isDesktop={isDesktop}
@@ -673,6 +671,8 @@ export function App() {
             apiKeyDialogOpen={apiKeyDialogOpen}
             onApiKeyDialogClose={() => setApiKeyDialogOpen(false)}
             onApiKeySaved={handleApiKeySaved}
+            onSaveDocument={handleSaveDocument}
+            activeDocName={activeDocName}
             onWorkflowComplete={() => {
               trackEvent('workflow_completed', buildWorkflowProperties({
                 inputMethod: inputMethodRef.current,

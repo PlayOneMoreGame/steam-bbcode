@@ -70,8 +70,6 @@ interface MarkdownPanelProps {
   onInputMethodChange?: (method: InputMethod, content: string) => void;
   // Document management (web only — hidden on desktop)
   documents?: Document[];
-  activeDocName?: string | null;
-  onSaveDocument?: (name: string) => void;
   onLoadDocument?: (docId: string) => void;
   onDeleteDocument?: (docId: string) => void;
   isDesktop?: boolean;
@@ -92,8 +90,6 @@ export function MarkdownPanel({
   onFileDrop,
   onInputMethodChange,
   documents = [],
-  activeDocName = null,
-  onSaveDocument,
   onLoadDocument,
   onDeleteDocument,
   isDesktop = false,
@@ -105,18 +101,7 @@ export function MarkdownPanel({
 
   // Document management state (web only)
   const [showDocs, setShowDocs] = useState(false);
-  const [showNameInput, setShowNameInput] = useState(false);
-  const [saveName, setSaveName] = useState('');
-  const [saveFeedback, setSaveFeedback] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-
-  // Focus the name input when it appears
-  useEffect(() => {
-    if (showNameInput) {
-      nameInputRef.current?.focus();
-    }
-  }, [showNameInput]);
 
   // Auto-clear delete confirmation after 3 seconds
   useEffect(() => {
@@ -124,57 +109,6 @@ export function MarkdownPanel({
     const timer = setTimeout(() => setDeleteConfirmId(null), 3000);
     return () => clearTimeout(timer);
   }, [deleteConfirmId]);
-
-  // Auto-clear save feedback after 2 seconds
-  useEffect(() => {
-    if (!saveFeedback) return;
-    const timer = setTimeout(() => setSaveFeedback(''), 2000);
-    return () => clearTimeout(timer);
-  }, [saveFeedback]);
-
-  const handleDocSave = useCallback(() => {
-    if (!onSaveDocument) return;
-
-    // If doc already has a name, save immediately
-    if (activeDocName) {
-      onSaveDocument(activeDocName);
-      setSaveFeedback('Saved!');
-      return;
-    }
-
-    // Otherwise show the name input
-    if (!showNameInput) {
-      setShowNameInput(true);
-      return;
-    }
-
-    // Submit the name
-    const trimmed = saveName.trim();
-    if (!trimmed) return;
-    onSaveDocument(trimmed);
-    setSaveName('');
-    setShowNameInput(false);
-    setSaveFeedback('Saved!');
-  }, [activeDocName, showNameInput, saveName, onSaveDocument]);
-
-  const handleNameKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const trimmed = saveName.trim();
-        if (!trimmed) return;
-        onSaveDocument?.(trimmed);
-        setSaveName('');
-        setShowNameInput(false);
-        setSaveFeedback('Saved!');
-      }
-      if (e.key === 'Escape') {
-        setShowNameInput(false);
-        setSaveName('');
-      }
-    },
-    [saveName, onSaveDocument],
-  );
 
   const handleDocDelete = useCallback(
     (docId: string) => {
@@ -189,17 +123,7 @@ export function MarkdownPanel({
   );
 
   // Whether to show web document management features
-  const showWebDocs = !isDesktop && !!onSaveDocument;
-
-  // Smart save: web mode saves to doc store if named, otherwise falls through to Save As
-  const handleSave = useCallback(() => {
-    if (!isDesktop && onSaveDocument && activeDocName) {
-      onSaveDocument(activeDocName);
-      setSaveFeedback('Saved!');
-      return;
-    }
-    onSaveAs();
-  }, [isDesktop, onSaveDocument, activeDocName, onSaveAs]);
+  const showWebDocs = !isDesktop && !!onLoadDocument;
 
   const toggleHelp = useCallback((key: string, e: MouseEvent) => {
     e.stopPropagation();
@@ -378,56 +302,17 @@ export function MarkdownPanel({
             Open
           </button>
           {showWebDocs && (
-            <>
-              <button
-                className="btn btn-primary"
-                onClick={handleDocSave}
-                title={activeDocName ? `Save "${activeDocName}"` : 'Save document'}
-                data-testid="doc-save-btn"
-              >
-                {saveFeedback || 'Save'}
-              </button>
-              <button
-                className={`btn ${showDocs ? 'btn-active' : 'btn-secondary'}`}
-                onClick={() => setShowDocs(!showDocs)}
-                title="Saved documents"
-                data-testid="documents-btn"
-              >
-                Docs{documents.length > 0 ? ` (${documents.length})` : ''}
-              </button>
-            </>
+            <button
+              className={`btn ${showDocs ? 'btn-active' : 'btn-secondary'}`}
+              onClick={() => setShowDocs(!showDocs)}
+              title="Saved documents"
+              data-testid="documents-btn"
+            >
+              Docs{documents.length > 0 ? ` (${documents.length})` : ''}
+            </button>
           )}
         </div>
       </div>
-
-      {/* Save name input (web only, shown when saving unnamed doc) */}
-      {showWebDocs && showNameInput && !activeDocName && (
-        <div className="editor-save-name-row">
-          <input
-            ref={nameInputRef}
-            type="text"
-            className="settings-input editor-save-name-input"
-            value={saveName}
-            onChange={(e) => setSaveName(e.target.value)}
-            onKeyDown={handleNameKeyDown}
-            placeholder="Document name..."
-            data-testid="doc-name-input"
-          />
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={handleDocSave}
-            disabled={!saveName.trim()}
-          >
-            Save
-          </button>
-          <button
-            className="btn btn-sm btn-secondary"
-            onClick={() => { setShowNameInput(false); setSaveName(''); }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
 
       {/* Documents drawer (web only) */}
       {showWebDocs && showDocs && (
@@ -441,7 +326,7 @@ export function MarkdownPanel({
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className={`documents-row ${doc.name === activeDocName ? 'documents-row-active' : ''}`}
+                  className="documents-row"
                   data-testid="documents-row"
                 >
                   <div className="documents-row-info">
@@ -458,15 +343,13 @@ export function MarkdownPanel({
                     )}
                   </div>
                   <div className="documents-row-actions">
-                    {doc.name !== activeDocName && (
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => onLoadDocument?.(doc.id)}
-                        data-testid="doc-load-btn"
-                      >
-                        Load
-                      </button>
-                    )}
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => onLoadDocument?.(doc.id)}
+                      data-testid="doc-load-btn"
+                    >
+                      Load
+                    </button>
                     <button
                       className={`btn btn-sm ${deleteConfirmId === doc.id ? 'btn-warning' : 'btn-secondary'}`}
                       onClick={() => handleDocDelete(doc.id)}
@@ -587,7 +470,7 @@ export function MarkdownPanel({
         placeholder="Paste your content here, or drop a file to get started..."
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
-        onSave={handleSave}
+        onSave={onSaveAs}
         onPaste={handlePaste}
         onImageDrop={onImageDrop}
         onFileDrop={onFileDrop}

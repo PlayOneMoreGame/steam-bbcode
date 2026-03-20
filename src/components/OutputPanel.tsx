@@ -23,6 +23,9 @@ interface OutputPanelProps {
   onApiKeyDialogClose: () => void;
   onApiKeySaved: () => void;
   onWorkflowComplete?: () => void;
+  // Document save (web only — moved from MarkdownPanel for left-to-right workflow)
+  onSaveDocument?: (name: string) => void;
+  activeDocName?: string | null;
 }
 
 export function OutputPanel({
@@ -39,6 +42,8 @@ export function OutputPanel({
   onApiKeyDialogClose,
   onApiKeySaved,
   onWorkflowComplete,
+  onSaveDocument,
+  activeDocName = null,
 }: OutputPanelProps) {
   // Two independent dimensions
   const [viewMode, setViewMode] = useState<'preview' | 'bbcode'>('preview');
@@ -49,6 +54,73 @@ export function OutputPanel({
   const [lintExpanded, setLintExpanded] = useState(false);
   const [translateMenuOpen, setTranslateMenuOpen] = useState(false);
   const translateMenuRef = useRef<HTMLDivElement>(null);
+
+  // Save-related state (web only)
+  const [saveFeedback, setSaveFeedback] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Whether to show web document save features
+  const showWebSave = !isDesktop && !!onSaveDocument;
+
+  // Focus the name input when it appears
+  useEffect(() => {
+    if (showNameInput) {
+      nameInputRef.current?.focus();
+    }
+  }, [showNameInput]);
+
+  // Auto-clear save feedback after 2 seconds
+  useEffect(() => {
+    if (!saveFeedback) return;
+    const timer = setTimeout(() => setSaveFeedback(''), 2000);
+    return () => clearTimeout(timer);
+  }, [saveFeedback]);
+
+  const handleDocSave = useCallback(() => {
+    if (!onSaveDocument) return;
+
+    // If doc already has a name, save immediately
+    if (activeDocName) {
+      onSaveDocument(activeDocName);
+      setSaveFeedback('Saved!');
+      return;
+    }
+
+    // Otherwise show the name input
+    if (!showNameInput) {
+      setShowNameInput(true);
+      return;
+    }
+
+    // Submit the name
+    const trimmed = saveName.trim();
+    if (!trimmed) return;
+    onSaveDocument(trimmed);
+    setSaveName('');
+    setShowNameInput(false);
+    setSaveFeedback('Saved!');
+  }, [activeDocName, showNameInput, saveName, onSaveDocument]);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const trimmed = saveName.trim();
+        if (!trimmed) return;
+        onSaveDocument?.(trimmed);
+        setSaveName('');
+        setShowNameInput(false);
+        setSaveFeedback('Saved!');
+      }
+      if (e.key === 'Escape') {
+        setShowNameInput(false);
+        setSaveName('');
+      }
+    },
+    [saveName, onSaveDocument],
+  );
 
   // Global keyboard shortcuts: Cmd/Ctrl+1 = Preview, Cmd/Ctrl+2 = BBCode
   useEffect(() => {
@@ -214,6 +286,16 @@ export function OutputPanel({
           ) : (
             <span className="lint-status lint-status-ready">Ready</span>
           )}
+          {showWebSave && (
+            <button
+              className="btn btn-primary"
+              onClick={handleDocSave}
+              title={activeDocName ? `Save "${activeDocName}"` : 'Save document'}
+              data-testid="doc-save-btn"
+            >
+              {saveFeedback || 'Save'}
+            </button>
+          )}
           <button
             className="btn btn-primary"
             onClick={handleCopy}
@@ -290,6 +372,35 @@ export function OutputPanel({
           </div>
         </div>
       </div>
+
+      {/* Save name input (web only, shown when saving unnamed doc) */}
+      {showWebSave && showNameInput && !activeDocName && (
+        <div className="editor-save-name-row">
+          <input
+            ref={nameInputRef}
+            type="text"
+            className="settings-input editor-save-name-input"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={handleNameKeyDown}
+            placeholder="Document name..."
+            data-testid="doc-name-input"
+          />
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={handleDocSave}
+            disabled={!saveName.trim()}
+          >
+            Save
+          </button>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => { setShowNameInput(false); setSaveName(''); }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Collapsible lint message list (for active language) */}
       {lintExpanded && (activeLint.errors.length > 0 || activeLint.warnings.length > 0) && (
