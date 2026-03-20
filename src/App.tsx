@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
 import { OutputPanel } from '@/components/OutputPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
-import { DocumentsPanel } from '@/components/DocumentsPanel';
 import { markdownToBBCode } from '@/lib/converter';
 import { lintBBCode } from '@/lib/linter';
 import { extractPlaceholderImages } from '@/lib/image-placeholders';
@@ -163,7 +162,6 @@ export function App() {
   const [showTagRef, setShowTagRef] = useState(false);
   const tagsBtnRef = useRef<HTMLButtonElement>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showDocuments, setShowDocuments] = useState(false);
 
   // Workspace selection (studio + title) — must be declared before draftKey
   const [workspaceSelection, setWorkspaceSelectionState] = useState<WorkspaceSelection>(() => getWorkspaceSelection());
@@ -436,16 +434,21 @@ export function App() {
         e.preventDefault();
         handleOpenMarkdown();
       }
-      // Cmd+S or Ctrl+S - Save As
+      // Cmd+S or Ctrl+S - Save document (web) or Save As (desktop)
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        handleSaveMarkdownAs();
+        // Web mode: save to document store
+        if (activeDocName) {
+          handleSaveDocument(activeDocName);
+        } else {
+          handleSaveMarkdownAs();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDesktop, handleNew, handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode]);
+  }, [isDesktop, handleNew, handleOpenMarkdown, handleSaveMarkdownAs, handleCopyBBCode, activeDocName, handleSaveDocument]);
 
   // Listen for native menu events from Tauri (desktop only)
   useEffect(() => {
@@ -557,14 +560,6 @@ export function App() {
                 )}
               </div>
               <button
-                className={`btn btn-sm ${showDocuments ? 'btn-active' : 'btn-secondary'}`}
-                onClick={() => setShowDocuments(!showDocuments)}
-                title="Saved documents"
-                data-testid="documents-btn"
-              >
-                Documents{documents.length > 0 ? ` (${documents.length})` : ''}
-              </button>
-              <button
                 className={`btn btn-sm ${showSettings ? 'btn-active' : 'btn-secondary'}`}
                 onClick={() => setShowSettings(!showSettings)}
                 title="Settings"
@@ -584,18 +579,6 @@ export function App() {
                 </span>
               ))}
             </div>
-          )}
-
-          {/* Documents panel */}
-          {showDocuments && (
-            <DocumentsPanel
-              documents={documents}
-              activeDocId={activeDocId}
-              activeDocName={activeDocName}
-              onSave={handleSaveDocument}
-              onLoad={handleLoadDocument}
-              onDelete={handleDeleteDocument}
-            />
           )}
 
           {/* Settings panel */}
@@ -639,6 +622,12 @@ export function App() {
               pasteTimestampRef.current = Date.now();
               contentAtPasteRef.current = content;
             }}
+            documents={documents}
+            activeDocName={activeDocName}
+            onSaveDocument={handleSaveDocument}
+            onLoadDocument={handleLoadDocument}
+            onDeleteDocument={handleDeleteDocument}
+            isDesktop={isDesktop}
           />
 
           <div
@@ -685,7 +674,7 @@ export function App() {
           <span className="keyboard-hints">
             <kbd>{isMac ? '⌘' : 'Ctrl+'}N</kbd> New
             <kbd>{isMac ? '⌘' : 'Ctrl+'}O</kbd> Open
-            <kbd>{isMac ? '⌘' : 'Ctrl+'}S</kbd> Save As
+            <kbd>{isMac ? '⌘' : 'Ctrl+'}S</kbd> Save
             <kbd>{isMac ? '⌘⇧' : 'Ctrl+Shift+'}C</kbd> Copy BBCode
             <kbd>{isMac ? '⌘' : 'Ctrl+'}1</kbd> Preview
             <kbd>{isMac ? '⌘' : 'Ctrl+'}2</kbd> BBCode

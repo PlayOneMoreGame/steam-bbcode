@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, type MouseEvent } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, type MouseEvent } from 'react';
 import { SyntaxEditor, type SyntaxEditorHandle } from './SyntaxEditor';
 import { lintMarkdown } from '@/lib/markdown-linter';
 import { confluenceToMarkdown } from '@/lib/confluence-converter';
@@ -8,6 +8,7 @@ import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { InputFormat } from '@/lib/format-detector';
 import { trackEvent, type InputMethod } from '@/lib/analytics';
+import type { Document } from '@/lib/document-store';
 
 /** Labels shown in the format selector dropdown */
 const FORMAT_OPTIONS: { value: InputFormat; label: string }[] = [
@@ -34,6 +35,25 @@ function isRichHtml(html: string): boolean {
   return /<(p|h[1-6]|ul|ol|li|strong|em|b|i|table|tr|td|th|blockquote|pre|code|br|hr|div|span)\b/i.test(html);
 }
 
+/** Format a relative date string ("just now", "2 hours ago", "Mar 18"). */
+function formatRelativeDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 interface MarkdownPanelProps {
   value: string;
   onChange: (value: string) => void;
@@ -48,6 +68,13 @@ interface MarkdownPanelProps {
   onImageDrop?: (filename: string, dataUrl: string) => void;
   onFileDrop?: (filename: string, content: string) => void;
   onInputMethodChange?: (method: InputMethod, content: string) => void;
+  // Document management (web only — hidden on desktop)
+  documents?: Document[];
+  activeDocName?: string | null;
+  onSaveDocument?: (name: string) => void;
+  onLoadDocument?: (docId: string) => void;
+  onDeleteDocument?: (docId: string) => void;
+  isDesktop?: boolean;
 }
 
 export function MarkdownPanel({
@@ -64,11 +91,115 @@ export function MarkdownPanel({
   onImageDrop,
   onFileDrop,
   onInputMethodChange,
+  documents = [],
+  activeDocName = null,
+  onSaveDocument,
+  onLoadDocument,
+  onDeleteDocument,
+  isDesktop = false,
 }: MarkdownPanelProps) {
   const activeFormat = selectedFormat ?? detectedFormat;
   const [showDiscord, setShowDiscord] = useState(false);
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
   const editorRef = useRef<SyntaxEditorHandle>(null);
+
+  // Document management state (web only)
+  const [showDocs, setShowDocs] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the name input when it appears
+  useEffect(() => {
+    if (showNameInput) {
+      nameInputRef.current?.focus();
+    }
+  }, [showNameInput]);
+
+  // Auto-clear delete confirmation after 3 seconds
+  useEffect(() => {
+    if (deleteConfirmId === null) return;
+    const timer = setTimeout(() => setDeleteConfirmId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [deleteConfirmId]);
+
+  // Auto-clear save feedback after 2 seconds
+  useEffect(() => {
+    if (!saveFeedback) return;
+    const timer = setTimeout(() => setSaveFeedback(''), 2000);
+    return () => clearTimeout(timer);
+  }, [saveFeedback]);
+
+  const handleDocSave = useCallback(() => {
+    if (!onSaveDocument) return;
+
+    // If doc already has a name, save immediately
+    if (activeDocName) {
+      onSaveDocument(activeDocName);
+      setSaveFeedback('Saved!');
+      return;
+    }
+
+    // Otherwise show the name input
+    if (!showNameInput) {
+      setShowNameInput(true);
+      return;
+    }
+
+    // Submit the name
+    const trimmed = saveName.trim();
+    if (!trimmed) return;
+    onSaveDocument(trimmed);
+    setSaveName('');
+    setShowNameInput(false);
+    setSaveFeedback('Saved!');
+  }, [activeDocName, showNameInput, saveName, onSaveDocument]);
+
+  const handleNameKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const trimmed = saveName.trim();
+        if (!trimmed) return;
+        onSaveDocument?.(trimmed);
+        setSaveName('');
+        setShowNameInput(false);
+        setSaveFeedback('Saved!');
+      }
+      if (e.key === 'Escape') {
+        setShowNameInput(false);
+        setSaveName('');
+      }
+    },
+    [saveName, onSaveDocument],
+  );
+
+  const handleDocDelete = useCallback(
+    (docId: string) => {
+      if (deleteConfirmId === docId) {
+        onDeleteDocument?.(docId);
+        setDeleteConfirmId(null);
+      } else {
+        setDeleteConfirmId(docId);
+      }
+    },
+    [deleteConfirmId, onDeleteDocument],
+  );
+
+  // Whether to show web document management features
+  const showWebDocs = !isDesktop && !!onSaveDocument;
+
+  // Smart save: web mode saves to doc store if named, otherwise falls through to Save As
+  const handleSave = useCallback(() => {
+    if (!isDesktop && onSaveDocument && activeDocName) {
+      onSaveDocument(activeDocName);
+      setSaveFeedback('Saved!');
+      return;
+    }
+    onSaveAs();
+  }, [isDesktop, onSaveDocument, activeDocName, onSaveAs]);
 
   const toggleHelp = useCallback((key: string, e: MouseEvent) => {
     e.stopPropagation();
@@ -246,8 +377,111 @@ export function MarkdownPanel({
           >
             Open
           </button>
+          {showWebDocs && (
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={handleDocSave}
+                title={activeDocName ? `Save "${activeDocName}"` : 'Save document'}
+                data-testid="doc-save-btn"
+              >
+                {saveFeedback || 'Save'}
+              </button>
+              <button
+                className={`btn ${showDocs ? 'btn-active' : 'btn-secondary'}`}
+                onClick={() => setShowDocs(!showDocs)}
+                title="Saved documents"
+                data-testid="documents-btn"
+              >
+                Docs{documents.length > 0 ? ` (${documents.length})` : ''}
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Save name input (web only, shown when saving unnamed doc) */}
+      {showWebDocs && showNameInput && !activeDocName && (
+        <div className="editor-save-name-row">
+          <input
+            ref={nameInputRef}
+            type="text"
+            className="settings-input editor-save-name-input"
+            value={saveName}
+            onChange={(e) => setSaveName(e.target.value)}
+            onKeyDown={handleNameKeyDown}
+            placeholder="Document name..."
+            data-testid="doc-name-input"
+          />
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={handleDocSave}
+            disabled={!saveName.trim()}
+          >
+            Save
+          </button>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => { setShowNameInput(false); setSaveName(''); }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Documents drawer (web only) */}
+      {showWebDocs && showDocs && (
+        <div className="editor-docs-drawer" data-testid="documents-panel">
+          {documents.length === 0 ? (
+            <p className="settings-empty" data-testid="documents-empty">
+              No saved documents for this title.
+            </p>
+          ) : (
+            <div className="documents-list" data-testid="documents-list">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className={`documents-row ${doc.name === activeDocName ? 'documents-row-active' : ''}`}
+                  data-testid="documents-row"
+                >
+                  <div className="documents-row-info">
+                    <span className="documents-row-name" title={doc.name}>
+                      {doc.name}
+                    </span>
+                    <span className="documents-row-date">
+                      {formatRelativeDate(doc.updatedAt)}
+                    </span>
+                    {doc.translations && Object.keys(doc.translations).length > 0 && (
+                      <span className="documents-row-langs" title="Saved translations">
+                        {Object.keys(doc.translations).map(l => l.toUpperCase()).join(', ')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="documents-row-actions">
+                    {doc.name !== activeDocName && (
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => onLoadDocument?.(doc.id)}
+                        data-testid="doc-load-btn"
+                      >
+                        Load
+                      </button>
+                    )}
+                    <button
+                      className={`btn btn-sm ${deleteConfirmId === doc.id ? 'btn-warning' : 'btn-secondary'}`}
+                      onClick={() => handleDocDelete(doc.id)}
+                      data-testid="doc-delete-btn"
+                      title={deleteConfirmId === doc.id ? 'Click again to confirm' : `Delete "${doc.name}"`}
+                    >
+                      {deleteConfirmId === doc.id ? 'Confirm?' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Lint messages - clickable */}
       {hasIssues && (
@@ -353,7 +587,7 @@ export function MarkdownPanel({
         placeholder="Paste your content here, or drop a file to get started..."
         errorLines={lintResult.errorLines}
         warningLines={lintResult.warningLines}
-        onSave={onSaveAs}
+        onSave={handleSave}
         onPaste={handlePaste}
         onImageDrop={onImageDrop}
         onFileDrop={onFileDrop}
