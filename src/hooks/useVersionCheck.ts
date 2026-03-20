@@ -26,8 +26,8 @@ export function useVersionCheck(isDesktop: boolean): VersionCheckResult {
 
   const checkVersion = useCallback(async () => {
     try {
-      // Cache-bust to avoid CloudFront serving stale version.json
-      const res = await fetch(`/version.json?_=${Date.now()}`);
+      // Bypass browser cache (CloudFront strips query strings, so we use headers)
+      const res = await fetch('/version.json', { cache: 'no-cache' });
       if (!res.ok) return;
       const data = await res.json();
       if (data.version && data.version !== __APP_VERSION__) {
@@ -40,6 +40,8 @@ export function useVersionCheck(isDesktop: boolean): VersionCheckResult {
 
   useEffect(() => {
     if (isDesktop) return;
+    // Skip in dev mode — version.json only exists in production builds
+    if (import.meta.env.DEV) return;
 
     // Check on mount
     checkVersion();
