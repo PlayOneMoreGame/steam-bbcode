@@ -53,7 +53,7 @@
   },
   "productName": "SteamBBEditor",
   "mainBinaryName": "SteamBBEditor",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "identifier": "com.onemoregame.steam-bbcode",
   "plugins": {
     "updater": {
