@@ -17,6 +17,7 @@
 
 import type { StudioConfig, TitleConfig, WorkspaceConfig, WorkspaceSelection } from './workspace-types';
 import { getStudioFromCookie } from './cookie-utils';
+import { getCustomTitles } from './custom-titles';
 
 // Auto-discover all studio.json and title JSON files at build time.
 // import.meta.glob with { eager: true } resolves them synchronously.
@@ -98,8 +99,13 @@ export function getWorkspaceSelection(): WorkspaceSelection {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as WorkspaceSelection;
-      if (studios[parsed.studioSlug] && titlesByStudio[parsed.studioSlug]?.[parsed.titleSlug]) {
-        return parsed;
+      if (studios[parsed.studioSlug]) {
+        // Check build-time titles first, then custom titles
+        const isBuiltIn = !!titlesByStudio[parsed.studioSlug]?.[parsed.titleSlug];
+        const isCustom = !isBuiltIn && getCustomTitles(parsed.studioSlug).some(t => t.slug === parsed.titleSlug);
+        if (isBuiltIn || isCustom) {
+          return parsed;
+        }
       }
     }
 
@@ -129,9 +135,16 @@ export function getAvailableStudios(): StudioConfig[] {
   return Object.values(studios);
 }
 
-/** List titles for a given studio. */
+/** List all build-time title slugs for a studio (used by custom-titles to prevent collisions). */
+export function getBuiltInTitleSlugs(studioSlug: string): string[] {
+  return Object.keys(titlesByStudio[studioSlug] ?? {});
+}
+
+/** List titles for a given studio (build-time + custom). */
 export function getAvailableTitles(studioSlug: string): TitleConfig[] {
-  return Object.values(titlesByStudio[studioSlug] ?? {});
+  const builtIn = Object.values(titlesByStudio[studioSlug] ?? {});
+  const custom = getCustomTitles(studioSlug);
+  return [...builtIn, ...custom];
 }
 
 /** Get full workspace config for a specific selection (defaults to persisted selection). */
@@ -143,10 +156,18 @@ export function getWorkspaceConfig(sel?: WorkspaceSelection): WorkspaceConfig {
     throw new Error(`Unknown studio: "${studioSlug}". Available: ${Object.keys(studios).join(', ')}`);
   }
 
-  const title = titlesByStudio[studioSlug]?.[titleSlug];
+  // Look up in build-time titles first, then custom titles
+  let title = titlesByStudio[studioSlug]?.[titleSlug];
   if (!title) {
-    const available = Object.keys(titlesByStudio[studioSlug] ?? {});
-    throw new Error(`Unknown title: "${titleSlug}" for studio "${studioSlug}". Available: ${available.join(', ')}`);
+    const customTitle = getCustomTitles(studioSlug).find(t => t.slug === titleSlug);
+    if (customTitle) {
+      title = customTitle;
+    } else {
+      const builtInSlugs = Object.keys(titlesByStudio[studioSlug] ?? {});
+      const customSlugs = getCustomTitles(studioSlug).map(t => t.slug);
+      const available = [...builtInSlugs, ...customSlugs];
+      throw new Error(`Unknown title: "${titleSlug}" for studio "${studioSlug}". Available: ${available.join(', ')}`);
+    }
   }
 
   return { studio, title };

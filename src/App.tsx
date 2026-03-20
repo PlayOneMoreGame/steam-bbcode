@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MarkdownPanel, TagReference } from '@/components';
 import { OutputPanel } from '@/components/OutputPanel';
 import { SettingsPanel } from '@/components/SettingsPanel';
+import { DocumentsPanel } from '@/components/DocumentsPanel';
 import { markdownToBBCode } from '@/lib/converter';
 import { lintBBCode } from '@/lib/linter';
 import { extractPlaceholderImages } from '@/lib/image-placeholders';
@@ -14,6 +15,7 @@ import { useBlacklist } from '@/hooks/useBlacklist';
 import { useDntTerms } from '@/hooks/useDntTerms';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFormatDetection } from '@/hooks/useFormatDetection';
+import { useDocuments } from '@/hooks/useDocuments';
 import type { InputFormat } from '@/lib/format-detector';
 import { useResizablePanes } from '@/hooks/useResizablePanes';
 import { getWorkspaceSelection, setWorkspaceSelection } from '@/lib/workspace-loader';
@@ -156,10 +158,39 @@ export function App() {
   // File name persists across sessions so the window title restores on relaunch
   const [mdFileName, setMdFileName] = useLocalStorage<string | null>('steam-bbcode-filename', null);
 
+  // Context persists across sessions
+  const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
+  const [showTagRef, setShowTagRef] = useState(false);
+  const tagsBtnRef = useRef<HTMLButtonElement>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
+
+  // Workspace selection (studio + title) — must be declared before draftKey
+  const [workspaceSelection, setWorkspaceSelectionState] = useState<WorkspaceSelection>(() => getWorkspaceSelection());
+  const workspaceKey = `${workspaceSelection.studioSlug}/${workspaceSelection.titleSlug}`;
+
+  // Draft storage key scoped by studio+title so switching workspaces doesn't overwrite work
+  const draftKey = `steam-bbcode-draft-${workspaceSelection.studioSlug}-${workspaceSelection.titleSlug}`;
+
   // Markdown content — restore saved draft for returning users, welcome doc for first visit
   const [markdown, setMarkdown] = useState(() => {
+    // Migrate legacy unscoped draft to current workspace on first load
     try {
-      const saved = localStorage.getItem('steam-bbcode-draft');
+      const legacyDraft = localStorage.getItem('steam-bbcode-draft');
+      if (legacyDraft && !localStorage.getItem(draftKey)) {
+        localStorage.setItem(draftKey, legacyDraft);
+        // Also migrate the saved-at timestamp
+        const legacySavedAt = localStorage.getItem('steam-bbcode-draft-saved-at');
+        if (legacySavedAt) {
+          localStorage.setItem(`${draftKey}-saved-at`, legacySavedAt);
+          localStorage.removeItem('steam-bbcode-draft-saved-at');
+        }
+        localStorage.removeItem('steam-bbcode-draft');
+      }
+    } catch { /* migration failed, continue */ }
+
+    try {
+      const saved = localStorage.getItem(draftKey);
       if (saved) {
         const { markdown: savedMarkdown } = JSON.parse(saved);
         // Return visitor with work in progress — restore it
@@ -173,20 +204,27 @@ export function App() {
   });
   const baseContentRef = useRef(markdown);
 
-  // Context persists across sessions
-  const [context, setContext] = useLocalStorage<SteamContext>('steam-bbcode-context', 'announcements');
-  const [showTagRef, setShowTagRef] = useState(false);
-  const tagsBtnRef = useRef<HTMLButtonElement>(null);
-  const [showSettings, setShowSettings] = useState(false);
-
-  // Workspace selection (studio + title)
-  const [workspaceSelection, setWorkspaceSelectionState] = useState<WorkspaceSelection>(() => getWorkspaceSelection());
-  const workspaceKey = `${workspaceSelection.studioSlug}/${workspaceSelection.titleSlug}`;
-
   const handleSwitchWorkspace = useCallback((sel: WorkspaceSelection) => {
     setWorkspaceSelection(sel);
     switchWorkspace(sel);
     setWorkspaceSelectionState(sel);
+
+    // Load the new workspace's draft (or start empty)
+    const newDraftKey = `steam-bbcode-draft-${sel.studioSlug}-${sel.titleSlug}`;
+    let newMarkdown = '';
+    try {
+      const saved = localStorage.getItem(newDraftKey);
+      if (saved) {
+        const { markdown: savedMarkdown } = JSON.parse(saved);
+        if (savedMarkdown && savedMarkdown !== WELCOME_MARKDOWN) {
+          newMarkdown = savedMarkdown;
+        }
+      }
+    } catch { /* corrupted draft, start empty */ }
+    setMarkdown(newMarkdown);
+    setMdFileName(null);
+    baseContentRef.current = newMarkdown;
+
     trackEvent('workspace_switched', { studio: sel.studioSlug, title: sel.titleSlug });
   }, []);
 
@@ -208,8 +246,8 @@ export function App() {
   // Resizable split panes
   const { splitRatio, handleMouseDown: handleResizeMouseDown, handleDoubleClick: handleResizeDoubleClick, containerRef } = useResizablePanes();
 
-  // Auto-save draft for crash recovery
-  const { status: saveStatus, lastSaved } = useAutoSave('steam-bbcode-draft', { markdown, context }, 2000);
+  // Auto-save draft for crash recovery (scoped per studio+title)
+  const { status: saveStatus, lastSaved } = useAutoSave(draftKey, { markdown, context }, 2000);
 
   // Convert editor markdown to BBCode — one pipeline, no exceptions
   const { bbcode, notes } = useMemo(
@@ -280,6 +318,9 @@ export function App() {
     }).catch(() => {});
   }, [mdFileName, isDesktop]);
 
+  // Document storage — save/load/delete per title
+  const { documents, activeDocId, saveCurrentDoc, loadDoc, deleteDoc, clearActiveDoc } = useDocuments(workspaceKey);
+
   // Reset editor to welcome document (New)
   const handleNew = useCallback(() => {
     if (markdown !== baseContentRef.current) {
@@ -290,8 +331,9 @@ export function App() {
     setMarkdown(WELCOME_MARKDOWN);
     setMdFileName(null);
     baseContentRef.current = WELCOME_MARKDOWN;
+    clearActiveDoc();
     trackEvent('new_document');
-  }, [markdown]);
+  }, [markdown, clearActiveDoc]);
 
   const handleSaveMarkdownAs = useCallback(async () => {
     const defaultName = mdFileName || 'document.md';
@@ -305,6 +347,51 @@ export function App() {
 
   // Translation state
   const { translations, apiKeyDialogOpen, setApiKeyDialogOpen, handleTranslate, handleApiKeySaved } = useTranslation(bbcode, dntTerms);
+
+  // Derive active document name from the documents list
+  const activeDocName = useMemo(() => {
+    if (!activeDocId) return null;
+    const doc = documents.find(d => d.id === activeDocId);
+    return doc?.name ?? null;
+  }, [activeDocId, documents]);
+
+  // Save current document (captures all state)
+  const handleSaveDocument = useCallback((name: string) => {
+    // Collect completed translations as a simple lang -> bbcode map
+    const translationMap: Record<string, string> = {};
+    for (const [lang, t] of Object.entries(translations)) {
+      if (t.status === 'done' && t.bbcode) {
+        translationMap[lang] = t.bbcode;
+      }
+    }
+    saveCurrentDoc({
+      name,
+      inputMarkdown: markdown,
+      outputBBCode: bbcode,
+      translations: Object.keys(translationMap).length > 0 ? translationMap : undefined,
+      context,
+    });
+    trackEvent('document_saved', { has_translations: Object.keys(translationMap).length > 0 });
+  }, [markdown, bbcode, translations, context, saveCurrentDoc]);
+
+  // Load a saved document
+  const handleLoadDocument = useCallback((docId: string) => {
+    const doc = loadDoc(docId);
+    if (!doc) return;
+    setMarkdown(doc.inputMarkdown);
+    setMdFileName(null);
+    baseContentRef.current = doc.inputMarkdown;
+    if (doc.context) {
+      setContext(doc.context as SteamContext);
+    }
+    trackEvent('document_loaded');
+  }, [loadDoc]);
+
+  // Delete a saved document
+  const handleDeleteDocument = useCallback((docId: string) => {
+    deleteDoc(docId);
+    trackEvent('document_deleted');
+  }, [deleteDoc]);
 
   // Copy BBCode to clipboard (for keyboard shortcut)
   const handleCopyBBCode = useCallback(async () => {
@@ -470,6 +557,14 @@ export function App() {
                 )}
               </div>
               <button
+                className={`btn btn-sm ${showDocuments ? 'btn-active' : 'btn-secondary'}`}
+                onClick={() => setShowDocuments(!showDocuments)}
+                title="Saved documents"
+                data-testid="documents-btn"
+              >
+                Documents{documents.length > 0 ? ` (${documents.length})` : ''}
+              </button>
+              <button
                 className={`btn btn-sm ${showSettings ? 'btn-active' : 'btn-secondary'}`}
                 onClick={() => setShowSettings(!showSettings)}
                 title="Settings"
@@ -489,6 +584,18 @@ export function App() {
                 </span>
               ))}
             </div>
+          )}
+
+          {/* Documents panel */}
+          {showDocuments && (
+            <DocumentsPanel
+              documents={documents}
+              activeDocId={activeDocId}
+              activeDocName={activeDocName}
+              onSave={handleSaveDocument}
+              onLoad={handleLoadDocument}
+              onDelete={handleDeleteDocument}
+            />
           )}
 
           {/* Settings panel */}
@@ -517,7 +624,7 @@ export function App() {
           <MarkdownPanel
             value={markdown}
             onChange={setMarkdown}
-            fileName={mdFileName}
+            fileName={activeDocName || mdFileName}
             onOpen={handleOpenMarkdown}
             onSaveAs={handleSaveMarkdownAs}
             detectedFormat={detectedFormat}

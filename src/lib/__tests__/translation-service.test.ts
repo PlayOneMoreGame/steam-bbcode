@@ -1,6 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getDoNotTranslateTerms } from '../glossary';
 
+// Mock workspace-stores so api-key-store can resolve the current studio
+// and dnt-store can resolve getDntStore
+vi.mock('../workspace-stores', () => ({
+  getCurrentSelection: vi.fn(() => ({ studioSlug: 'test-studio', titleSlug: 'test-title' })),
+  getDntStore: vi.fn(() => ({
+    getAll: () => [],
+    add: vi.fn(),
+    remove: vi.fn(),
+    reset: vi.fn(),
+    isTitleDefault: () => false,
+    getTier: () => 'user',
+    isDefault: () => false,
+    setUserTerms: vi.fn(),
+  })),
+}));
+
 // Mock localStorage for node environment
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -40,6 +56,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 
 // Import after mocks are set up
 import { buildSystemPrompt, translateBBCode, hashString } from '../translation-service';
+import { _resetMigrationFlag } from '../api-key-store';
 
 describe('buildSystemPrompt', () => {
   it('includes the target language name', () => {
@@ -90,6 +107,7 @@ describe('translateBBCode', () => {
   beforeEach(() => {
     localStorageMock.clear();
     mockCreate.mockReset();
+    _resetMigrationFlag();
   });
 
   it('returns missing_api_key error when no key is set', async () => {
@@ -101,7 +119,7 @@ describe('translateBBCode', () => {
   });
 
   it('calls the API and returns translated content on success', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
     mockCreate.mockResolvedValueOnce({
       content: [{ type: 'text', text: '[h1]Ola[/h1]' }],
     });
@@ -114,7 +132,7 @@ describe('translateBBCode', () => {
   });
 
   it('passes the correct model to the API', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
     mockCreate.mockResolvedValueOnce({
       content: [{ type: 'text', text: 'translated' }],
     });
@@ -129,7 +147,7 @@ describe('translateBBCode', () => {
   });
 
   it('sends BBCode as user message', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
     mockCreate.mockResolvedValueOnce({
       content: [{ type: 'text', text: 'translated' }],
     });
@@ -144,7 +162,7 @@ describe('translateBBCode', () => {
   });
 
   it('includes system prompt with target language', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
     mockCreate.mockResolvedValueOnce({
       content: [{ type: 'text', text: 'translated' }],
     });
@@ -159,7 +177,7 @@ describe('translateBBCode', () => {
   });
 
   it('returns api_error when response has no text block', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
     mockCreate.mockResolvedValueOnce({
       content: [],
     });
@@ -172,7 +190,7 @@ describe('translateBBCode', () => {
   });
 
   it('handles API errors gracefully', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
 
     // Import the mock class to create an APIError
     const mod = await import('@anthropic-ai/sdk');
@@ -190,7 +208,7 @@ describe('translateBBCode', () => {
   });
 
   it('handles generic errors gracefully', async () => {
-    localStorageMock.setItem('steambb-anthropic-api-key', 'sk-ant-test-key');
+    localStorageMock.setItem('steambb-api-key-test-studio', 'sk-ant-test-key');
     mockCreate.mockRejectedValueOnce(new Error('Something went wrong'));
 
     const result = await translateBBCode('test', 'pt-BR');

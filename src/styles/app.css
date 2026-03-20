@@ -2230,6 +2230,22 @@ body {
   color: var(--text-primary);
 }
 
+.settings-title-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.settings-title-controls .control-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-add-title-form .settings-add-row {
+  flex: 1;
+}
+
 .settings-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -2348,6 +2364,102 @@ body {
 
 .settings-input::placeholder {
   color: var(--text-dim);
+}
+
+/* ==========================================================================
+   Documents Panel
+   ========================================================================== */
+
+.documents-panel {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.documents-save-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.documents-name-input {
+  max-width: 220px;
+}
+
+.documents-active-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.documents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.documents-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  gap: var(--spacing-sm);
+}
+
+.documents-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.documents-row-active {
+  background-color: var(--bg-blue-subtle);
+}
+
+.documents-row-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  flex: 1;
+}
+
+.documents-row-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documents-row-date {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.documents-row-langs {
+  font-size: 9px;
+  color: var(--accent-cyan);
+  background-color: var(--bg-cyan-subtle);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.documents-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================

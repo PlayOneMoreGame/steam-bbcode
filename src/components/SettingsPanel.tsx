@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { isOrgTerm } from '@/lib/blacklist-store';
 import { isWorkspaceTerm } from '@/lib/dnt-store';
-import { getWorkspaceConfig, getAvailableStudios, getAvailableTitles } from '@/lib/workspace-loader';
+import { getWorkspaceConfig, getAvailableTitles, getBuiltInTitleSlugs } from '@/lib/workspace-loader';
+import { addCustomTitle, isCustomTitle, removeCustomTitle } from '@/lib/custom-titles';
 import type { WorkspaceSelection } from '@/lib/workspace-types';
 
 interface SettingsPanelProps {
@@ -32,8 +33,13 @@ export function SettingsPanel({
   const [blockedSearch, setBlockedSearch] = useState('');
   const [newDntTerm, setNewDntTerm] = useState('');
   const [resetConfirm, setResetConfirm] = useState<'blacklist' | 'dnt' | null>(null);
+  const [showAddTitle, setShowAddTitle] = useState(false);
+  const [newTitleName, setNewTitleName] = useState('');
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = useState<string | null>(null);
+  const [titleListKey, setTitleListKey] = useState(0);
   const blockedInputRef = useRef<HTMLInputElement>(null);
   const dntInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     blockedInputRef.current?.focus();
@@ -117,57 +123,171 @@ export function SettingsPanel({
   }, [dntTerms, newDntTerm]);
 
   const workspaceConfig = useMemo(() => getWorkspaceConfig(workspaceSelection), [workspaceSelection]);
-  const availableStudios = useMemo(() => getAvailableStudios(), []);
   const availableTitles = useMemo(
     () => getAvailableTitles(workspaceSelection.studioSlug),
-    [workspaceSelection.studioSlug]
+    // titleListKey forces re-read after adding/removing custom titles
+    [workspaceSelection.studioSlug, titleListKey] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const handleStudioChange = useCallback((studioSlug: string) => {
-    const titles = getAvailableTitles(studioSlug);
-    const firstTitle = titles[0]?.slug ?? '';
-    onSwitchWorkspace({ studioSlug, titleSlug: firstTitle });
-  }, [onSwitchWorkspace]);
+  const builtInSlugs = useMemo(
+    () => getBuiltInTitleSlugs(workspaceSelection.studioSlug),
+    [workspaceSelection.studioSlug]
+  );
 
   const handleTitleChange = useCallback((titleSlug: string) => {
     onSwitchWorkspace({ studioSlug: workspaceSelection.studioSlug, titleSlug });
   }, [workspaceSelection.studioSlug, onSwitchWorkspace]);
 
+  // Auto-clear delete confirmation after 3 seconds
+  useEffect(() => {
+    if (deleteConfirmSlug === null) return;
+    const timer = setTimeout(() => setDeleteConfirmSlug(null), 3000);
+    return () => clearTimeout(timer);
+  }, [deleteConfirmSlug]);
+
+  const handleAddTitle = useCallback(() => {
+    const trimmed = newTitleName.trim();
+    if (!trimmed) return;
+
+    // Copy localization targets from the first build-in title if available
+    const firstBuiltIn = availableTitles.find(t => builtInSlugs.includes(t.slug));
+    const locTargets = firstBuiltIn?.localizationTargets;
+
+    const created = addCustomTitle(
+      workspaceSelection.studioSlug,
+      trimmed,
+      builtInSlugs,
+      locTargets,
+    );
+
+    if (created) {
+      setNewTitleName('');
+      setShowAddTitle(false);
+      setTitleListKey(k => k + 1);
+      // Switch to the newly created title
+      onSwitchWorkspace({ studioSlug: workspaceSelection.studioSlug, titleSlug: created.slug });
+    }
+  }, [newTitleName, workspaceSelection.studioSlug, builtInSlugs, availableTitles, onSwitchWorkspace]);
+
+  const handleAddTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTitle();
+    }
+    if (e.key === 'Escape') {
+      setShowAddTitle(false);
+      setNewTitleName('');
+    }
+  }, [handleAddTitle]);
+
+  const handleDeleteTitle = useCallback((titleSlug: string) => {
+    if (deleteConfirmSlug === titleSlug) {
+      removeCustomTitle(workspaceSelection.studioSlug, titleSlug);
+      setDeleteConfirmSlug(null);
+      setTitleListKey(k => k + 1);
+      // If we just deleted the active title, switch to the first available
+      if (workspaceSelection.titleSlug === titleSlug) {
+        const remaining = getAvailableTitles(workspaceSelection.studioSlug);
+        if (remaining.length > 0) {
+          onSwitchWorkspace({ studioSlug: workspaceSelection.studioSlug, titleSlug: remaining[0].slug });
+        }
+      }
+    } else {
+      setDeleteConfirmSlug(titleSlug);
+    }
+  }, [deleteConfirmSlug, workspaceSelection.studioSlug, workspaceSelection.titleSlug, onSwitchWorkspace]);
+
+  // Focus the title input when the add form is shown
+  useEffect(() => {
+    if (showAddTitle) {
+      titleInputRef.current?.focus();
+    }
+  }, [showAddTitle]);
+
   return (
     <div className="settings-panel" data-testid="settings-panel">
-      {/* Workspace selector */}
+      {/* Workspace — studio is locked by auth, only title is switchable */}
       <div className="settings-section">
         <h3 className="settings-section-title">Workspace</h3>
         <p className="settings-section-desc">
-          Select your studio and title. Settings and terms are scoped per title.
+          Your studio is set by your login. Switch titles below, or create a new one for your project.
         </p>
         <div className="settings-workspace-info" data-testid="workspace-info">
           <div className="settings-workspace-row">
             <span className="settings-workspace-label">Studio</span>
-            <select
-              className="control-select"
-              value={workspaceSelection.studioSlug}
-              onChange={e => handleStudioChange(e.target.value)}
-              data-testid="studio-select"
-            >
-              {availableStudios.map(s => (
-                <option key={s.slug} value={s.slug}>{s.displayName}</option>
-              ))}
-            </select>
+            <span className="settings-workspace-value" data-testid="studio-display">{workspaceConfig.studio.displayName}</span>
           </div>
           <div className="settings-workspace-row">
             <span className="settings-workspace-label">Title</span>
-            <select
-              className="control-select"
-              value={workspaceSelection.titleSlug}
-              onChange={e => handleTitleChange(e.target.value)}
-              data-testid="title-select"
-            >
-              {availableTitles.map(t => (
-                <option key={t.slug} value={t.slug}>{t.displayName}</option>
-              ))}
-            </select>
+            <div className="settings-title-controls">
+              <select
+                className="control-select"
+                value={workspaceSelection.titleSlug}
+                onChange={e => handleTitleChange(e.target.value)}
+                data-testid="title-select"
+              >
+                {/* Built-in titles */}
+                {availableTitles.filter(t => builtInSlugs.includes(t.slug)).length > 0 && (
+                  <optgroup label="Built-in">
+                    {availableTitles.filter(t => builtInSlugs.includes(t.slug)).map(t => (
+                      <option key={t.slug} value={t.slug}>{t.displayName}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {/* Custom titles */}
+                {availableTitles.filter(t => !builtInSlugs.includes(t.slug)).length > 0 && (
+                  <optgroup label="Custom">
+                    {availableTitles.filter(t => !builtInSlugs.includes(t.slug)).map(t => (
+                      <option key={t.slug} value={t.slug}>{t.displayName}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {isCustomTitle(workspaceSelection.studioSlug, workspaceSelection.titleSlug) && (
+                <button
+                  className={`btn btn-sm ${deleteConfirmSlug === workspaceSelection.titleSlug ? 'btn-warning' : 'btn-secondary'}`}
+                  onClick={() => handleDeleteTitle(workspaceSelection.titleSlug)}
+                  title={deleteConfirmSlug === workspaceSelection.titleSlug ? 'Click again to confirm deletion' : 'Delete this custom title'}
+                  data-testid="delete-title-btn"
+                >
+                  {deleteConfirmSlug === workspaceSelection.titleSlug ? 'Confirm?' : 'Delete'}
+                </button>
+              )}
+              <button
+                className={`btn btn-sm ${showAddTitle ? 'btn-active' : 'btn-secondary'}`}
+                onClick={() => setShowAddTitle(!showAddTitle)}
+                title="Add a new title"
+                data-testid="add-title-btn"
+              >
+                + Title
+              </button>
+            </div>
           </div>
+          {showAddTitle && (
+            <div className="settings-workspace-row settings-add-title-form">
+              <span className="settings-workspace-label" />
+              <div className="settings-add-row">
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  className="settings-input"
+                  value={newTitleName}
+                  onChange={e => setNewTitleName(e.target.value)}
+                  onKeyDown={handleAddTitleKeyDown}
+                  placeholder="New title name..."
+                  data-testid="new-title-input"
+                />
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={handleAddTitle}
+                  disabled={!newTitleName.trim()}
+                  data-testid="create-title-btn"
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          )}
           <div className="settings-workspace-row">
             <span className="settings-workspace-label">Languages</span>
             <span className="settings-workspace-value">{workspaceConfig.title.localizationTargets.join(', ')}</span>
