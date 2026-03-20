@@ -26,17 +26,20 @@ import {
   getTier,
 } from '../dnt-store';
 import { getWorkspaceConfig } from '../workspace-loader';
+import { switchWorkspace } from '../workspace-stores';
 
-// Get the default DNT terms from the workspace config (SWAPMEAT title)
+// Get the SWAPMEAT DNT terms from the workspace config
 const TITLE_DNT_TERMS = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' }).title.dntTerms;
 
-// Scoped localStorage key for the default workspace
+// Scoped localStorage key for one-more-game/swapmeat
 const USER_KEY = 'steambb-dnt-user-one-more-game-swapmeat';
 
 describe('dnt-store (split model: title defaults + user additions)', () => {
   beforeEach(() => {
     localStorageMock.clear();
     vi.clearAllMocks();
+    // Explicitly select SWAPMEAT workspace for these tests
+    switchWorkspace({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
   });
 
   describe('getDntTerms', () => {

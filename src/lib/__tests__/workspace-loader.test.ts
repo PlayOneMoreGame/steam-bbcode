@@ -1,7 +1,46 @@
 import { describe, it, expect } from 'vitest';
-import { getWorkspaceConfig, getAvailableStudios, getAvailableTitles } from '../workspace-loader';
+import { getWorkspaceConfig, getWorkspaceSelection, getAvailableStudios, getAvailableTitles } from '../workspace-loader';
 
 describe('workspace-loader', () => {
+  describe('auto-discovery', () => {
+    it('discovers studios from src/workspace/studios/ via import.meta.glob', () => {
+      const studios = getAvailableStudios();
+      expect(studios.length).toBeGreaterThanOrEqual(2);
+      const slugs = studios.map(s => s.slug);
+      expect(slugs).toContain('one-more-game');
+      expect(slugs).toContain('best-mega-gameco');
+    });
+
+    it('discovers titles nested under each studio', () => {
+      const omgTitles = getAvailableTitles('one-more-game');
+      expect(omgTitles.length).toBeGreaterThanOrEqual(1);
+      expect(omgTitles.map(t => t.slug)).toContain('swapmeat');
+
+      const bmgTitles = getAvailableTitles('best-mega-gameco');
+      expect(bmgTitles.length).toBeGreaterThanOrEqual(1);
+      expect(bmgTitles.map(t => t.slug)).toContain('mega-wedgie-3d');
+    });
+  });
+
+  describe('default selection', () => {
+    it('defaults to studio with "default": true (one-more-game)', () => {
+      // one-more-game has "default": true in studio.json
+      const sel = getWorkspaceSelection();
+      expect(sel.studioSlug).toBe('one-more-game');
+      expect(sel.titleSlug).toBe('swapmeat');
+    });
+
+    it('studio marked as default has the flag set', () => {
+      const config = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
+      expect(config.studio.default).toBe(true);
+    });
+
+    it('non-default studio does not have the flag', () => {
+      const config = getWorkspaceConfig({ studioSlug: 'best-mega-gameco', titleSlug: 'mega-wedgie-3d' });
+      expect(config.studio.default).toBeFalsy();
+    });
+  });
+
   describe('getWorkspaceConfig', () => {
     it('returns a valid config with studio and title', () => {
       const config = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });

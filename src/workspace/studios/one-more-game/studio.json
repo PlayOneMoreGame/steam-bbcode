@@ -1,4 +1,5 @@
 {
   "slug": "one-more-game",
-  "displayName": "One More Game"
+  "displayName": "One More Game",
+  "default": true
 }

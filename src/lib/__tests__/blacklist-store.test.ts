@@ -16,17 +16,20 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, wri
 // Import after localStorage is mocked
 import { getBlacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm } from '../blacklist-store';
 import { getWorkspaceConfig } from '../workspace-loader';
+import { switchWorkspace } from '../workspace-stores';
 
-// Get the default blocked words from the workspace config (SWAPMEAT title)
+// Get the SWAPMEAT blocked words from the workspace config
 const TITLE_BLOCKED_WORDS = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' }).title.blockedWords;
 
-// Scoped localStorage key for the default workspace (one-more-game/swapmeat)
+// Scoped localStorage key for one-more-game/swapmeat
 const USER_KEY = 'steambb-blacklist-user-one-more-game-swapmeat';
 
 describe('blacklist-store', () => {
   beforeEach(() => {
     localStorageMock.clear();
     vi.clearAllMocks();
+    // Explicitly select SWAPMEAT workspace for these tests
+    switchWorkspace({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
   });
 
   describe('title blocked words', () => {

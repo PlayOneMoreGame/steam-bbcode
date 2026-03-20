@@ -96,18 +96,20 @@ resource "aws_s3_bucket_policy" "website" {
 # Basic Auth (SSM + CloudFront Function)
 #######################################
 
-data "aws_ssm_parameter" "basic_auth_key" {
-  name = "/omg/staging/steam-bbcode/basic_auth_key"
+# Per-studio credentials stored as JSON: {"studio-slug": "base64(slug:password)", ...}
+# Managed by scripts/add-studio.sh
+data "aws_ssm_parameter" "studio_credentials" {
+  name = "/omg/staging/steam-bbcode/studio_credentials"
 }
 
 resource "aws_cloudfront_function" "viewer_request" {
   name    = "staging-steam-bbcode-vrf"
   runtime = "cloudfront-js-2.0"
-  comment = "Basic auth for ${local.domain_name}"
+  comment = "Per-studio basic auth for ${local.domain_name}"
   publish = true
   code = templatefile("${path.module}/scripts/viewer-request.js.tpl", {
-    auth_enabled         = "true"
-    expected_auth_header = data.aws_ssm_parameter.basic_auth_key.value
+    auth_enabled       = "true"
+    studio_credentials = data.aws_ssm_parameter.studio_credentials.value
   })
 }
 

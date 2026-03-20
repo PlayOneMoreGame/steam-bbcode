@@ -14,7 +14,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "release": "bash scripts/bump-version.sh"
+    "release": "bash scripts/bump-version.sh",
+    "add-studio": "bash scripts/add-studio.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

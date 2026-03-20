@@ -9,6 +9,8 @@
 export interface StudioConfig {
   slug: string;
   displayName: string;
+  /** If true, this studio is selected by default when no user preference is stored. */
+  default?: boolean;
 }
 
 export interface TitleConfig {
