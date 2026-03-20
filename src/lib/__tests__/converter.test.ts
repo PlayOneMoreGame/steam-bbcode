@@ -46,6 +46,38 @@ describe('markdownToBBCode', () => {
       expect(result.bbcode).toBe('This is [i]italic[/i] text');
     });
 
+    it('does not treat underscores in identifiers as italic', () => {
+      const result = markdownToBBCode('OMG_Brady talked to the team', 'announcements');
+      expect(result.bbcode).toBe('OMG_Brady talked to the team');
+    });
+
+    it('does not treat underscores spanning two identifiers as italic', () => {
+      const result = markdownToBBCode('OMG_Brady and Rocky_Johnson played', 'announcements');
+      expect(result.bbcode).not.toContain('[i]');
+      expect(result.bbcode).toBe('OMG_Brady and Rocky_Johnson played');
+    });
+
+    it('does not treat underscores in parenthesized identifiers as italic', () => {
+      const result = markdownToBBCode('(OMG_Brady) was there', 'announcements');
+      expect(result.bbcode).not.toContain('[i]');
+      expect(result.bbcode).toBe('(OMG_Brady) was there');
+    });
+
+    it('does not treat underscores in snake_case words as italic', () => {
+      const result = markdownToBBCode('The my_variable is set', 'announcements');
+      expect(result.bbcode).not.toContain('[i]');
+    });
+
+    it('still converts standalone underscore italic at start of line', () => {
+      const result = markdownToBBCode('_italic text_ here', 'announcements');
+      expect(result.bbcode).toBe('[i]italic text[/i] here');
+    });
+
+    it('still converts standalone underscore italic after space', () => {
+      const result = markdownToBBCode('This is _really important_ stuff', 'announcements');
+      expect(result.bbcode).toBe('This is [i]really important[/i] stuff');
+    });
+
     it('converts strikethrough', () => {
       const result = markdownToBBCode('This is ~~deleted~~ text', 'announcements');
       expect(result.bbcode).toBe('This is [strike]deleted[/strike] text');
@@ -181,6 +213,36 @@ describe('markdownToBBCode', () => {
       const result = markdownToBBCode(md, 'announcements');
       expect(result.bbcode).toContain('[/list]');
       expect(result.bbcode).toContain('Some text after');
+    });
+
+    it('does not convert a single isolated dash line to a list item', () => {
+      const md = 'Thanks for reading!\n\n- Jason';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).not.toContain('[list]');
+      expect(result.bbcode).not.toContain('[*]');
+      expect(result.bbcode).toContain('- Jason');
+    });
+
+    it('does not convert a single dash line at end of document', () => {
+      const md = 'Some prose\n- Jason';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).not.toContain('[list]');
+      expect(result.bbcode).toContain('- Jason');
+    });
+
+    it('converts two or more consecutive dash lines as a list', () => {
+      const md = '- Alpha\n- Beta';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toBe('[list]\n[*]Alpha\n[*]Beta\n[/list]');
+    });
+
+    it('leaves isolated dash line but converts multi-item list nearby', () => {
+      const md = '- Solo line\n\n- Item 1\n- Item 2';
+      const result = markdownToBBCode(md, 'announcements');
+      expect(result.bbcode).toContain('- Solo line');
+      expect(result.bbcode).toContain('[list]');
+      expect(result.bbcode).toContain('[*]Item 1');
+      expect(result.bbcode).toContain('[*]Item 2');
     });
   });
 

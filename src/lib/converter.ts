@@ -56,7 +56,9 @@ export function markdownToBBCode(markdown: string, context: SteamContext): Conve
 
   // Italic (* or _) - must come after bold, careful not to match inside words
   result = result.replace(/(?<![*\w])\*([^*\n]+)\*(?![*\w])/g, '[i]$1[/i]');
-  result = result.replace(/(?<![_\w])_([^_\n]+)_(?![_\w])/g, '[i]$1[/i]');
+  // Underscore italic: only match when _ is a standalone emphasis marker,
+  // not part of an identifier like OMG_Brady or snake_case
+  result = result.replace(/(?<=^|[\s(["'])_([^_\n]+)_(?=[\s.,;:!?)"'\]]|$)/gm, '[i]$1[/i]');
 
   // Strikethrough
   result = result.replace(/~~([^~]+)~~/g, '[strike]$1[/strike]');
@@ -119,20 +121,57 @@ function processMedia(text: string, context: SteamContext, notes: string[]): str
 }
 
 /**
+ * Classify a line as unordered list item, ordered list item, or plain text.
+ * Returns the match type and captured content.
+ */
+function classifyListLine(line: string): { type: 'unordered' | 'ordered' | 'plain'; content: string } {
+  const unorderedMatch = line.match(/^[\s]*[-*+] (.+)$/);
+  if (unorderedMatch) return { type: 'unordered', content: unorderedMatch[1] };
+  const orderedMatch = line.match(/^[\s]*\d+\. (.+)$/);
+  if (orderedMatch) return { type: 'ordered', content: orderedMatch[1] };
+  return { type: 'plain', content: line };
+}
+
+/**
  * Process Markdown lists to BBCode
- * Keeps formatting tight to avoid Steam parsing issues
+ * Keeps formatting tight to avoid Steam parsing issues.
+ *
+ * Only converts list-marker lines when they appear in a run of 2+ consecutive
+ * items of the same type. A single isolated `- text` line (e.g., a sign-off
+ * like `- Jason`) is left as plain text.
  */
 function processLists(text: string): string {
   const lines = text.split('\n');
+  const classified = lines.map(classifyListLine);
+
+  // Pre-compute run lengths: for each list-type line, how many consecutive
+  // lines of the same type start at this position?
+  const runLength: number[] = new Array(classified.length).fill(0);
+  for (let i = classified.length - 1; i >= 0; i--) {
+    const t = classified[i].type;
+    if (t === 'plain') {
+      runLength[i] = 0;
+    } else if (i + 1 < classified.length && classified[i + 1].type === t) {
+      runLength[i] = runLength[i + 1] + 1;
+    } else {
+      runLength[i] = 1;
+    }
+  }
+
   const result: string[] = [];
   let inUnorderedList = false;
   let inOrderedList = false;
 
-  for (const line of lines) {
-    const unorderedMatch = line.match(/^[\s]*[-*+] (.+)$/);
-    const orderedMatch = line.match(/^[\s]*\d+\. (.+)$/);
+  for (let i = 0; i < classified.length; i++) {
+    const { type, content } = classified[i];
+    const isListCandidate = type !== 'plain' && runLength[i] >= 2;
+    // Also treat a line as a list candidate if we're already inside a list
+    // of the same type (handles lines that are continuations of a run)
+    const inMatchingList =
+      (type === 'unordered' && inUnorderedList) ||
+      (type === 'ordered' && inOrderedList);
 
-    if (unorderedMatch) {
+    if ((isListCandidate || inMatchingList) && type === 'unordered') {
       if (!inUnorderedList && !inOrderedList) {
         result.push('[list]');
         inUnorderedList = true;
@@ -142,8 +181,8 @@ function processLists(text: string): string {
         inOrderedList = false;
         inUnorderedList = true;
       }
-      result.push(`[*]${unorderedMatch[1]}`);
-    } else if (orderedMatch) {
+      result.push(`[*]${content}`);
+    } else if ((isListCandidate || inMatchingList) && type === 'ordered') {
       if (!inOrderedList && !inUnorderedList) {
         result.push('[olist]');
         inOrderedList = true;
@@ -153,7 +192,7 @@ function processLists(text: string): string {
         inUnorderedList = false;
         inOrderedList = true;
       }
-      result.push(`[*]${orderedMatch[1]}`);
+      result.push(`[*]${content}`);
     } else {
       if (inUnorderedList) {
         result.push('[/list]');
@@ -163,7 +202,8 @@ function processLists(text: string): string {
         result.push('[/olist]');
         inOrderedList = false;
       }
-      result.push(line);
+      // For isolated list-marker lines that didn't qualify, emit the original line
+      result.push(lines[i]);
     }
   }
 

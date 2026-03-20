@@ -20,7 +20,7 @@ export function tokenizeMarkdown(text: string): HighlightToken[] {
     [/__([^_]+)__/g, 'md-bold'],
     // Italic
     [/(?<![*_])\*([^*]+)\*(?![*_])/g, 'md-italic'],
-    [/(?<![*_])_([^_]+)_(?![*_])/g, 'md-italic'],
+    [/(?<=^|[\s(["'])_([^_]+)_(?=[\s.,;:!?)"'\]]|$)/gm, 'md-italic'],
     // Strikethrough
     [/~~([^~]+)~~/g, 'md-strike'],
     // Code blocks

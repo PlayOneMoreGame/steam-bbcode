@@ -72,7 +72,12 @@ function handler(event) {
       statusDescription: "Found",
       headers: {
         "location": { value: redirectUri },
-        "set-cookie": { value: "steambb-studio=" + studioSlug + "; Path=/; Secure; SameSite=Lax; Max-Age=31536000" },
+      },
+      cookies: {
+        "steambb-studio": {
+          value: studioSlug,
+          attributes: "Path=/; Secure; SameSite=Lax; Max-Age=31536000",
+        },
       },
     };
   }
