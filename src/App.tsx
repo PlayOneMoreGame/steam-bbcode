@@ -14,6 +14,7 @@ import { useBlacklist } from '@/hooks/useBlacklist';
 import { useDntTerms } from '@/hooks/useDntTerms';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useFormatDetection } from '@/hooks/useFormatDetection';
+import type { InputFormat } from '@/lib/format-detector';
 import { useResizablePanes } from '@/hooks/useResizablePanes';
 import { getWorkspaceSelection, setWorkspaceSelection } from '@/lib/workspace-loader';
 import { switchWorkspace } from '@/lib/workspace-stores';
@@ -28,8 +29,9 @@ import '@/styles/steam-theme.css';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-const GITHUB_RELEASES_URL = 'https://github.com/PlayOneMoreGame/steam-bbcode/releases';
-const GITHUB_API_LATEST = 'https://api.github.com/repos/PlayOneMoreGame/steam-bbcode/releases/latest';
+// Desktop downloads are hosted on the same domain under /downloads/
+// Updated on each release via: aws s3 sync binaries/ s3://BUCKET/downloads/
+const DOWNLOADS_BASE = '/downloads';
 
 // Auto-updater state for desktop app
 interface UpdateInfo {
@@ -106,73 +108,22 @@ function useAutoUpdater(isDesktop: boolean) {
   return { updateInfo, downloadAndInstall, restartApp };
 }
 
-interface ReleaseAsset {
-  name: string;
-  browser_download_url: string;
-}
+/** Detect platform and return a download link to the S3-hosted binary. */
+function useDownloadLink(isDesktop: boolean): { url: string; label: string } | null {
+  if (isDesktop) return null;
 
-interface GitHubRelease {
-  assets: ReleaseAsset[];
-}
-
-function detectPlatformAsset(assets: ReleaseAsset[]): { url: string; label: string } | null {
   const ua = navigator.userAgent;
   const isMacUA = /Macintosh|Mac OS X/.test(ua);
   const isWindows = /Windows/.test(ua);
 
   if (isMacUA) {
-    // Detect Apple Silicon vs Intel via GPU renderer or platform heuristics
-    // navigator.platform is deprecated but still widely supported
-    const isARM = /ARM/.test(navigator.platform) ||
-      // Chrome/Safari on Apple Silicon report this in userAgent
-      /Mac OS X.*AppleWebKit/.test(ua) && typeof (navigator as unknown as Record<string, unknown>).userAgentData !== 'undefined';
-
-    // Try aarch64 first for Apple Silicon, fall back to x64
-    const armAsset = assets.find(a => a.name.endsWith('_aarch64.dmg'));
-    const x64Asset = assets.find(a => a.name.endsWith('_x64.dmg'));
-
-    if (isARM && armAsset) return { url: armAsset.browser_download_url, label: 'Desktop App (Apple Silicon)' };
-    if (armAsset && !x64Asset) return { url: armAsset.browser_download_url, label: 'Desktop App (macOS)' };
-    if (x64Asset && !armAsset) return { url: x64Asset.browser_download_url, label: 'Desktop App (macOS)' };
-    // If both exist but we can't reliably detect arch, prefer aarch64 (most modern Macs)
-    if (armAsset) return { url: armAsset.browser_download_url, label: 'Desktop App (macOS)' };
+    // Most modern Macs are Apple Silicon — offer aarch64 by default
+    return { url: `${DOWNLOADS_BASE}/SteamBBEditor-latest-aarch64.dmg`, label: 'Desktop App (macOS)' };
   }
-
   if (isWindows) {
-    const msiAsset = assets.find(a => a.name.endsWith('.msi'));
-    if (msiAsset) return { url: msiAsset.browser_download_url, label: 'Desktop App (Windows)' };
+    return { url: `${DOWNLOADS_BASE}/SteamBBEditor-latest.msi`, label: 'Desktop App (Windows)' };
   }
-
   return null;
-}
-
-function useLatestRelease(isDesktop: boolean) {
-  const [downloadInfo, setDownloadInfo] = useState<{ url: string; label: string } | null>(null);
-  const fetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (isDesktop || fetchedRef.current) return;
-    fetchedRef.current = true;
-
-    fetch(GITHUB_API_LATEST)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<GitHubRelease>;
-      })
-      .then(release => {
-        const match = detectPlatformAsset(release.assets);
-        if (match) {
-          setDownloadInfo(match);
-        } else {
-          setDownloadInfo({ url: GITHUB_RELEASES_URL, label: 'Desktop App' });
-        }
-      })
-      .catch(() => {
-        setDownloadInfo({ url: GITHUB_RELEASES_URL, label: 'Desktop App' });
-      });
-  }, [isDesktop]);
-
-  return downloadInfo;
 }
 
 export function App() {
@@ -180,7 +131,7 @@ export function App() {
   const { openFile, saveFileAs, isDesktop, currentFile } = useFileService();
 
   // Desktop app download link (web only)
-  const downloadInfo = useLatestRelease(isDesktop);
+  const downloadInfo = useDownloadLink(isDesktop);
   const [showInstallTip, setShowInstallTip] = useState(false);
 
   // Auto-updater (desktop only)
@@ -245,8 +196,14 @@ export function App() {
   // DNT (Do Not Translate) state — loaded from localStorage, refreshes on workspace switch
   const { dntTerms, addTerm: handleAddDntTerm, removeTerm: handleRemoveDntTerm, resetTerms: handleResetDntTerms } = useDntTerms(workspaceKey);
 
-  // Format detection (debounced)
+  // Format detection (debounced auto-detection + manual override)
   const detectedFormat = useFormatDetection(markdown);
+  const [selectedFormat, setSelectedFormat] = useState<InputFormat | null>(null);
+
+  // When user manually selects a format, override auto-detection
+  const handleFormatChange = useCallback((format: InputFormat) => {
+    setSelectedFormat(format);
+  }, []);
 
   // Resizable split panes
   const { splitRatio, handleMouseDown: handleResizeMouseDown, handleDoubleClick: handleResizeDoubleClick, containerRef } = useResizablePanes();
@@ -564,6 +521,8 @@ export function App() {
             onOpen={handleOpenMarkdown}
             onSaveAs={handleSaveMarkdownAs}
             detectedFormat={detectedFormat}
+            selectedFormat={selectedFormat ?? undefined}
+            onFormatChange={handleFormatChange}
             context={context}
             blacklist={blacklist}
             onImageDrop={handleImageDrop}

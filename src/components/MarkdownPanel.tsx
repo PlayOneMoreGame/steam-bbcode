@@ -2,18 +2,20 @@ import { useState, useMemo, useCallback, useRef, type MouseEvent } from 'react';
 import { SyntaxEditor, type SyntaxEditorHandle } from './SyntaxEditor';
 import { lintMarkdown } from '@/lib/markdown-linter';
 import { confluenceToMarkdown } from '@/lib/confluence-converter';
+import { googleDocsToMarkdown, isGoogleDocsHtml } from '@/lib/google-docs-converter';
 import { plaintextToMarkdown } from '@/lib/plaintext-normalizer';
 import { splitForDiscord } from '@/lib/splitter';
 import { CHAR_LIMITS, type SteamContext } from '@/lib/contexts';
 import type { InputFormat } from '@/lib/format-detector';
 import { trackEvent, type InputMethod } from '@/lib/analytics';
 
-/** Labels shown in the format badge — user-facing, no technical jargon */
-const FORMAT_LABELS: Record<InputFormat, string> = {
-  markdown: 'MD',
-  confluence: 'Rich Text',
-  plaintext: 'Plain',
-};
+/** Labels shown in the format selector dropdown */
+const FORMAT_OPTIONS: { value: InputFormat; label: string }[] = [
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'google-docs', label: 'Google Docs' },
+  { value: 'confluence', label: 'Confluence' },
+  { value: 'plaintext', label: 'Plaintext' },
+];
 
 /**
  * Check if HTML clipboard content contains Confluence markers.
@@ -39,6 +41,8 @@ interface MarkdownPanelProps {
   onOpen: () => void;
   onSaveAs: () => void;
   detectedFormat?: InputFormat;
+  selectedFormat?: InputFormat;
+  onFormatChange?: (format: InputFormat) => void;
   context?: SteamContext;
   blacklist?: string[];
   onImageDrop?: (filename: string, dataUrl: string) => void;
@@ -53,12 +57,15 @@ export function MarkdownPanel({
   onOpen,
   onSaveAs,
   detectedFormat = 'markdown',
+  selectedFormat,
+  onFormatChange,
   context = 'announcements',
   blacklist = [],
   onImageDrop,
   onFileDrop,
   onInputMethodChange,
 }: MarkdownPanelProps) {
+  const activeFormat = selectedFormat ?? detectedFormat;
   const [showDiscord, setShowDiscord] = useState(false);
   const [expandedHelp, setExpandedHelp] = useState<Set<string>>(new Set());
   const editorRef = useRef<SyntaxEditorHandle>(null);
@@ -91,20 +98,50 @@ export function MarkdownPanel({
                     lintResult.info.length > 0;
 
   // Handle paste: normalize input to markdown regardless of source
-  // Confluence HTML → confluenceToMarkdown, plain text → plaintextToMarkdown
+  // Priority: Confluence markers -> Google Docs markers -> generic rich HTML -> plain text
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const html = e.clipboardData.getData('text/html');
-    if (html && (isConfluenceHtml(html) || isRichHtml(html))) {
-      e.preventDefault();
-      const { markdown } = confluenceToMarkdown(html, context);
-      const textarea = e.currentTarget;
-      const before = value.substring(0, textarea.selectionStart);
-      const after = value.substring(textarea.selectionEnd);
-      onChange(before + markdown + after);
-      const source = isConfluenceHtml(html) ? 'confluence_paste' : 'richtext_paste';
-      onInputMethodChange?.(source as InputMethod, markdown);
-      trackEvent('paste_confluence', { source: isConfluenceHtml(html) ? 'clipboard_html' : 'clipboard_richtext' });
-      return;
+    if (html) {
+      // Confluence takes highest priority
+      if (isConfluenceHtml(html)) {
+        e.preventDefault();
+        const { markdown } = confluenceToMarkdown(html, context);
+        const textarea = e.currentTarget;
+        const before = value.substring(0, textarea.selectionStart);
+        const after = value.substring(textarea.selectionEnd);
+        onChange(before + markdown + after);
+        onFormatChange?.('confluence');
+        onInputMethodChange?.('confluence_paste', markdown);
+        trackEvent('paste_confluence', { source: 'clipboard_html' });
+        return;
+      }
+
+      // Google Docs HTML
+      if (isGoogleDocsHtml(html)) {
+        e.preventDefault();
+        const { markdown } = googleDocsToMarkdown(html);
+        const textarea = e.currentTarget;
+        const before = value.substring(0, textarea.selectionStart);
+        const after = value.substring(textarea.selectionEnd);
+        onChange(before + markdown + after);
+        onFormatChange?.('google-docs');
+        onInputMethodChange?.('google_docs_paste', markdown);
+        trackEvent('paste_google_docs', { source: 'clipboard_html' });
+        return;
+      }
+
+      // Generic rich HTML (Word, other sources) — route through Confluence converter
+      if (isRichHtml(html)) {
+        e.preventDefault();
+        const { markdown } = confluenceToMarkdown(html, context);
+        const textarea = e.currentTarget;
+        const before = value.substring(0, textarea.selectionStart);
+        const after = value.substring(textarea.selectionEnd);
+        onChange(before + markdown + after);
+        onInputMethodChange?.('confluence_paste', markdown);
+        trackEvent('paste_richtext', { source: 'clipboard_richtext' });
+        return;
+      }
     }
 
     // Plain text paste — apply light markdown formatting if structured
@@ -129,7 +166,7 @@ export function MarkdownPanel({
     if (plain) {
       onInputMethodChange?.('markdown_paste', plain);
     }
-  }, [value, onChange, context, onInputMethodChange]);
+  }, [value, onChange, context, onFormatChange, onInputMethodChange]);
 
   // "Paste as Confluence" context menu action: read clipboard HTML and run Confluence conversion
   const handlePasteAsConfluence = useCallback(async () => {
@@ -178,9 +215,21 @@ export function MarkdownPanel({
       <div className="panel-header">
         <span className="panel-label">
           Editor
-          <span className={`format-badge format-${detectedFormat}`} data-testid="format-badge">
-            {FORMAT_LABELS[detectedFormat]}
-          </span>
+          <select
+            className={`format-selector format-${activeFormat}`}
+            data-testid="format-selector"
+            value={activeFormat}
+            onChange={(e) => {
+              const newFormat = e.target.value as InputFormat;
+              onFormatChange?.(newFormat);
+              trackEvent('format_changed', { from: activeFormat, to: newFormat });
+            }}
+            aria-label="Input format"
+          >
+            {FORMAT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
           {fileName && <span className="file-name" title={fileName}>{fileName}</span>}
         </span>
         <div className="panel-actions">

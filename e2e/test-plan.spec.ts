@@ -125,12 +125,12 @@ test.describe('2. Welcome Experience', () => {
 // ============================================================================
 
 test.describe('3. Markdown Input', () => {
-  test('format badge shows MD', async ({ page }) => {
+  test('format selector shows Markdown', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill(MARKDOWN_INPUT);
     await page.waitForTimeout(500);
-    const badge = page.locator('.panel').first().locator('.format-badge');
-    await expect(badge).toContainText('MD');
+    const selector = page.locator('.panel').first().locator('.format-selector');
+    await expect(selector).toHaveValue('markdown');
     await page.screenshot({ path: '/private/tmp/test-plan/03-markdown-input.png', fullPage: true });
   });
 
@@ -190,12 +190,12 @@ test.describe('3. Markdown Input', () => {
 // ============================================================================
 
 test.describe('4. Confluence XHTML Input', () => {
-  test('format badge switches to CONFLUENCE', async ({ page }) => {
+  test('format selector switches to Confluence', async ({ page }) => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill(CONFLUENCE_INPUT);
     await page.waitForTimeout(500);
-    const badge = page.locator('.panel').first().locator('.format-badge');
-    await expect(badge).toContainText('Rich Text');
+    const selector = page.locator('.panel').first().locator('.format-selector');
+    await expect(selector).toHaveValue('confluence');
     await page.screenshot({ path: '/private/tmp/test-plan/04-confluence-input.png', fullPage: true });
   });
 
@@ -608,9 +608,9 @@ test.describe('15. Edge Cases', () => {
     const mdEditor = page.locator('.panel').first().locator('textarea');
     await mdEditor.fill('<div class="post"><h1>Title</h1><p>Just a normal web page.</p></div>');
     await page.waitForTimeout(500);
-    const badge = page.locator('.panel').first().locator('.format-badge');
-    // Should NOT be CONFLUENCE (no ac: or ri: markers)
-    const badgeText = await badge.textContent() || '';
-    expect(badgeText).not.toContain('CONFLUENCE');
+    const selector = page.locator('.panel').first().locator('.format-selector');
+    // Should NOT be Confluence (no ac: or ri: markers)
+    const selectorValue = await selector.inputValue();
+    expect(selectorValue).not.toBe('confluence');
   });
 });

@@ -72,6 +72,27 @@ describe('detectFormat', () => {
     });
   });
 
+  describe('google-docs detection', () => {
+    it('detects docs-internal-guid wrapper', () => {
+      const html = '<b id="docs-internal-guid-abc123" style="font-weight:normal"><p><span>Content</span></p></b>';
+      expect(detectFormat(html)).toBe('google-docs');
+    });
+
+    it('detects docs-internal-guid in a meta wrapper', () => {
+      const html = '<meta charset="utf-8"><b id="docs-internal-guid-xyz" style="font-weight:normal"><span>Text</span></b>';
+      expect(detectFormat(html)).toBe('google-docs');
+    });
+
+    it('prioritizes confluence over google docs when both present', () => {
+      const mixed = '<b id="docs-internal-guid-abc"><ac:image><ri:attachment /></ac:image></b>';
+      expect(detectFormat(mixed)).toBe('confluence');
+    });
+
+    it('does not false-positive on random HTML with "docs" in text', () => {
+      expect(detectFormat('These are docs about internal systems')).not.toBe('google-docs');
+    });
+  });
+
   describe('plaintext detection', () => {
     it('returns plaintext for empty string', () => {
       expect(detectFormat('')).toBe('plaintext');

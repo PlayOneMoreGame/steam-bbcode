@@ -234,9 +234,9 @@ test('Confluence paste into empty editor works normally', async ({ page }) => {
   expect(value).toContain('empty');
 
   // Confluence HTML is converted to markdown by the paste handler,
-  // so the format detector correctly identifies the result as markdown.
-  const badge = page.getByTestId('format-badge');
-  await expect(badge).toHaveText('MD');
+  // so the paste handler sets the format to 'confluence'.
+  const selector = page.getByTestId('format-selector');
+  await expect(selector).toHaveValue('confluence');
 });
 
 // ---------------------------------------------------------------------------

@@ -1,21 +1,25 @@
 // Input format detection for multi-format support
 // Pure function, no dependencies
 
-export type InputFormat = 'markdown' | 'confluence' | 'plaintext';
+export type InputFormat = 'markdown' | 'confluence' | 'google-docs' | 'plaintext';
 
 /**
  * Detect the input format of pasted or loaded text.
  *
  * Heuristics (in priority order):
  * 1. Confluence XHTML: contains ac: or ri: namespace tags
- * 2. Markdown: contains # headers, **bold**, [links](url), - lists, etc.
- * 3. Plain text: everything else (treated as markdown by the converter)
+ * 2. Google Docs HTML: contains docs-internal-guid wrapper
+ * 3. Markdown: contains # headers, **bold**, [links](url), - lists, etc.
+ * 4. Plain text: everything else (treated as markdown by the converter)
  */
 export function detectFormat(text: string): InputFormat {
   if (!text || !text.trim()) return 'plaintext';
 
   // Confluence XHTML detection — look for Atlassian-specific namespace prefixes
   if (hasConfluenceMarkers(text)) return 'confluence';
+
+  // Google Docs HTML detection — check for docs-internal-guid wrapper
+  if (hasGoogleDocsMarkers(text)) return 'google-docs';
 
   // Markdown detection — look for common markdown syntax patterns
   if (hasMarkdownMarkers(text)) return 'markdown';
@@ -38,6 +42,16 @@ function hasConfluenceMarkers(text: string): boolean {
 
   // Rendered clipboard: mediaSingle/media data attributes with blob: Confluence URLs
   if (/data-node-type="media/.test(text)) return true;
+
+  return false;
+}
+
+function hasGoogleDocsMarkers(text: string): boolean {
+  // Google Docs clipboard HTML wraps content in a span/b with id="docs-internal-guid-*"
+  if (/docs-internal-guid/i.test(text)) return true;
+
+  // Google Docs also uses specific data attributes
+  if (/data-docs-has-editors/i.test(text)) return true;
 
   return false;
 }

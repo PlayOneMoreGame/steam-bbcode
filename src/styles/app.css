@@ -168,7 +168,7 @@ body {
 }
 
 
-.format-badge {
+.format-selector {
   font-size: 9px;
   font-weight: 500;
   color: var(--text-muted);
@@ -178,26 +178,49 @@ body {
   margin-left: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  transition: color 0.15s, background-color 0.15s;
+  border: 1px solid transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  /* Right padding for the dropdown arrow */
+  padding-right: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%237f848e' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
 
-.format-badge.format-confluence {
+.format-selector:hover {
+  border-color: var(--border-subtle);
+}
+
+.format-selector:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
+.format-selector.format-confluence {
   color: var(--accent-blue);
   background-color: var(--bg-blue-subtle);
 }
 
-.format-badge.format-markdown {
+.format-selector.format-google-docs {
+  color: var(--accent-blue);
+  background-color: var(--bg-blue-subtle);
+}
+
+.format-selector.format-markdown {
   color: var(--text-muted);
   background-color: var(--bg-elevated);
 }
 
-.format-badge.format-plaintext {
+.format-selector.format-plaintext {
   color: var(--text-dim);
   background-color: var(--bg-elevated);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .format-badge {
+  .format-selector {
     transition: none;
   }
 }

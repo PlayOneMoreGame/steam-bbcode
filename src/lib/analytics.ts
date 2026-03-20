@@ -11,7 +11,7 @@ export function trackPageView(): void {
   posthog.capture('$pageview');
 }
 
-export type InputMethod = 'confluence_paste' | 'plaintext_paste' | 'markdown_paste' | 'file_open' | 'typed' | 'unknown';
+export type InputMethod = 'confluence_paste' | 'google_docs_paste' | 'plaintext_paste' | 'markdown_paste' | 'file_open' | 'typed' | 'unknown';
 
 export interface WorkflowProperties {
   input_method: InputMethod;
