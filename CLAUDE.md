@@ -66,10 +66,9 @@ src/
 │   ├── types.ts             # Shared TypeScript types
 │   └── __tests__/           # Vitest unit tests
 ├── workspace/
-│   ├── studio.json          # Studio config (One More Game)
-│   ├── dnt-defaults.json    # Legacy DNT defaults (superseded by title config)
-│   └── titles/
-│       └── swapmeat.json    # Title config (DNT terms, localization targets)
+│   └── studios/
+│       ├── example-studio/      # Default studio: studio.json + titles/example-game.json
+│       └── best-mega-gameco/    # Second sample studio
 └── styles/
     ├── app.css              # Main styles with CSS variables
     └── steam-theme.css      # Steam-accurate preview styling
@@ -156,13 +155,11 @@ Edit `src/lib/welcome.ts`. Keep it lint-error-free in both panels!
 ## Infrastructure
 
 - **GitHub Actions** - CI/CD for desktop builds (`.github/workflows/`)
-- **Buildkite** - OMG standard CI for web builds (`.buildkite/`)
-- **Terraform** - Infrastructure as code (`terraform/`)
 - **Nix** - Reproducible dev environment (`shell.nix`)
 
 ## Jira
 
-Project key: **SMD**. Config: `~/.config/omg/jira-config.json`. Use the `standup-to-jira` skill (`~/OneMoreGame/standup-to-jira/SKILL.md`) for batch ticket creation. Use `requests` or `curl` for direct API access — the `jira` Python library fails in the Nix shell. Always use REST API v3 (`/rest/api/3/search/jql`), not v2.
+Project key: **SMD**. Use the `standup-to-jira` skill for batch ticket creation. Use `requests` or `curl` for direct API access — the `jira` Python library fails in the Nix shell. Always use REST API v3 (`/rest/api/3/search/jql`), not v2.
 
 ## Agent Definitions
 
@@ -183,5 +180,4 @@ Six specialized agents in `.claude/agents/`:
 - [ROADMAP.md](ROADMAP.md) - Feature tracking
 - [CHANGELOG.md](CHANGELOG.md) - Version history
 - [BUILD.md](BUILD.md) - Desktop build instructions
-- [WEBAPP.md](WEBAPP.md) - Web deployment
 - [docs/test-plan.md](docs/test-plan.md) - QA test plan

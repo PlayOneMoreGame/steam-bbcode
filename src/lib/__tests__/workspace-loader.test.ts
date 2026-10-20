@@ -7,14 +7,14 @@ describe('workspace-loader', () => {
       const studios = getAvailableStudios();
       expect(studios.length).toBeGreaterThanOrEqual(2);
       const slugs = studios.map(s => s.slug);
-      expect(slugs).toContain('one-more-game');
+      expect(slugs).toContain('example-studio');
       expect(slugs).toContain('best-mega-gameco');
     });
 
     it('discovers titles nested under each studio', () => {
-      const omgTitles = getAvailableTitles('one-more-game');
-      expect(omgTitles.length).toBeGreaterThanOrEqual(1);
-      expect(omgTitles.map(t => t.slug)).toContain('swapmeat');
+      const exampleTitles = getAvailableTitles('example-studio');
+      expect(exampleTitles.length).toBeGreaterThanOrEqual(1);
+      expect(exampleTitles.map(t => t.slug)).toContain('example-game');
 
       const bmgTitles = getAvailableTitles('best-mega-gameco');
       expect(bmgTitles.length).toBeGreaterThanOrEqual(1);
@@ -23,15 +23,15 @@ describe('workspace-loader', () => {
   });
 
   describe('default selection', () => {
-    it('defaults to studio with "default": true (one-more-game)', () => {
-      // one-more-game has "default": true in studio.json
+    it('defaults to studio with "default": true (example-studio)', () => {
+      // example-studio has "default": true in studio.json
       const sel = getWorkspaceSelection();
-      expect(sel.studioSlug).toBe('one-more-game');
-      expect(sel.titleSlug).toBe('swapmeat');
+      expect(sel.studioSlug).toBe('example-studio');
+      expect(sel.titleSlug).toBe('example-game');
     });
 
     it('studio marked as default has the flag set', () => {
-      const config = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
+      const config = getWorkspaceConfig({ studioSlug: 'example-studio', titleSlug: 'example-game' });
       expect(config.studio.default).toBe(true);
     });
 
@@ -43,11 +43,11 @@ describe('workspace-loader', () => {
 
   describe('getWorkspaceConfig', () => {
     it('returns a valid config with studio and title', () => {
-      const config = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
+      const config = getWorkspaceConfig({ studioSlug: 'example-studio', titleSlug: 'example-game' });
       expect(config.studio).toBeDefined();
       expect(config.title).toBeDefined();
-      expect(config.studio.displayName).toBe('One More Game');
-      expect(config.title.displayName).toBe('SWAPMEAT');
+      expect(config.studio.displayName).toBe('Example Studio');
+      expect(config.title.displayName).toBe('Example Game');
     });
 
     it('returns config for Best Mega Gameco', () => {
@@ -57,20 +57,20 @@ describe('workspace-loader', () => {
     });
 
     it('throws for unknown studio', () => {
-      expect(() => getWorkspaceConfig({ studioSlug: 'nope', titleSlug: 'swapmeat' }))
+      expect(() => getWorkspaceConfig({ studioSlug: 'nope', titleSlug: 'example-game' }))
         .toThrow('Unknown studio: "nope"');
     });
 
     it('throws for unknown title', () => {
-      expect(() => getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'nope' }))
+      expect(() => getWorkspaceConfig({ studioSlug: 'example-studio', titleSlug: 'nope' }))
         .toThrow('Unknown title: "nope"');
     });
 
-    it('has expected shape for SWAPMEAT', () => {
-      const config = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
-      expect(config.studio.slug).toBe('one-more-game');
-      expect(config.title.slug).toBe('swapmeat');
-      expect(config.title.studioSlug).toBe('one-more-game');
+    it('has expected shape for Example Game', () => {
+      const config = getWorkspaceConfig({ studioSlug: 'example-studio', titleSlug: 'example-game' });
+      expect(config.studio.slug).toBe('example-studio');
+      expect(config.title.slug).toBe('example-game');
+      expect(config.title.studioSlug).toBe('example-studio');
       expect(Array.isArray(config.title.dntTerms)).toBe(true);
       expect(config.title.dntTerms.length).toBeGreaterThan(0);
       expect(Array.isArray(config.title.blockedWords)).toBe(true);
@@ -93,16 +93,16 @@ describe('workspace-loader', () => {
     it('returns both studios', () => {
       const studios = getAvailableStudios();
       expect(studios.length).toBe(2);
-      expect(studios.map(s => s.slug)).toContain('one-more-game');
+      expect(studios.map(s => s.slug)).toContain('example-studio');
       expect(studios.map(s => s.slug)).toContain('best-mega-gameco');
     });
   });
 
   describe('getAvailableTitles', () => {
-    it('returns SWAPMEAT for one-more-game', () => {
-      const titles = getAvailableTitles('one-more-game');
+    it('returns Example Game for example-studio', () => {
+      const titles = getAvailableTitles('example-studio');
       expect(titles.length).toBe(1);
-      expect(titles[0].slug).toBe('swapmeat');
+      expect(titles[0].slug).toBe('example-game');
     });
 
     it('returns Mega Wedgie 3D for best-mega-gameco', () => {

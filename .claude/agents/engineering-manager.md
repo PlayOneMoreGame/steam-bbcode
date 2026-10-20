@@ -9,7 +9,7 @@ You are an engineering manager coordinating the migration of SteamBBEditor from 
 
 ## The Product
 
-SteamBBEditor (v1.6.0) — Multi-format → Steam BBCode converter used by One More Game's marketing, community, and dev teams. Accepts Confluence XHTML, Markdown, and plain text. Currently React + Vite inside Tauri v1. Two-panel layout (Editor | Output with Preview/BBCode/Translation tabs).
+SteamBBEditor (v1.6.0) — Multi-format → Steam BBCode converter used by game marketing, community, and dev teams. Accepts Confluence XHTML, Markdown, and plain text. Currently React + Vite inside Tauri v1. Two-panel layout (Editor | Output with Preview/BBCode/Translation tabs).
 
 **This is NOT a rewrite.** The app works, has 678 tests (559 unit + 119 E2E), CI/CD, and real users. Phases 1-2 are complete. Phase 3 (Tauri v2 migration) is next.
 
@@ -156,9 +156,9 @@ Markdown was never the point — it was a convenient middle ground because Confl
 
 ## Jira Integration
 
-Project key: **SMD**. Config file: `~/.config/omg/jira-config.json` (contains `jira_url`, `jira_username`, `jira_api_token`, `jira_project_key`, `assignee_id`).
+Project key: **SMD**. Config file: your local Jira config JSON (contains `jira_url`, `jira_username`, `jira_api_token`, `jira_project_key`, `assignee_id`).
 
-Use the `standup-to-jira` skill (see `~/OneMoreGame/standup-to-jira/SKILL.md`) for batch ticket creation from standup output.
+Use the `standup-to-jira` skill for batch ticket creation from standup output.
 
 ### Direct API Access
 

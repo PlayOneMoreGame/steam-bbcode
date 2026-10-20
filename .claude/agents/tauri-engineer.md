@@ -54,7 +54,7 @@ Current build produces:
 - `SteamBBEditor_1.6.0_x64-setup.exe` (Windows)
 - `.dmg` (macOS disk image)
 
-GitHub Actions handles CI/CD. Buildkite handles OMG standard web builds.
+GitHub Actions handles CI/CD.
 
 ### Code Signing & Notarization
 For macOS direct distribution:

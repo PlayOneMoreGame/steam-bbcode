@@ -1,2 +1,0 @@
-mkdir -p ~/OneMoreGame/steam-bbcode/src/lib/__tests__/fixtures
-pbpaste > ~/OneMoreGame/steam-bbcode/src/lib/__tests__/fixtures/swapmeat-019-raw.xml

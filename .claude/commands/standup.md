@@ -8,7 +8,7 @@ description: Daily morning standup — agents review current state and recommend
 ### Ticket Registry
 
 The local ticket registry is at:
-`~/.claude/projects/-Users-jchackert-OneMoreGame-steam-bbcode/memory/tickets.json`
+`tickets.json` in this project's Claude memory directory
 
 This file is the source of truth for "our" tickets. Use it instead of raw Jira queries to avoid noise from other teams' tickets in the SMD project.
 
@@ -20,9 +20,9 @@ This file is the source of truth for "our" tickets. Use it instead of raw Jira q
 ### Step 1: Gather State
 
 Read context files:
-- ~/OneMoreGame/steam-bbcode/CLAUDE.md
-- ~/OneMoreGame/steam-bbcode/ROADMAP.md
-- ~/.claude/projects/-Users-jchackert-OneMoreGame-steam-bbcode/memory/tickets.json
+- CLAUDE.md
+- ROADMAP.md
+- the ticket registry (`tickets.json`)
 
 From the ticket registry, report:
 - Total open tickets (status != "done")
@@ -31,17 +31,17 @@ From the ticket registry, report:
 
 Check repo status:
 ```bash
-cd ~/OneMoreGame/steam-bbcode && git log --oneline -5 && git status --short
+git log --oneline -5 && git status --short
 ```
 
 Check current test status:
 ```bash
-cd ~/OneMoreGame/steam-bbcode && npm run test:run 2>&1 | tail -5
+npm run test:run 2>&1 | tail -5
 ```
 
 ### Step 2: Agent Check-ins
 
-Delegate to ALL FIVE agents in ~/OneMoreGame/steam-bbcode/.claude/agents/. Each agent reports:
+Delegate to ALL FIVE agents in .claude/agents/. Each agent reports:
 1. Current priorities in their domain
 2. Blockers, risks, or stale items
 3. What they recommend working on today
@@ -78,9 +78,9 @@ Flag any conflicts between agent recommendations. Present the plan for approval 
 
 After the plan is approved, use the standup-to-jira skill to create tickets:
 - Write ticket definitions to /tmp/standup-tickets.json
-- Dry run first: `python ~/OneMoreGame/standup-to-jira/scripts/create_tickets.py --config ~/.config/omg/jira-config.json --tickets /tmp/standup-tickets.json --dry-run`
+- Dry run first: `python <standup-to-jira>/scripts/create_tickets.py --config <jira-config.json> --tickets /tmp/standup-tickets.json --dry-run`
 - Show preview, wait for approval
-- Create with registry update: `python ~/OneMoreGame/standup-to-jira/scripts/create_tickets.py --config ~/.config/omg/jira-config.json --tickets /tmp/standup-tickets.json --registry ~/.claude/projects/-Users-jchackert-OneMoreGame-steam-bbcode/memory/tickets.json`
+- Create with registry update: `python <standup-to-jira>/scripts/create_tickets.py --config <jira-config.json> --tickets /tmp/standup-tickets.json --registry <tickets.json>`
 
 ### Closing Tickets
 

@@ -2,8 +2,8 @@
 name = "steam-bbcode"
 version = "1.9.0"
 description = "Markdown to Steam BBCode converter"
-authors = ["One More Game"]
-license = ""
+authors = ["Jamie Stormbreaker"]
+license = "MIT"
 repository = ""
 edition = "2021"
 

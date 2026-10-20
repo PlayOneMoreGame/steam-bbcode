@@ -24,8 +24,8 @@ describe('cookie-utils', () => {
     });
 
     it('returns the cookie value when found', () => {
-      document.cookie = 'steambb-studio=one-more-game';
-      expect(getCookie('steambb-studio')).toBe('one-more-game');
+      document.cookie = 'steambb-studio=example-studio';
+      expect(getCookie('steambb-studio')).toBe('example-studio');
     });
 
     it('handles multiple cookies', () => {

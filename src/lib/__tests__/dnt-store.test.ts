@@ -28,18 +28,18 @@ import {
 import { getWorkspaceConfig } from '../workspace-loader';
 import { switchWorkspace } from '../workspace-stores';
 
-// Get the SWAPMEAT DNT terms from the workspace config
-const TITLE_DNT_TERMS = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' }).title.dntTerms;
+// Get the Example Game DNT terms from the workspace config
+const TITLE_DNT_TERMS = getWorkspaceConfig({ studioSlug: 'example-studio', titleSlug: 'example-game' }).title.dntTerms;
 
-// Scoped localStorage key for one-more-game/swapmeat
-const USER_KEY = 'steambb-dnt-user-one-more-game-swapmeat';
+// Scoped localStorage key for example-studio/example-game
+const USER_KEY = 'steambb-dnt-user-example-studio-example-game';
 
 describe('dnt-store (split model: title defaults + user additions)', () => {
   beforeEach(() => {
     localStorageMock.clear();
     vi.clearAllMocks();
-    // Explicitly select SWAPMEAT workspace for these tests
-    switchWorkspace({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
+    // Explicitly select Example Game workspace for these tests
+    switchWorkspace({ studioSlug: 'example-studio', titleSlug: 'example-game' });
   });
 
   describe('getDntTerms', () => {
@@ -51,18 +51,18 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
     it('returns title defaults + user additions when user terms exist', () => {
       store[USER_KEY] = JSON.stringify(['CustomTerm', 'AnotherTerm']);
       const terms = getDntTerms();
-      expect(terms).toContain('SWAPMEAT'); // title default
+      expect(terms).toContain('Example Game'); // title default
       expect(terms).toContain('CustomTerm'); // user addition
       expect(terms).toContain('AnotherTerm'); // user addition
       expect(terms.length).toBe(TITLE_DNT_TERMS.length + 2);
     });
 
     it('deduplicates case-insensitively (title default wins)', () => {
-      store[USER_KEY] = JSON.stringify(['swapmeat']); // duplicate of title term
+      store[USER_KEY] = JSON.stringify(['example game']); // duplicate of title term
       const terms = getDntTerms();
-      const count = terms.filter(t => t.toLowerCase() === 'swapmeat').length;
+      const count = terms.filter(t => t.toLowerCase() === 'example game').length;
       expect(count).toBe(1);
-      expect(terms).toContain('SWAPMEAT');
+      expect(terms).toContain('Example Game');
     });
 
     it('returns defaults for corrupted user terms JSON', () => {
@@ -80,7 +80,7 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
     it('migrates old unscoped key to scoped user terms', () => {
       store['steambb-dnt-user-terms'] = JSON.stringify(['CustomBoss', 'MyNewTerm']);
       const terms = getDntTerms();
-      expect(terms).toContain('SWAPMEAT');
+      expect(terms).toContain('Example Game');
       expect(terms).toContain('CustomBoss');
       expect(terms).toContain('MyNewTerm');
       // Old key should be removed
@@ -99,7 +99,7 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
 
   describe('setDntTerms', () => {
     it('stores only non-title-default terms', () => {
-      setDntTerms(['SWAPMEAT', 'CustomTerm', 'Tangus']);
+      setDntTerms(['Example Game', 'CustomTerm', 'Blorbo']);
       const userTerms = JSON.parse(store[USER_KEY]);
       expect(userTerms).toEqual(['CustomTerm']);
     });
@@ -117,16 +117,16 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
       addDntTerm('NewGameTerm');
       const terms = getDntTerms();
       expect(terms).toContain('NewGameTerm');
-      expect(terms).toContain('SWAPMEAT');
+      expect(terms).toContain('Example Game');
     });
 
     it('skips if already a title default (case-insensitive)', () => {
-      addDntTerm('SWAPMEAT');
+      addDntTerm('Example Game');
       expect(store[USER_KEY]).toBeUndefined();
     });
 
     it('skips if already a title default with different case', () => {
-      addDntTerm('swapmeat');
+      addDntTerm('example game');
       expect(store[USER_KEY]).toBeUndefined();
     });
 
@@ -155,13 +155,13 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
 
   describe('removeDntTerm', () => {
     it('does NOT remove title default terms', () => {
-      removeDntTerm('Tangus');
-      expect(getDntTerms()).toContain('Tangus');
+      removeDntTerm('Blorbo');
+      expect(getDntTerms()).toContain('Blorbo');
     });
 
     it('does NOT remove title defaults case-insensitively', () => {
-      removeDntTerm('tangus');
-      expect(getDntTerms()).toContain('Tangus');
+      removeDntTerm('blorbo');
+      expect(getDntTerms()).toContain('Blorbo');
     });
 
     it('removes a user-added term', () => {
@@ -201,13 +201,13 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
 
   describe('isWorkspaceTerm / isProtectedTerm', () => {
     it('returns true for title default terms', () => {
-      expect(isWorkspaceTerm('SWAPMEAT')).toBe(true);
-      expect(isProtectedTerm('Tangus')).toBe(true);
+      expect(isWorkspaceTerm('Example Game')).toBe(true);
+      expect(isProtectedTerm('Blorbo')).toBe(true);
     });
 
     it('is case-insensitive', () => {
-      expect(isWorkspaceTerm('swapmeat')).toBe(true);
-      expect(isProtectedTerm('TANGUS')).toBe(true);
+      expect(isWorkspaceTerm('example game')).toBe(true);
+      expect(isProtectedTerm('BLORBO')).toBe(true);
     });
 
     it('returns false for non-workspace terms', () => {
@@ -222,12 +222,12 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
 
   describe('isTitleTerm', () => {
     it('returns true for title default terms', () => {
-      expect(isTitleTerm('SWAPMEAT')).toBe(true);
-      expect(isTitleTerm('Tangus')).toBe(true);
+      expect(isTitleTerm('Example Game')).toBe(true);
+      expect(isTitleTerm('Blorbo')).toBe(true);
     });
 
     it('is case-insensitive', () => {
-      expect(isTitleTerm('swapmeat')).toBe(true);
+      expect(isTitleTerm('example game')).toBe(true);
     });
 
     it('returns false for user terms', () => {
@@ -238,13 +238,13 @@ describe('dnt-store (split model: title defaults + user additions)', () => {
 
   describe('getTier', () => {
     it('returns title for title default terms', () => {
-      expect(getTier('SWAPMEAT')).toBe('title');
-      expect(getTier('Tangus')).toBe('title');
+      expect(getTier('Example Game')).toBe('title');
+      expect(getTier('Blorbo')).toBe('title');
     });
 
     it('is case-insensitive', () => {
-      expect(getTier('swapmeat')).toBe('title');
-      expect(getTier('TANGUS')).toBe('title');
+      expect(getTier('example game')).toBe('title');
+      expect(getTier('BLORBO')).toBe('title');
     });
 
     it('returns user for user-added terms', () => {

@@ -309,8 +309,8 @@ test.describe('8. Term Protection', () => {
   test('Settings shows DNT glossary read-only', async ({ page }) => {
     await page.getByRole('button', { name: 'Settings' }).click();
     await expect(page.locator('.settings-panel')).toBeVisible();
-    await expect(page.locator('.settings-panel')).toContainText('SWAPMEAT');
-    await expect(page.locator('.settings-panel')).toContainText('Tangus');
+    await expect(page.locator('.settings-panel')).toContainText('Example Game');
+    await expect(page.locator('.settings-panel')).toContainText('Blorbo');
     await page.screenshot({ path: '/private/tmp/test-plan/08-dnt-glossary.png', fullPage: true });
   });
 

@@ -2,7 +2,7 @@
  * Workspace configuration types for multi-studio, multi-title support.
  *
  * Hierarchy: Studio -> Title -> User (teams/users is a future tier)
- * Example:   One More Game -> SWAPMEAT -> Jeff
+ * Example:   Example Studio -> Example Game -> (their team)
  *            Best Mega Gameco -> Mega Wedgie 3D -> (their team)
  */
 
