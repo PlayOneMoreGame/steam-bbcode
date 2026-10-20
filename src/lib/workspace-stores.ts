@@ -22,8 +22,8 @@ function buildStores(sel: WorkspaceSelection): void {
     defaults: [],
     titleDefaults: config.title.blockedWords,
     userStorageKey: `steambb-blacklist-user-${scope}`,
-    // Migrate old unscoped key for OMG/SWAPMEAT users
-    ...(sel.studioSlug === 'one-more-game' && sel.titleSlug === 'swapmeat'
+    // Migrate old unscoped key from before workspaces were scoped
+    ...(sel.studioSlug === 'example-studio' && sel.titleSlug === 'example-game'
       ? { legacyStorageKey: 'steambb-blacklist-user-terms', legacyCleanupKeys: ['steambb-blacklist-terms'] }
       : {}),
   });
@@ -32,8 +32,8 @@ function buildStores(sel: WorkspaceSelection): void {
     defaults: [],
     titleDefaults: config.title.dntTerms,
     userStorageKey: `steambb-dnt-user-${scope}`,
-    // Migrate old unscoped key for OMG/SWAPMEAT users
-    ...(sel.studioSlug === 'one-more-game' && sel.titleSlug === 'swapmeat'
+    // Migrate old unscoped key from before workspaces were scoped
+    ...(sel.studioSlug === 'example-studio' && sel.titleSlug === 'example-game'
       ? { legacyStorageKey: 'steambb-dnt-user-terms', legacyCleanupKeys: ['steambb-dnt-terms'] }
       : {}),
   });

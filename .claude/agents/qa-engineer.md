@@ -46,24 +46,6 @@ test('Test Plan Item 3: Markdown input', async ({ page }) => {
 });
 ```
 
-### Testing Against Staging
-For staging tests, use the `baseURL` override and provide basic auth:
-
-```bash
-PLAYWRIGHT_BASE_URL=https://staging-steam-bbcode.dev.onemoregame.live \
-npx playwright test e2e/test-plan-run.spec.ts
-```
-
-Note: Basic auth via Playwright requires setting HTTP credentials:
-```typescript
-test.use({
-  httpCredentials: {
-    username: 'steambb',
-    password: 'REDACTED'
-  }
-});
-```
-
 ## How to Execute a Test Plan
 
 When given a test plan (markdown with checkboxes), you:
@@ -127,11 +109,10 @@ All existing tests must pass. No exceptions. If a test fails, it's either a bug 
 
 ### Real Confluence XHTML
 The SWAPMEAT 0.19.0 patch notes fixture is at:
-`src/lib/__tests__/fixtures/swapmeat-019-raw.xml`
 `src/lib/__tests__/fixtures/confluence-patch-notes.fixture.ts`
 
-### DNT Terms (from glossary.ts)
-SWAPMEAT, Tangus, Jangus, Smart Meat, Gobble Gazer, Hard, Standard, Casual, Nightmare, Random Solar System, Paper Bobby, Boombot, BoxFace, Rocketbot, Rangus, Franken Meat, Franken Beans, Plasma, Slime, Squat Daddy, Coach Dan, Dingus, Micro Jackson, Highbeam, Zorpjet, Pestie, Peeperoni, Bean Minion, Wheelie, Creeper, Katana, Clobberbot
+### DNT Terms
+The default title's terms live in `src/workspace/studios/example-studio/titles/example-game.json` (Example Game, Blorbo, Captain Placeholder, …).
 
 ### Steam BBCode Quirks to Verify
 1. `[hr]` needs closing `[/hr]`

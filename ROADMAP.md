@@ -80,9 +80,6 @@
 
 **DevOps**
 - GitHub Actions CI/CD (multi-platform desktop builds)
-- Buildkite CI (web builds via OMG infrastructure)
-- Terraform infrastructure (S3 + CloudFront)
-- Basic auth for staging
 - Semantic versioning with interactive release script
 
 ---
@@ -190,7 +187,6 @@ SMD-4367 should be split:
 |-----|---------|
 | [README.md](README.md) | User guide, quick start |
 | [BUILD.md](BUILD.md) | Desktop app build instructions, versioning |
-| [WEBAPP.md](WEBAPP.md) | Web deployment (Amplify, S3, Terraform) |
 | [ROADMAP.md](ROADMAP.md) | This file - feature tracking |
 | [docs/test-plan.md](docs/test-plan.md) | QA test plan (v3, updated 2026-03-13) |
 

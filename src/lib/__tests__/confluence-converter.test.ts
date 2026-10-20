@@ -169,7 +169,7 @@ describe('confluenceToMarkdown', () => {
 
     it('converts <img> with Confluence src to drop marker', () => {
       const result = confluenceToMarkdown(
-        '<img src="https://onemoregame.atlassian.net/wiki/download/attachments/123/screenshot.png" alt="screenshot.png" />',
+        '<img src="https://example.atlassian.net/wiki/download/attachments/123/screenshot.png" alt="screenshot.png" />',
         'announcements'
       );
       expect(result.markdown).toContain('**>>> Drop image: screenshot.png <<<**');
@@ -187,7 +187,7 @@ describe('confluenceToMarkdown', () => {
 
     it('uses alt text as filename when URL has no extractable name', () => {
       const result = confluenceToMarkdown(
-        '<img src="https://onemoregame.atlassian.net/wiki/download/attachments/123/" alt="my-image.gif" />',
+        '<img src="https://example.atlassian.net/wiki/download/attachments/123/" alt="my-image.gif" />',
         'announcements'
       );
       expect(result.markdown).toContain('>>> Drop image: my-image.gif <<<');
@@ -313,7 +313,7 @@ describe('confluenceToMarkdown', () => {
     });
 
     it('converts blob: img src to drop marker using alt text', () => {
-      const html = '<img src="blob:https://onemoregame.atlassian.net/fake-id" alt="screenshot.png">';
+      const html = '<img src="blob:https://example.atlassian.net/fake-id" alt="screenshot.png">';
       const result = confluenceToMarkdown(html, 'announcements');
       expect(result.markdown).toContain('**>>> Drop image: screenshot.png <<<**');
       expect(result.markdown).not.toContain('blob:');

@@ -1,5 +1,4 @@
 // Real Confluence storage format from SWAPMEAT 0.19.0 patch notes
-// Source: https://onemoregame.atlassian.net/wiki/spaces/OMG/pages/2550235145/
 // Used as test fixture for confluence-converter.ts
 
 export const SWAPMEAT_019_PATCH_NOTES = `<h2 local-id="8c8c629dc341"><strong><u>Shrines</u></strong></h2>

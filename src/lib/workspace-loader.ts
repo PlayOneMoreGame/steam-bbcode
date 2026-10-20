@@ -53,13 +53,13 @@ for (const [path, config] of Object.entries(titleModules)) {
   }
 }
 
-/** Extract studio slug from a glob path like ".../studios/one-more-game/studio.json" */
+/** Extract studio slug from a glob path like ".../studios/example-studio/studio.json" */
 function extractStudioSlug(path: string): string | null {
   const match = path.match(/\/studios\/([^/]+)\/studio\.json$/);
   return match ? match[1] : null;
 }
 
-/** Extract studio and title slugs from ".../studios/one-more-game/titles/swapmeat.json" */
+/** Extract studio and title slugs from ".../studios/example-studio/titles/example-game.json" */
 function extractTitleParts(path: string): { studioSlug: string; titleSlug: string } | null {
   const match = path.match(/\/studios\/([^/]+)\/titles\/([^/]+)\.json$/);
   return match ? { studioSlug: match[1], titleSlug: match[2] } : null;

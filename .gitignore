@@ -1,5 +1,3 @@
-#omgcmd { overwrite: false }
-
 # Nix
 .cache
 .local
@@ -112,7 +110,7 @@ pkg/
 # runtime data
 .pid
 
-# OMGCmd
+# Example config files
 *.example
 
 # Nix

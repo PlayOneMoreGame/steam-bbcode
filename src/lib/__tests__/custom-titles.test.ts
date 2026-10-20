@@ -53,127 +53,127 @@ describe('custom-titles', () => {
 
   describe('getCustomTitles', () => {
     it('returns empty array when no custom titles exist', () => {
-      expect(getCustomTitles('one-more-game')).toEqual([]);
+      expect(getCustomTitles('example-studio')).toEqual([]);
     });
 
     it('returns stored custom titles', () => {
       const titles = [{
         slug: 'my-game',
         displayName: 'My Game',
-        studioSlug: 'one-more-game',
+        studioSlug: 'example-studio',
         dntTerms: [],
         blockedWords: [],
         localizationTargets: ['pt-BR'],
       }];
-      store['steambb-custom-titles-one-more-game'] = JSON.stringify(titles);
-      expect(getCustomTitles('one-more-game')).toEqual(titles);
+      store['steambb-custom-titles-example-studio'] = JSON.stringify(titles);
+      expect(getCustomTitles('example-studio')).toEqual(titles);
     });
 
     it('returns empty array for corrupted data', () => {
-      store['steambb-custom-titles-one-more-game'] = 'not json';
-      expect(getCustomTitles('one-more-game')).toEqual([]);
+      store['steambb-custom-titles-example-studio'] = 'not json';
+      expect(getCustomTitles('example-studio')).toEqual([]);
     });
 
     it('returns empty array for non-array data', () => {
-      store['steambb-custom-titles-one-more-game'] = JSON.stringify({ bad: true });
-      expect(getCustomTitles('one-more-game')).toEqual([]);
+      store['steambb-custom-titles-example-studio'] = JSON.stringify({ bad: true });
+      expect(getCustomTitles('example-studio')).toEqual([]);
     });
   });
 
   describe('addCustomTitle', () => {
     it('adds a custom title and returns it', () => {
-      const result = addCustomTitle('one-more-game', 'My New Game', ['swapmeat']);
+      const result = addCustomTitle('example-studio', 'My New Game', ['example-game']);
       expect(result).not.toBeNull();
       expect(result!.slug).toBe('my-new-game');
       expect(result!.displayName).toBe('My New Game');
-      expect(result!.studioSlug).toBe('one-more-game');
+      expect(result!.studioSlug).toBe('example-studio');
       expect(result!.dntTerms).toEqual([]);
       expect(result!.blockedWords).toEqual([]);
       expect(result!.localizationTargets).toEqual(['pt-BR', 'es-LATAM', 'ko', 'zh-Hans', 'ja', 'de', 'fr']);
     });
 
     it('persists to localStorage', () => {
-      addCustomTitle('one-more-game', 'My New Game', ['swapmeat']);
-      const stored = JSON.parse(store['steambb-custom-titles-one-more-game']);
+      addCustomTitle('example-studio', 'My New Game', ['example-game']);
+      const stored = JSON.parse(store['steambb-custom-titles-example-studio']);
       expect(stored).toHaveLength(1);
       expect(stored[0].slug).toBe('my-new-game');
     });
 
     it('returns null for duplicate custom title slug', () => {
-      addCustomTitle('one-more-game', 'My Game', ['swapmeat']);
-      const result = addCustomTitle('one-more-game', 'My Game', ['swapmeat']);
+      addCustomTitle('example-studio', 'My Game', ['example-game']);
+      const result = addCustomTitle('example-studio', 'My Game', ['example-game']);
       expect(result).toBeNull();
     });
 
     it('returns null when slug collides with a built-in title', () => {
-      const result = addCustomTitle('one-more-game', 'Swapmeat', ['swapmeat']);
+      const result = addCustomTitle('example-studio', 'Example Game', ['example-game']);
       expect(result).toBeNull();
     });
 
     it('returns null for empty name', () => {
-      const result = addCustomTitle('one-more-game', '', ['swapmeat']);
+      const result = addCustomTitle('example-studio', '', ['example-game']);
       expect(result).toBeNull();
     });
 
     it('returns null for whitespace-only name', () => {
-      const result = addCustomTitle('one-more-game', '   ', ['swapmeat']);
+      const result = addCustomTitle('example-studio', '   ', ['example-game']);
       expect(result).toBeNull();
     });
 
     it('uses provided localization targets when given', () => {
-      const result = addCustomTitle('one-more-game', 'My Game', ['swapmeat'], ['ko', 'ja']);
+      const result = addCustomTitle('example-studio', 'My Game', ['example-game'], ['ko', 'ja']);
       expect(result!.localizationTargets).toEqual(['ko', 'ja']);
     });
 
     it('scopes custom titles per studio', () => {
-      addCustomTitle('one-more-game', 'OMG Game', ['swapmeat']);
+      addCustomTitle('example-studio', 'Neat Game', ['example-game']);
       addCustomTitle('best-mega-gameco', 'BMG Game', ['mega-wedgie-3d']);
 
-      expect(getCustomTitles('one-more-game')).toHaveLength(1);
-      expect(getCustomTitles('one-more-game')[0].slug).toBe('omg-game');
+      expect(getCustomTitles('example-studio')).toHaveLength(1);
+      expect(getCustomTitles('example-studio')[0].slug).toBe('neat-game');
 
       expect(getCustomTitles('best-mega-gameco')).toHaveLength(1);
       expect(getCustomTitles('best-mega-gameco')[0].slug).toBe('bmg-game');
     });
 
     it('can add multiple titles to the same studio', () => {
-      addCustomTitle('one-more-game', 'Game A', ['swapmeat']);
-      addCustomTitle('one-more-game', 'Game B', ['swapmeat']);
-      expect(getCustomTitles('one-more-game')).toHaveLength(2);
+      addCustomTitle('example-studio', 'Game A', ['example-game']);
+      addCustomTitle('example-studio', 'Game B', ['example-game']);
+      expect(getCustomTitles('example-studio')).toHaveLength(2);
     });
 
     it('trims the display name', () => {
-      const result = addCustomTitle('one-more-game', '  Padded Name  ', ['swapmeat']);
+      const result = addCustomTitle('example-studio', '  Padded Name  ', ['example-game']);
       expect(result!.displayName).toBe('Padded Name');
     });
   });
 
   describe('removeCustomTitle', () => {
     it('removes a custom title', () => {
-      addCustomTitle('one-more-game', 'My Game', ['swapmeat']);
-      expect(getCustomTitles('one-more-game')).toHaveLength(1);
+      addCustomTitle('example-studio', 'My Game', ['example-game']);
+      expect(getCustomTitles('example-studio')).toHaveLength(1);
 
-      removeCustomTitle('one-more-game', 'my-game');
-      expect(getCustomTitles('one-more-game')).toHaveLength(0);
+      removeCustomTitle('example-studio', 'my-game');
+      expect(getCustomTitles('example-studio')).toHaveLength(0);
     });
 
     it('cleans up localStorage when last title is removed', () => {
-      addCustomTitle('one-more-game', 'My Game', ['swapmeat']);
-      removeCustomTitle('one-more-game', 'my-game');
-      expect(store['steambb-custom-titles-one-more-game']).toBeUndefined();
+      addCustomTitle('example-studio', 'My Game', ['example-game']);
+      removeCustomTitle('example-studio', 'my-game');
+      expect(store['steambb-custom-titles-example-studio']).toBeUndefined();
     });
 
     it('is a no-op for unknown slug', () => {
-      addCustomTitle('one-more-game', 'My Game', ['swapmeat']);
-      removeCustomTitle('one-more-game', 'nonexistent');
-      expect(getCustomTitles('one-more-game')).toHaveLength(1);
+      addCustomTitle('example-studio', 'My Game', ['example-game']);
+      removeCustomTitle('example-studio', 'nonexistent');
+      expect(getCustomTitles('example-studio')).toHaveLength(1);
     });
 
     it('only removes the targeted title', () => {
-      addCustomTitle('one-more-game', 'Game A', ['swapmeat']);
-      addCustomTitle('one-more-game', 'Game B', ['swapmeat']);
-      removeCustomTitle('one-more-game', 'game-a');
-      const remaining = getCustomTitles('one-more-game');
+      addCustomTitle('example-studio', 'Game A', ['example-game']);
+      addCustomTitle('example-studio', 'Game B', ['example-game']);
+      removeCustomTitle('example-studio', 'game-a');
+      const remaining = getCustomTitles('example-studio');
       expect(remaining).toHaveLength(1);
       expect(remaining[0].slug).toBe('game-b');
     });
@@ -181,47 +181,47 @@ describe('custom-titles', () => {
 
   describe('isCustomTitle', () => {
     it('returns true for custom title', () => {
-      addCustomTitle('one-more-game', 'My Game', ['swapmeat']);
-      expect(isCustomTitle('one-more-game', 'my-game')).toBe(true);
+      addCustomTitle('example-studio', 'My Game', ['example-game']);
+      expect(isCustomTitle('example-studio', 'my-game')).toBe(true);
     });
 
     it('returns false for non-existent title', () => {
-      expect(isCustomTitle('one-more-game', 'nonexistent')).toBe(false);
+      expect(isCustomTitle('example-studio', 'nonexistent')).toBe(false);
     });
 
     it('returns false for built-in title slug', () => {
-      // swapmeat is a build-time title, not a custom one
-      expect(isCustomTitle('one-more-game', 'swapmeat')).toBe(false);
+      // example-game is a build-time title, not a custom one
+      expect(isCustomTitle('example-studio', 'example-game')).toBe(false);
     });
   });
 
   describe('integration with workspace-loader', () => {
     it('custom title appears in getAvailableTitles', () => {
-      addCustomTitle('one-more-game', 'My New Title', ['swapmeat']);
-      const titles = getAvailableTitles('one-more-game');
+      addCustomTitle('example-studio', 'My New Title', ['example-game']);
+      const titles = getAvailableTitles('example-studio');
       const slugs = titles.map(t => t.slug);
-      expect(slugs).toContain('swapmeat');
+      expect(slugs).toContain('example-game');
       expect(slugs).toContain('my-new-title');
     });
 
     it('custom titles appear after built-in titles', () => {
-      addCustomTitle('one-more-game', 'My New Title', ['swapmeat']);
-      const titles = getAvailableTitles('one-more-game');
-      const swapmeatIdx = titles.findIndex(t => t.slug === 'swapmeat');
+      addCustomTitle('example-studio', 'My New Title', ['example-game']);
+      const titles = getAvailableTitles('example-studio');
+      const exampleIdx = titles.findIndex(t => t.slug === 'example-game');
       const customIdx = titles.findIndex(t => t.slug === 'my-new-title');
-      expect(customIdx).toBeGreaterThan(swapmeatIdx);
+      expect(customIdx).toBeGreaterThan(exampleIdx);
     });
 
     it('removed custom title disappears from getAvailableTitles', () => {
-      addCustomTitle('one-more-game', 'Temp Title', ['swapmeat']);
-      removeCustomTitle('one-more-game', 'temp-title');
-      const titles = getAvailableTitles('one-more-game');
+      addCustomTitle('example-studio', 'Temp Title', ['example-game']);
+      removeCustomTitle('example-studio', 'temp-title');
+      const titles = getAvailableTitles('example-studio');
       expect(titles.map(t => t.slug)).not.toContain('temp-title');
     });
 
     it('custom title has empty DNT and blocked words', () => {
-      addCustomTitle('one-more-game', 'Clean Title', ['swapmeat']);
-      const titles = getAvailableTitles('one-more-game');
+      addCustomTitle('example-studio', 'Clean Title', ['example-game']);
+      const titles = getAvailableTitles('example-studio');
       const custom = titles.find(t => t.slug === 'clean-title');
       expect(custom).toBeDefined();
       expect(custom!.dntTerms).toEqual([]);

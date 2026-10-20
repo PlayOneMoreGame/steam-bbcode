@@ -2,7 +2,7 @@
 
 Convert content to Steam BBCode with live preview, linting, and translation.
 
-Built for One More Game's marketing, community, and dev teams to streamline patch notes and announcements. Import from Confluence, Markdown, or plain text -- edit, preview, copy, and post to Steam.
+Built for game marketing, community, and dev teams to streamline patch notes and announcements. Import from Confluence, Markdown, or plain text -- edit, preview, copy, and post to Steam.
 
 ## Installation (Team Members)
 
@@ -179,10 +179,8 @@ steam-bbcode/
 │   └── src/main.rs         # Rust entry point
 ├── e2e/                    # Playwright E2E tests
 ├── scripts/                # Build & release scripts
-├── terraform/              # Infrastructure as code
 ├── CLAUDE.md               # AI assistant context
 ├── BUILD.md                # Detailed build instructions
-├── WEBAPP.md               # Web deployment guide
 └── ROADMAP.md              # Feature tracking
 ```
 
@@ -219,4 +217,4 @@ Limited: Guides require uploaded images with `[previewimg]` tags.
 
 ## License
 
-MIT -- One More Game
+MIT. See [LICENSE](LICENSE).

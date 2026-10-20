@@ -18,18 +18,18 @@ import { getBlacklist, addTerm, removeTerm, resetBlacklist, isOrgTerm } from '..
 import { getWorkspaceConfig } from '../workspace-loader';
 import { switchWorkspace } from '../workspace-stores';
 
-// Get the SWAPMEAT blocked words from the workspace config
-const TITLE_BLOCKED_WORDS = getWorkspaceConfig({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' }).title.blockedWords;
+// Get the Example Game blocked words from the workspace config
+const TITLE_BLOCKED_WORDS = getWorkspaceConfig({ studioSlug: 'example-studio', titleSlug: 'example-game' }).title.blockedWords;
 
-// Scoped localStorage key for one-more-game/swapmeat
-const USER_KEY = 'steambb-blacklist-user-one-more-game-swapmeat';
+// Scoped localStorage key for example-studio/example-game
+const USER_KEY = 'steambb-blacklist-user-example-studio-example-game';
 
 describe('blacklist-store', () => {
   beforeEach(() => {
     localStorageMock.clear();
     vi.clearAllMocks();
-    // Explicitly select SWAPMEAT workspace for these tests
-    switchWorkspace({ studioSlug: 'one-more-game', titleSlug: 'swapmeat' });
+    // Explicitly select Example Game workspace for these tests
+    switchWorkspace({ studioSlug: 'example-studio', titleSlug: 'example-game' });
   });
 
   describe('title blocked words', () => {
